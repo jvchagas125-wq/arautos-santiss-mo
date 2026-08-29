@@ -98,6 +98,20 @@
     pointer-events:none;
   }
   .hero-inner{position:relative;max-width:640px;margin:0 auto;}
+  .hero-brand{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:1.1rem;
+    flex-wrap:wrap;
+  }
+  .hero-logo{
+    height:clamp(52px,8vw,80px);
+    width:auto;
+    flex-shrink:0;
+    filter:drop-shadow(0 2px 8px rgba(0,0,0,.35));
+  }
+  .hero-text{min-width:0;}
   .hero h1{
     margin:0 0 .7rem;
     font-size:clamp(1.6rem,4.4vw,2.5rem);
@@ -427,10 +441,13 @@
     var selectedDate = days.find(function(d){ return toKey(d)===ui.selectedDay; }) || todayD;
 
     var html = '';
-    html += '<header class="hero"><div class="hero-inner">' +
-      '<h1>' + escapeHtml(STATE.config.churchName) + '</h1>' +
-      '<p class="subtitle">' + escapeHtml(STATE.config.subtitle) + '</p>' +
-    '</div></header>';
+    html += '<header class="hero"><div class="hero-inner"><div class="hero-brand">' +
+      '<img class="hero-logo" src="assets/logo-cruz.png" alt="" aria-hidden="true">' +
+      '<div class="hero-text">' +
+        '<h1>' + escapeHtml(STATE.config.churchName) + '</h1>' +
+        '<p class="subtitle">' + escapeHtml(STATE.config.subtitle) + '</p>' +
+      '</div>' +
+    '</div></div></header>';
 
     html += '<main class="wrap">';
     html += '<div class="legend"><span><i class="avail"></i>Disponível</span><span><i class="full"></i>Reservado</span><span><i class="closed"></i>Encerrado</span></div>';
