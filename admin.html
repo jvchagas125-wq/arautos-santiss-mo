@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Painel da secretaria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --bg-soft:#fbf3ec;
+    --surface:#ffffff;
+    --ink:#2a1210;
+    --ink-soft:#7a5b53;
+    --line:rgba(58,4,3,.14);
+    --red-bright:#8a0f04;
+    --red-deep:#3a0403;
+    --gold:#a97a2f;
+    --gold-soft:#f1e3c6;
+    --full-bg:#efe6e0;
+    --full-ink:#a3908a;
+    --danger:#a2321f;
+    --danger-bg:#fbeae6;
+    --focus:#a97a2f;
+    --shadow:0 18px 40px -20px rgba(58,4,3,.35);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#170a09;
+      --bg-soft:#221110;
+      --surface:#261311;
+      --ink:#f3e7e0;
+      --ink-soft:#c9a99f;
+      --line:rgba(233,211,183,.16);
+      --red-bright:#c8422a;
+      --red-deep:#7c1208;
+      --gold:#d8ac5c;
+      --gold-soft:#4a3418;
+      --full-bg:#32201d;
+      --full-ink:#8d746c;
+      --danger:#e2604a;
+      --danger-bg:#3a1a15;
+      --focus:#d8ac5c;
+      --shadow:0 18px 40px -20px rgba(0,0,0,.6);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#170a09;
+    --bg-soft:#221110;
+    --surface:#261311;
+    --ink:#f3e7e0;
+    --ink-soft:#c9a99f;
+    --line:rgba(233,211,183,.16);
+    --red-bright:#c8422a;
+    --red-deep:#7c1208;
+    --gold:#d8ac5c;
+    --gold-soft:#4a3418;
+    --full-bg:#32201d;
+    --full-ink:#8d746c;
+    --danger:#e2604a;
+    --danger-bg:#3a1a15;
+    --focus:#d8ac5c;
+    --shadow:0 18px 40px -20px rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Lora',ui-serif,Georgia,serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  h1,h2,h3,.font-display{font-family:'Cinzel',ui-serif,serif;letter-spacing:.02em;text-wrap:balance;}
+  .font-ui{font-family:'Inter',ui-sans-serif,system-ui,sans-serif;}
+  button,input{font-family:inherit;}
+  button{cursor:pointer;}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+
+  .hero{
+    position:relative;
+    overflow:hidden;
+    padding:2.2rem 1.5rem;
+    background:linear-gradient(160deg, var(--red-bright) 0%, var(--red-deep) 78%);
+    color:#fbe9d8;
+    text-align:center;
+  }
+  .hero::before{
+    content:"";
+    position:absolute;
+    top:-30%; right:-15%;
+    width:70vmin;height:70vmin;
+    background:
+      repeating-conic-gradient(from 0deg, rgba(241,227,198,.16) 0deg 3deg, transparent 3deg 18deg);
+    border-radius:50%;
+    filter:blur(1px);
+    opacity:.55;
+    pointer-events:none;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(ellipse at 50% 120%, rgba(0,0,0,.28), transparent 60%);
+    pointer-events:none;
+  }
+  .hero-inner{position:relative;max-width:640px;margin:0 auto;}
+  .eyebrow{
+    font-family:'Inter',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.16em;
+    font-size:.72rem;
+    color:var(--gold-soft, #f1e3c6);
+    opacity:.85;
+    margin:0 0 .7rem;
+  }
+  .hero h1{
+    margin:0;
+    font-size:clamp(1.4rem,4vw,2.1rem);
+    color:#fff;
+  }
+  .back-link{
+    display:inline-block;
+    margin-top:.9rem;
+    font-family:'Inter',sans-serif;
+    font-size:.82rem;
+    color:#f4e2d3;
+    text-decoration:none;
+    opacity:.9;
+  }
+  .back-link:hover{opacity:1;text-decoration:underline;}
+
+  .wrap{max-width:560px;margin:0 auto;padding:2rem 1.25rem 4rem;}
+
+  .panel h2{font-size:1.3rem;margin:0 0 1.4rem;}
+  .panel h3{
+    font-family:'Inter',sans-serif;font-size:.76rem;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--ink-soft);margin:2rem 0 .8rem;
+  }
+  .panel h3:first-of-type{margin-top:0;}
+
+  .card{
+    background:var(--surface);border:1.5px solid var(--line);border-radius:16px;
+    padding:1.4rem;margin-bottom:1.4rem;box-shadow:var(--shadow);
+  }
+
+  label.field{display:block;margin-bottom:1rem;font-family:'Inter',sans-serif;font-size:.82rem;color:var(--ink-soft);}
+  label.field input, label.field select{
+    display:block;width:100%;margin-top:.35rem;
+    padding:.65rem .75rem;border-radius:9px;border:1.5px solid var(--line);
+    background:var(--bg);color:var(--ink);font-size:.98rem;font-family:'Inter',sans-serif;
+  }
+  label.field input:focus, label.field select:focus{border-color:var(--focus);}
+  .field-error{color:var(--danger);font-size:.76rem;margin-top:.3rem;display:none;}
+  .field-error.show{display:block;}
+
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:.9rem;
+    border-radius:10px;padding:.7rem 1.1rem;border:1.5px solid transparent;
+  }
+  .btn.primary{background:var(--red-bright);color:#fff;}
+  .btn.primary:hover{background:var(--red-deep);}
+  .btn.primary:disabled{opacity:.6;cursor:wait;}
+  .btn.ghost{background:transparent;border-color:var(--line);color:var(--ink-soft);}
+  .btn.ghost:hover{border-color:var(--ink-soft);}
+  .btn.small{padding:.4rem .7rem;font-size:.78rem;}
+  .btn.block{width:100%;}
+
+  .hours-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.4rem;font-family:'Inter',sans-serif;}
+  .hour-check{
+    display:flex;align-items:center;justify-content:center;
+    border:1.5px solid var(--line);border-radius:8px;padding:.4rem 0;
+    font-size:.8rem;font-variant-numeric:tabular-nums;color:var(--ink-soft);
+  }
+  .hour-check input{accent-color:var(--red-bright);margin-right:.3rem;}
+  .hour-check.on{border-color:var(--red-bright);color:var(--ink);}
+  .row-actions{display:flex;gap:.6rem;margin:.7rem 0;}
+
+  .booking-day{margin-bottom:1.1rem;}
+  .booking-day > strong{font-family:'Inter',sans-serif;font-size:.82rem;color:var(--ink-soft);}
+  .booking-row{
+    display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+    padding:.55rem 0;border-bottom:1px solid var(--line);
+    font-family:'Inter',sans-serif;font-size:.86rem;
+  }
+  .booking-row .who{display:flex;flex-direction:column;}
+  .booking-row .who a{color:var(--ink-soft);text-decoration:none;font-size:.78rem;}
+  .booking-row .time{font-variant-numeric:tabular-nums;color:var(--gold);font-weight:600;min-width:3.4rem;}
+  .no-bookings{color:var(--ink-soft);font-style:italic;font-size:.86rem;}
+  .login-box{display:flex;flex-direction:column;gap:.9rem;max-width:340px;margin:0 auto;}
+
+  .toast{
+    position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);
+    background:var(--ink);color:var(--bg);
+    font-family:'Inter',sans-serif;font-size:.86rem;
+    padding:.75rem 1.2rem;border-radius:999px;box-shadow:var(--shadow);
+    z-index:200;max-width:90vw;text-align:center;
+  }
+  .empty-state{text-align:center;color:var(--ink-soft);font-style:italic;padding:2rem 1rem;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;animation:none !important;}
+  }
+  [hidden]{display:none !important;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function(){
+  "use strict";
+
+  var STATE = { config: null, loaded: false, loadError: false };
+  var ui = {
+    token: sessionStorage.getItem('admToken') || null,
+    authed: !!sessionStorage.getItem('admToken'),
+    bookings: null,
+    busy: false
+  };
+
+  // ---------------- helpers ----------------
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function parseKey(k){ var p = k.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+  var WEEKDAYS = ['dom','seg','ter','qua','qui','sex','sáb'];
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function fv(form, field){
+    var el = form.elements.namedItem(field);
+    return el ? el.value : '';
+  }
+  function api(path, body){
+    return fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    }).then(function(r){
+      return r.json().then(function(data){ return { status: r.status, data: data }; });
+    });
+  }
+  var toastTimer = null;
+  function toast(msg){
+    var el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.hidden = true; }, 4200);
+  }
+
+  function loadState(){
+    return fetch('/api/state').then(function(r){
+      return r.json().catch(function(){ return null; }).then(function(data){ return { ok: r.ok, status: r.status, data: data }; });
+    }).then(function(res){
+      if (!res.ok || !res.data || !res.data.config){
+        STATE.loadError = true;
+        console.error('Falha ao carregar /api/state (status ' + res.status + ')', res.data);
+        render();
+        return;
+      }
+      STATE.config = res.data.config;
+      STATE.loaded = true;
+      STATE.loadError = false;
+      render();
+    }).catch(function(err){
+      STATE.loadError = true;
+      console.error('Erro de rede ao carregar /api/state', err);
+      render();
+    });
+  }
+
+  function forceLogout(msg){
+    ui.authed = false; ui.token = null; ui.bookings = null;
+    sessionStorage.removeItem('admToken');
+    render();
+    if (msg) toast(msg);
+  }
+
+  function fetchBookings(){
+    return api('/api/admin/bookings', { token: ui.token }).then(function(res){
+      if (res.status === 401){ forceLogout('Sessão expirada. Entre novamente.'); return; }
+      ui.bookings = res.data.bookings || {};
+      render();
+    }).catch(function(){ /* list stays in loading state, user can retry via reload */ });
+  }
+
+  // ---------------- rendering ----------------
+  function renderHoursGrid(){
+    var active = (STATE.config && STATE.config.activeHours) || [];
+    var cells = [];
+    for (var h=0; h<24; h++){
+      var on = active.indexOf(h) !== -1;
+      cells.push('<label class="hour-check' + (on?' on':'') + '"><input type="checkbox" data-hour="' + h + '" ' + (on?'checked':'') + '>' + pad2(h) + '</label>');
+    }
+    return '<div class="hours-grid">' + cells.join('') + '</div>';
+  }
+
+  function renderBookingsList(){
+    if (!ui.bookings){
+      return '<p class="no-bookings">Carregando agendamentos...</p>';
+    }
+    var keys = Object.keys(ui.bookings);
+    if (!keys.length) return '<p class="no-bookings">Ainda não há agendamentos.</p>';
+    var byDay = {};
+    keys.forEach(function(k){
+      var parts = k.split('|');
+      byDay[parts[0]] = byDay[parts[0]] || [];
+      (ui.bookings[k]||[]).forEach(function(b){
+        byDay[parts[0]].push({ hour: parts[1], id: b.id, name: b.name, phone: b.phone, key: k });
+      });
+    });
+    return Object.keys(byDay).sort().map(function(dk){
+      var d = parseKey(dk);
+      var label = WEEKDAYS[d.getDay()] + ' ' + pad2(d.getDate()) + '/' + pad2(d.getMonth()+1);
+      var rows = byDay[dk].sort(function(a,b){ return a.hour.localeCompare(b.hour); }).map(function(b){
+        return '<div class="booking-row"><span class="time">' + b.hour + ':00</span>' +
+          '<span class="who"><span>' + escapeHtml(b.name) + '</span><a href="tel:' + escapeHtml(b.phone) + '">' + escapeHtml(b.phone) + '</a></span>' +
+          '<button type="button" class="btn ghost small" title="Remover agendamento" data-remove-key="' + b.key + '" data-remove-id="' + b.id + '">Remover</button></div>';
+      }).join('');
+      return '<div class="booking-day"><strong>' + label + '</strong>' + rows + '</div>';
+    }).join('');
+  }
+
+  function render(){
+    var app = document.getElementById('app');
+    var html = '<header class="hero"><div class="hero-inner">' +
+      '<p class="eyebrow">Área restrita</p>' +
+      '<h1>Painel da secretaria</h1>' +
+      '<a class="back-link" href="/">← Ver a página de agendamento</a>' +
+    '</div></header>';
+
+    html += '<main class="wrap panel">';
+
+    if (!ui.authed){
+      html += '<div class="card">' +
+        '<h2>Entrar</h2>' +
+        '<form id="loginForm" class="login-box">' +
+          '<label class="field">Senha<input type="password" name="password" required autofocus></label>' +
+          '<p class="field-error" id="loginError"></p>' +
+          '<button type="submit" class="btn primary block">Entrar</button>' +
+        '</form>' +
+      '</div>';
+      html += '<div class="toast" id="toast" hidden></div>';
+      app.innerHTML = html;
+      return;
+    }
+
+    if (!STATE.loaded){
+      html += STATE.loadError
+        ? '<p class="empty-state">Não foi possível carregar os dados. Recarregue a página.</p>'
+        : '<p class="empty-state">Carregando...</p>';
+      html += '<div class="toast" id="toast" hidden></div>';
+      app.innerHTML = html;
+      return;
+    }
+
+    var cfg = STATE.config;
+    var totalBookings = ui.bookings ? Object.keys(ui.bookings).reduce(function(s,k){return s+ui.bookings[k].length;},0) : '...';
+
+    html += '<div class="card">' +
+      '<h3>Dados da página</h3>' +
+      '<form id="configForm">' +
+        '<label class="field">Nome da igreja/paróquia<input type="text" name="churchName" value="' + escapeHtml(cfg.churchName) + '" required></label>' +
+        '<label class="field">Subtítulo<input type="text" name="subtitle" value="' + escapeHtml(cfg.subtitle) + '"></label>' +
+        '<label class="field">Telefone de contato (opcional)<input type="tel" name="contactPhone" value="' + escapeHtml(cfg.contactPhone||'') + '"></label>' +
+
+        '<h3>Período de agendamento</h3>' +
+        '<label class="field">Data inicial<input type="date" name="startDate" value="' + cfg.startDate + '" required></label>' +
+        '<label class="field">Data final<input type="date" name="endDate" value="' + cfg.endDate + '" required></label>' +
+        '<p class="field-error" id="dateError"></p>' +
+
+        '<h3>Horários habilitados</h3>' +
+        '<div class="row-actions">' +
+          '<button type="button" class="btn ghost small" id="hoursAll">Marcar todas</button>' +
+          '<button type="button" class="btn ghost small" id="hoursNone">Desmarcar todas</button>' +
+        '</div>' +
+        renderHoursGrid() +
+
+        '<h3>Vagas por horário</h3>' +
+        '<label class="field">Quantidade de pessoas por horário<input type="number" name="capacity" min="1" max="20" value="' + cfg.capacity + '" required></label>' +
+
+        '<button type="submit" class="btn primary block" style="margin-top:1rem;">Salvar alterações</button>' +
+      '</form>' +
+    '</div>';
+
+    html += '<div class="card">' +
+      '<h3>Trocar senha da secretaria</h3>' +
+      '<form id="passwordForm">' +
+        '<label class="field">Nova senha<input type="password" name="pw1" minlength="4" required></label>' +
+        '<label class="field">Confirmar nova senha<input type="password" name="pw2" minlength="4" required></label>' +
+        '<p class="field-error" id="pwError"></p>' +
+        '<button type="submit" class="btn ghost block">Atualizar senha</button>' +
+      '</form>' +
+    '</div>';
+
+    html += '<div class="card">' +
+      '<h3>Agendamentos (' + totalBookings + ')</h3>' +
+      '<div class="row-actions"><button type="button" class="btn ghost small" id="exportCsv">Exportar CSV</button></div>' +
+      renderBookingsList() +
+    '</div>';
+
+    html += '<div class="row-actions"><button type="button" class="btn ghost small" id="adminLogout">Sair</button></div>';
+    html += '</main>';
+    html += '<div class="toast" id="toast" hidden></div>';
+
+    app.innerHTML = html;
+  }
+
+  // ---------------- events ----------------
+  document.body.addEventListener('click', function(e){
+    if (e.target.closest('#adminLogout')){ forceLogout(); return; }
+
+    if (e.target.closest('#hoursAll')){
+      document.querySelectorAll('.hour-check input').forEach(function(cb){ cb.checked = true; cb.closest('.hour-check').classList.add('on'); });
+      return;
+    }
+    if (e.target.closest('#hoursNone')){
+      document.querySelectorAll('.hour-check input').forEach(function(cb){ cb.checked = false; cb.closest('.hour-check').classList.remove('on'); });
+      return;
+    }
+
+    var rem = e.target.closest('[data-remove-key]');
+    if (rem){
+      if (ui.busy) return;
+      ui.busy = true;
+      var slotKey = rem.getAttribute('data-remove-key');
+      var bookingId = rem.getAttribute('data-remove-id');
+      api('/api/admin/remove-booking', { token: ui.token, slotKey: slotKey, bookingId: bookingId }).then(function(res){
+        ui.busy = false;
+        if (res.status === 401){ forceLogout('Sessão expirada. Entre novamente.'); return; }
+        if (!res.data.ok){ toast('Não foi possível remover.'); return; }
+        toast('Agendamento removido.');
+        fetchBookings();
+      }).catch(function(){ ui.busy = false; toast('Erro de conexão. Tente novamente.'); });
+      return;
+    }
+
+    if (e.target.closest('#exportCsv')){
+      if (!ui.bookings){ toast('Aguarde os agendamentos carregarem.'); return; }
+      var rows = [['Data','Hora','Nome','Telefone']];
+      Object.keys(ui.bookings).sort().forEach(function(k){
+        var parts = k.split('|');
+        (ui.bookings[k]||[]).forEach(function(b){ rows.push([parts[0], parts[1]+':00', b.name, b.phone]); });
+      });
+      var csv = '﻿' + rows.map(function(r){ return r.map(function(v){ return '"' + String(v).replace(/"/g,'""') + '"'; }).join(';'); }).join('\r\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'agendamentos.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+      return;
+    }
+  });
+
+  document.body.addEventListener('input', function(e){
+    if (e.target.closest('.hour-check input')){
+      e.target.closest('.hour-check').classList.toggle('on', e.target.checked);
+    }
+  });
+
+  document.body.addEventListener('submit', function(e){
+    if (e.target.id === 'loginForm'){
+      e.preventDefault();
+      var pw = fv(e.target,'password');
+      api('/api/admin/login', { password: pw }).then(function(res){
+        if (res.data.ok){
+          ui.token = res.data.token;
+          ui.authed = true;
+          sessionStorage.setItem('admToken', ui.token);
+          render();
+          loadState();
+          fetchBookings();
+        } else {
+          var le = document.getElementById('loginError');
+          le.textContent = 'Senha incorreta.';
+          le.classList.add('show');
+        }
+      }).catch(function(){
+        var le2 = document.getElementById('loginError');
+        le2.textContent = 'Erro de conexão. Tente novamente.';
+        le2.classList.add('show');
+      });
+      return;
+    }
+
+    if (e.target.id === 'configForm'){
+      e.preventDefault();
+      var f = e.target;
+      var startDate = fv(f,'startDate'), endDate = fv(f,'endDate');
+      var de = document.getElementById('dateError');
+      if (!startDate || !endDate || endDate < startDate){
+        de.textContent = 'A data final precisa ser igual ou depois da data inicial.';
+        de.classList.add('show');
+        return;
+      }
+      de.classList.remove('show');
+      var hours = Array.prototype.slice.call(document.querySelectorAll('.hour-check input:checked')).map(function(cb){ return Number(cb.getAttribute('data-hour')); });
+      var patch = {
+        churchName: fv(f,'churchName').trim(),
+        subtitle: fv(f,'subtitle').trim(),
+        contactPhone: fv(f,'contactPhone').trim(),
+        startDate: startDate,
+        endDate: endDate,
+        activeHours: hours,
+        capacity: Number(fv(f,'capacity')) || 1
+      };
+      api('/api/admin/config', { token: ui.token, patch: patch }).then(function(res){
+        if (res.status === 401){ forceLogout('Sessão expirada. Entre novamente.'); return; }
+        if (!res.data.ok){ toast('Não foi possível salvar.'); return; }
+        toast('Alterações salvas.');
+        loadState();
+      }).catch(function(){ toast('Erro de conexão. Tente novamente.'); });
+      return;
+    }
+
+    if (e.target.id === 'passwordForm'){
+      e.preventDefault();
+      var f2 = e.target;
+      var pe = document.getElementById('pwError');
+      var pw1 = fv(f2,'pw1'), pw2 = fv(f2,'pw2');
+      if (pw1.length < 4){ pe.textContent = 'A senha precisa ter ao menos 4 caracteres.'; pe.classList.add('show'); return; }
+      if (pw1 !== pw2){ pe.textContent = 'As senhas não coincidem.'; pe.classList.add('show'); return; }
+      pe.classList.remove('show');
+      api('/api/admin/password', { token: ui.token, newPassword: pw1 }).then(function(res){
+        if (res.status === 401){ forceLogout('Sessão expirada. Entre novamente.'); return; }
+        if (!res.data.ok){ pe.textContent = 'Não foi possível atualizar.'; pe.classList.add('show'); return; }
+        toast('Senha atualizada.');
+        f2.reset();
+      }).catch(function(){ pe.textContent = 'Erro de conexão.'; pe.classList.add('show'); });
+      return;
+    }
+  });
+
+  // ---------------- init ----------------
+  render();
+  if (ui.authed){ loadState(); fetchBookings(); }
+})();
+</script>
+</body>
+</html>
