@@ -197,6 +197,11 @@
   .slot.avail .s{color:var(--red-bright);}
   .slot.full{background:var(--full-bg);color:var(--full-ink);border-color:var(--full-bg);cursor:not-allowed;}
   .slot.full .s{color:var(--full-ink);}
+  .slot.full .n{
+    display:block;font-size:.72rem;margin-top:.3rem;color:var(--ink-soft);
+    font-family:'Lora',serif;font-style:italic;line-height:1.2;
+    overflow-wrap:break-word;
+  }
   .slot.closed{opacity:.45;border-style:dashed;cursor:not-allowed;}
   .empty-state{
     text-align:center;color:var(--ink-soft);font-style:italic;padding:2rem 1rem;
@@ -276,7 +281,7 @@
 (function(){
   "use strict";
 
-  var STATE = { config: null, counts: {}, loaded: false, loadError: false };
+  var STATE = { config: null, counts: {}, names: {}, loaded: false, loadError: false };
   var ui = { selectedDay: null, modalSlot: null, busy: false };
 
   // ---------------- date helpers ----------------
@@ -325,6 +330,7 @@
       }
       STATE.config = res.data.config;
       STATE.counts = res.data.counts || {};
+      STATE.names = res.data.names || {};
       STATE.loaded = true;
       STATE.loadError = false;
     }).catch(function(err){
@@ -393,7 +399,11 @@
         return '<button type="button" class="slot closed" disabled><span class="t">' + label + '</span><span class="s">Encerrado</span></button>';
       }
       if (full){
-        return '<button type="button" class="slot full" disabled><span class="t">' + label + '</span><span class="s">' + (capacity>1?'Completo':'Reservado') + '</span></button>';
+        var bookedNames = STATE.names[slotKey] || [];
+        var namesHtml = bookedNames.length
+          ? '<span class="n">' + bookedNames.map(escapeHtml).join(', ') + '</span>'
+          : '';
+        return '<button type="button" class="slot full" disabled><span class="t">' + label + '</span><span class="s">' + (capacity>1?'Completo':'Reservado') + '</span>' + namesHtml + '</button>';
       }
       var statusText = capacity>1 ? ((capacity-count) + ' vaga' + ((capacity-count)!==1?'s':'')) : 'Disponível';
       return '<button type="button" class="slot avail" data-slot="' + slotKey + '"><span class="t">' + label + '</span><span class="s">' + statusText + '</span></button>';
