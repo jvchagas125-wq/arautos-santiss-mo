@@ -390,7 +390,7 @@ img{ max-width: 100%; display:block; }
 .calendario__dia.disponivel{
   color: var(--texto); background: rgba(205,164,52,.12); cursor:pointer; font-weight:600;
 }
-.calendario__dia.disponivel:hover{ background: rgba(205,164,52,.32); }
+.calendario__dia.disponivel:hover:not(.selecionado){ background: rgba(205,164,52,.32); }
 .calendario__dia.selecionado{
   background: linear-gradient(135deg, var(--dourado-claro), var(--dourado));
   color: var(--vermelho-escuro); box-shadow: 0 4px 12px rgba(157,122,31,.4);
@@ -409,7 +409,7 @@ img{ max-width: 100%; display:block; }
   background: #fffefb; font-family:'Cinzel'; font-size:.82rem; font-weight:600; color: var(--texto);
   transition: all .2s ease; animation: escala .35s ease both;
 }
-.horario-btn:hover:not(:disabled){ border-color: var(--dourado); background: rgba(205,164,52,.1); transform: translateY(-2px); }
+.horario-btn:hover:not(:disabled):not(.selecionado){ border-color: var(--dourado); background: rgba(205,164,52,.1); transform: translateY(-2px); }
 .horario-btn.selecionado{
   background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro));
   border-color: var(--vermelho-escuro); color:#fff; box-shadow: 0 6px 16px var(--vermelho-glow);
