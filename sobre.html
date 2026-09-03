@@ -3,17 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Adoração ao Santíssimo</title>
-<meta name="description" content="Agende seu horário de adoração ao Santíssimo Sacramento." />
+<title>Sobre — Adoração ao Santíssimo Sacramento</title>
 <link rel="icon" href="assets/favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="stylesheet" href="css/style.css" />
 </head>
-<body class="tela-fundo">
+<body class="pagina-clara">
 
   <div class="overlay" id="overlay"></div>
 
-  <!-- Menu lateral (hambúrguer) -->
   <aside class="menu-lateral" id="menuLateral">
     <div class="menu-lateral__topo">
       <img src="assets/logo.png" alt="Arautos do Evangelho" class="js-logo" />
@@ -29,7 +27,6 @@
     <div class="menu-lateral__rodape">Adoração ao Santíssimo Sacramento</div>
   </aside>
 
-  <!-- Cabeçalho -->
   <header class="topbar">
     <button class="topbar__btn topbar__menu" id="btnMenu" aria-label="Abrir menu">
       <span class="icone-hamburguer"><span></span><span></span><span></span></span>
@@ -42,7 +39,6 @@
     </button>
   </header>
 
-  <!-- Dropdown de perfil -->
   <div class="dropdown-perfil" id="dropdownPerfil">
     <div class="dropdown-perfil__avatar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -56,20 +52,38 @@
     <button id="btnSair">🚪 Sair</button>
   </div>
 
-  <!-- Conteúdo -->
   <main class="conteudo">
-    <img class="selo-decorativo" src="assets/selo-adoracao.png" alt="" />
-    <h1 class="titulo-pagina">Adoração ao Santíssimo Sacramento</h1>
+    <h1 class="titulo-pagina">Sobre este site</h1>
     <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-    <div class="card-frase">
-      <div class="card-frase__eyebrow">Frase do dia</div>
-      <blockquote id="fraseTexto">Carregando...</blockquote>
-      <cite id="fraseAutor"></cite>
+    <div class="painel">
+      <div class="painel__titulo"><span class="emoji">🙏</span> Para que serve</div>
+      <p style="margin:0 0 14px; line-height:1.7; color:var(--texto-suave);">
+        Este site foi criado para organizar a Adoração ao Santíssimo Sacramento da nossa comunidade dos Arautos do Evangelho.
+        Aqui você pode escolher, entre os dias e horários disponíveis, um momento para acompanhar Jesus Sacramentado,
+        consultar os agendamentos que já fez e cancelar caso algo mude — tudo isso sem depender de ligações,
+        recados ou anotações em papel.
+      </p>
+      <p style="margin:0; line-height:1.7; color:var(--texto-suave);">
+        Assim, cada horário de adoração fica sempre com alguém responsável, e a coordenação da igreja consegue
+        acompanhar em tempo real quem está inscrito em cada dia.
+      </p>
     </div>
 
-    <p class="pergunta-dia">Já visitou Nosso Senhor Jesus Cristo hoje?</p>
-    <a href="agendamento.html" class="btn btn-dourado">
+    <div class="painel">
+      <div class="painel__titulo"><span class="emoji">✝️</span> Como foi construído</div>
+      <p style="margin:0 0 14px; line-height:1.7; color:var(--texto-suave);">
+        O site foi desenvolvido especialmente para esta paróquia, utilizando tecnologias web modernas e um banco
+        de dados na nuvem que atualiza os horários em tempo real para todos que acessam — evitando que dois
+        agendamentos fiquem marcados para o mesmo horário.
+      </p>
+      <p style="margin:0; line-height:1.7; color:var(--texto-suave);">
+        Foi idealizado e desenvolvido por João Victor Chagas Medeiros, com o cuidado de manter uma experiência
+        simples e bonita, fiel ao espírito de devoção da nossa comunidade.
+      </p>
+    </div>
+
+    <a href="agendamento.html" class="btn btn-dourado" style="margin-top:22px;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
       Agende seu horário
     </a>
@@ -78,6 +92,6 @@
     <p class="rodape-dev">Desenvolvido por João Victor Chagas Medeiros</p>
   </main>
 
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/sobre.js"></script>
 </body>
 </html>
