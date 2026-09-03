@@ -1,5 +1,5 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
-  formatarDataBR, formatarHora } from "./utils.js";
+  formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterDiasHorarios, salvarDiasHorarios,
@@ -17,6 +17,8 @@ const painelAdmin = document.getElementById("painelAdmin");
 const formLoginAdmin = document.getElementById("formLoginAdmin");
 const inputSenhaAdmin = document.getElementById("inputSenhaAdmin");
 const erroSenhaAdmin = document.getElementById("erroSenhaAdmin");
+
+vincularOlhoSenha(document.getElementById("olhoSenhaAdmin"), inputSenhaAdmin);
 
 function mostrarPainel() {
   telaLoginAdmin.classList.add("oculto");
@@ -129,6 +131,9 @@ function configurarHorarios() {
   const campoFim = document.getElementById("campoDataFim");
   const grade = document.getElementById("gradeHorariosAdmin");
 
+  const calInicio = criarCalendario(document.getElementById("calendarioInicio"), campoInicio, {});
+  const calFim = criarCalendario(document.getElementById("calendarioFim"), campoFim, {});
+
   for (let h = 0; h < 24; h++) {
     const label = document.createElement("label");
     label.innerHTML = `<input type="checkbox" value="${h}" /> ${String(h).padStart(2,"0")}h`;
@@ -141,8 +146,8 @@ function configurarHorarios() {
   });
 
   obterDiasHorarios().then((dh) => {
-    campoInicio.value = dh.dataInicio || "";
-    campoFim.value = dh.dataFim || "";
+    calInicio.definirValor(dh.dataInicio || null);
+    calFim.definirValor(dh.dataFim || null);
     const ativos = new Set(dh.horariosAtivos || []);
     checkboxes().forEach((cb) => {
       cb.checked = ativos.has(Number(cb.value));
@@ -159,7 +164,13 @@ function configurarHorarios() {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (campoFim.value < campoInicio.value) {
+    const dataInicio = calInicio.obterValor();
+    const dataFim = calFim.obterValor();
+    if (!dataInicio || !dataFim) {
+      mostrarToast("Selecione as duas datas do período.");
+      return;
+    }
+    if (dataFim < dataInicio) {
       mostrarToast('A data "até" precisa ser igual ou depois da data "de".');
       return;
     }
@@ -168,7 +179,7 @@ function configurarHorarios() {
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
-      await salvarDiasHorarios({ dataInicio: campoInicio.value, dataFim: campoFim.value, horariosAtivos });
+      await salvarDiasHorarios({ dataInicio, dataFim, horariosAtivos });
       mostrarToast("Dias e horários atualizados!");
     } catch (err) {
       console.error(err);
@@ -278,6 +289,8 @@ function configurarConfiguracoes() {
   const uploadFundo = document.getElementById("uploadFundo");
   const urlLogo = document.getElementById("urlLogo");
   const urlFundo = document.getElementById("urlFundo");
+
+  vincularOlhoSenha(document.getElementById("olhoNovaSenha"), document.getElementById("campoNovaSenha"));
 
   let novoLogoDataUrl = null;
   let novoFundoDataUrl = null;

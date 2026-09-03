@@ -28,6 +28,18 @@
   display:inline-block; margin-top:16px; font-family:'Cinzel'; font-size:.8rem; color: var(--vermelho);
 }
 
+/* ---------- campo de senha com botão "olho" ---------- */
+.campo-senha{ position: relative; }
+.campo-senha input{ padding-right: 46px; }
+.btn-olho{
+  position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  width:34px; height:34px; border:none; background:transparent; border-radius:50%;
+  color: var(--texto-suave); display:flex; align-items:center; justify-content:center;
+  transition: background .2s ease, color .2s ease;
+}
+.btn-olho:hover, .btn-olho:focus-visible{ background: rgba(122,12,30,.08); color: var(--vermelho); outline:none; }
+.btn-olho svg{ width:19px; height:19px; }
+
 /* ---------- layout geral do painel ---------- */
 .admin-titulo-topo{
   position:absolute; right:16px; top:50%; transform:translateY(-50%);

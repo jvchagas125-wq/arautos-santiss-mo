@@ -186,3 +186,123 @@ export function aplicarFundo(url) {
   if (!url) return;
   document.documentElement.style.setProperty("--fundo-img", `url('${url}')`);
 }
+
+/* ---------- Botão "olho" para mostrar/ocultar senha ----------
+   Espera um botão com dois SVGs filhos: .olho-aberto e .olho-fechado */
+export function vincularOlhoSenha(botao, input) {
+  if (!botao || !input) return;
+  const aberto = botao.querySelector(".olho-aberto");
+  const fechado = botao.querySelector(".olho-fechado");
+  botao.addEventListener("click", () => {
+    const vaiMostrar = input.type === "password";
+    input.type = vaiMostrar ? "text" : "password";
+    aberto?.classList.toggle("oculto", vaiMostrar);
+    fechado?.classList.toggle("oculto", !vaiMostrar);
+    botao.setAttribute("aria-label", vaiMostrar ? "Ocultar senha" : "Mostrar senha");
+    input.focus({ preventScroll: true });
+  });
+}
+
+/* ---------- Calendário personalizado reutilizável ----------
+   container: elemento .calendario (com [data-mes-ano], [data-dias], [data-nav-anterior], [data-nav-proximo])
+   input: campo de texto (readonly) onde a data formatada é exibida
+   opts: { valorInicial, minIso, maxIso, aoSelecionar(iso) }
+   Retorna { definirValor(iso), obterValor() } */
+export function criarCalendario(container, input, opts = {}) {
+  const elMesAno = container.querySelector("[data-mes-ano]");
+  const elDias = container.querySelector("[data-dias]");
+  const btnAnterior = container.querySelector("[data-nav-anterior]");
+  const btnProximo = container.querySelector("[data-nav-proximo]");
+  const aoSelecionar = opts.aoSelecionar || (() => {});
+  let minIso = opts.minIso || null;
+  let maxIso = opts.maxIso || null;
+
+  let dataSelecionada = opts.valorInicial || null;
+  let mesAtual = dataSelecionada
+    ? new Date(isoParaData(dataSelecionada).getFullYear(), isoParaData(dataSelecionada).getMonth(), 1)
+    : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+  function podeSelecionar(iso) {
+    if (minIso && iso < minIso) return false;
+    if (maxIso && iso > maxIso) return false;
+    return true;
+  }
+
+  function render() {
+    const nomeMes = MESES[mesAtual.getMonth()];
+    elMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesAtual.getFullYear()}`;
+    elDias.innerHTML = "";
+
+    const primeiroDiaSemana = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1).getDay();
+    const totalDias = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0).getDate();
+
+    for (let i = 0; i < primeiroDiaSemana; i++) {
+      const vazio = document.createElement("span");
+      vazio.className = "calendario__vazio";
+      elDias.appendChild(vazio);
+    }
+
+    for (let dia = 1; dia <= totalDias; dia++) {
+      const d = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), dia);
+      const iso = dataParaIso(d);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "calendario__dia";
+      btn.textContent = dia;
+
+      if (podeSelecionar(iso)) {
+        btn.classList.add("disponivel");
+        if (iso === dataSelecionada) btn.classList.add("selecionado");
+        btn.addEventListener("click", () => {
+          dataSelecionada = iso;
+          input.value = formatarDataBR(iso);
+          container.classList.remove("aberto");
+          render();
+          aoSelecionar(iso);
+        });
+      }
+      elDias.appendChild(btn);
+    }
+  }
+
+  btnAnterior?.addEventListener("click", () => {
+    mesAtual = new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1, 1);
+    render();
+  });
+  btnProximo?.addEventListener("click", () => {
+    mesAtual = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
+    render();
+  });
+
+  input.addEventListener("click", () => {
+    document.querySelectorAll(".calendario.aberto").forEach((c) => {
+      if (c !== container) c.classList.remove("aberto");
+    });
+    container.classList.toggle("aberto");
+  });
+  document.addEventListener("click", (e) => {
+    if (!container.contains(e.target) && e.target !== input) {
+      container.classList.remove("aberto");
+    }
+  });
+
+  if (dataSelecionada) input.value = formatarDataBR(dataSelecionada);
+  render();
+
+  return {
+    definirValor(iso) {
+      dataSelecionada = iso || null;
+      input.value = iso ? formatarDataBR(iso) : "";
+      if (iso) mesAtual = new Date(isoParaData(iso).getFullYear(), isoParaData(iso).getMonth(), 1);
+      render();
+    },
+    obterValor() {
+      return dataSelecionada;
+    },
+    definirLimites(novoMinIso, novoMaxIso) {
+      minIso = novoMinIso ?? minIso;
+      maxIso = novoMaxIso ?? maxIso;
+      render();
+    }
+  };
+}

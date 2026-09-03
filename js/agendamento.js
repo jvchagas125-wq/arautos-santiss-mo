@@ -50,7 +50,8 @@ function dataDentroDoPeriodo(iso) {
 }
 
 function renderizarCalendario() {
-  mesAnoEl.textContent = `${MESES[mesAtual.getMonth()]} de ${mesAtual.getFullYear()}`;
+  const nomeMes = MESES[mesAtual.getMonth()];
+  mesAnoEl.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesAtual.getFullYear()}`;
   calendarioDias.innerHTML = "";
 
   const primeiroDiaSemana = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1).getDay();

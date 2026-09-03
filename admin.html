@@ -20,7 +20,13 @@
       <form id="formLoginAdmin">
         <div class="campo">
           <label for="inputSenhaAdmin">Senha</label>
-          <input type="password" id="inputSenhaAdmin" placeholder="Digite a senha" autocomplete="current-password" required />
+          <div class="campo-senha">
+            <input type="password" id="inputSenhaAdmin" placeholder="Digite a senha" autocomplete="current-password" required />
+            <button type="button" class="btn-olho" id="olhoSenhaAdmin" aria-label="Mostrar senha">
+              <svg class="olho-aberto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="olho-fechado oculto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M6.5 6.7C3.9 8.4 1.5 12 1.5 12s3.5 7 10.5 7c2.1 0 3.9-.6 5.4-1.5M17.4 17.3C20 15.6 22.5 12 22.5 12s-1.2-2.4-3.4-4.3"/></svg>
+            </button>
+          </div>
           <span class="campo-erro" id="erroSenhaAdmin">Senha incorreta. Tente novamente.</span>
         </div>
         <button type="submit" class="btn btn-vermelho btn-full">Entrar</button>
@@ -90,11 +96,37 @@
           <form id="formPeriodo">
             <div class="campo">
               <label for="campoDataInicio">De</label>
-              <input type="date" id="campoDataInicio" required />
+              <div style="position:relative;">
+                <input type="text" id="campoDataInicio" class="campo-clicavel" placeholder="Clique aqui para selecionar o dia" readonly autocomplete="off" required />
+                <div class="calendario" id="calendarioInicio">
+                  <div class="calendario__cabecalho">
+                    <button type="button" class="calendario__nav" data-nav-anterior aria-label="Mês anterior">‹</button>
+                    <strong data-mes-ano>—</strong>
+                    <button type="button" class="calendario__nav" data-nav-proximo aria-label="Próximo mês">›</button>
+                  </div>
+                  <div class="calendario__semana">
+                    <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                  </div>
+                  <div class="calendario__dias" data-dias></div>
+                </div>
+              </div>
             </div>
             <div class="campo">
               <label for="campoDataFim">Até</label>
-              <input type="date" id="campoDataFim" required />
+              <div style="position:relative;">
+                <input type="text" id="campoDataFim" class="campo-clicavel" placeholder="Clique aqui para selecionar o dia" readonly autocomplete="off" required />
+                <div class="calendario" id="calendarioFim">
+                  <div class="calendario__cabecalho">
+                    <button type="button" class="calendario__nav" data-nav-anterior aria-label="Mês anterior">‹</button>
+                    <strong data-mes-ano>—</strong>
+                    <button type="button" class="calendario__nav" data-nav-proximo aria-label="Próximo mês">›</button>
+                  </div>
+                  <div class="calendario__semana">
+                    <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                  </div>
+                  <div class="calendario__dias" data-dias></div>
+                </div>
+              </div>
             </div>
             <div class="painel__titulo" style="margin-top:6px;"><span class="emoji">🕐</span> Horários disponíveis por dia (00h às 23h)</div>
             <div class="grade-checkbox" id="gradeHorariosAdmin"></div>
@@ -156,7 +188,13 @@
           <div class="painel__titulo"><span class="emoji">🔒</span> Senha do painel administrativo</div>
           <div class="campo">
             <label for="campoNovaSenha">Nova senha</label>
-            <input type="password" id="campoNovaSenha" placeholder="Digite a nova senha" />
+            <div class="campo-senha">
+              <input type="password" id="campoNovaSenha" placeholder="Digite a nova senha" />
+              <button type="button" class="btn-olho" id="olhoNovaSenha" aria-label="Mostrar senha">
+                <svg class="olho-aberto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="olho-fechado oculto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M6.5 6.7C3.9 8.4 1.5 12 1.5 12s3.5 7 10.5 7c2.1 0 3.9-.6 5.4-1.5M17.4 17.3C20 15.6 22.5 12 22.5 12s-1.2-2.4-3.4-4.3"/></svg>
+              </button>
+            </div>
           </div>
           <button type="button" class="btn btn-vermelho" id="btnSalvarSenha">Alterar senha</button>
         </div>

@@ -364,7 +364,7 @@ img{ max-width: 100%; display:block; }
 }
 .calendario.aberto{ opacity:1; transform:translateY(0); pointer-events:auto; }
 .calendario__cabecalho{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.calendario__cabecalho strong{ font-family:'Cinzel'; color:var(--vermelho-escuro); font-size:.92rem; text-transform:capitalize; }
+.calendario__cabecalho strong{ font-family:'Cinzel'; color:var(--vermelho-escuro); font-size:.92rem; }
 .calendario__nav{
   width:30px; height:30px; border-radius:50%; border:none; background: rgba(122,12,30,.08); color:var(--vermelho);
   display:flex; align-items:center; justify-content:center;
