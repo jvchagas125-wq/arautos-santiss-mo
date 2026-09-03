@@ -175,6 +175,17 @@ export function ouvirAgendamentosDoUsuario(telefoneDigits, callback) {
   });
 }
 
+// Remove permanentemente os agendamentos cancelados.
+// Sem telefoneDigits: limpa todos (uso do painel admin). Com telefoneDigits: limpa só os da pessoa.
+export async function limparAgendamentosCancelados(telefoneDigits) {
+  const clausulas = [where("status", "==", "cancelado")];
+  if (telefoneDigits) clausulas.push(where("telefoneDigits", "==", telefoneDigits));
+  const q = query(collection(db, "agendamentos"), ...clausulas);
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, "agendamentos", d.id))));
+  return snap.docs.length;
+}
+
 export function ouvirTodosAgendamentos(status, callback) {
   const q = query(
     collection(db, "agendamentos"),

@@ -413,6 +413,20 @@ img{ max-width: 100%; display:block; }
 .horario-btn:disabled{ opacity:.4; text-decoration: line-through; cursor:not-allowed; background:#f1ece2; }
 .mensagem-vazia{ text-align:center; color: var(--texto-suave); font-style:italic; padding: 18px 0; }
 
+/* ============ ABAS (agendados / cancelados) ============ */
+.abas{ display:flex; gap:10px; margin-bottom:18px; width:100%; }
+.aba{
+  flex:1; padding: 11px; border-radius:10px; border: 1.5px solid rgba(157,122,31,.3);
+  background: #fffefb; font-family:'Cinzel'; font-size:.85rem; color: var(--texto-suave);
+  transition: all .2s ease;
+}
+.aba.ativa{
+  background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro));
+  color:#fff; border-color: var(--vermelho-escuro);
+}
+.acoes-lista{ display:flex; justify-content:flex-end; width:100%; margin-bottom:12px; }
+.btn-pequeno{ padding: 8px 16px; font-size:.78rem; }
+
 /* ============ CARDS DE AGENDAMENTO ============ */
 .lista-agendamentos{ display:flex; flex-direction:column; gap:16px; width:100%; }
 .card-agendamento{

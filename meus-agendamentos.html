@@ -55,8 +55,20 @@
     <h1 class="titulo-pagina">Meus Agendamentos</h1>
     <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-    <div id="listaContainer" class="lista-agendamentos">
-      <div class="spinner"></div>
+    <div class="abas">
+      <button type="button" class="aba ativa" data-aba="agendados">Agendados</button>
+      <button type="button" class="aba" data-aba="cancelados">Cancelados</button>
+    </div>
+
+    <div id="painelAgendados" style="width:100%;">
+      <div id="listaAgendados" class="lista-agendamentos"><div class="spinner"></div></div>
+    </div>
+
+    <div id="painelCancelados" class="oculto" style="width:100%;">
+      <div class="acoes-lista">
+        <button type="button" class="btn btn-contorno btn-pequeno" id="btnLimparCancelados">Limpar cancelados</button>
+      </div>
+      <div id="listaCancelados" class="lista-agendamentos"><div class="spinner"></div></div>
     </div>
 
     <a href="agendamento.html" class="btn btn-dourado" style="margin-top:22px;">+ Novo agendamento</a>
@@ -80,6 +92,19 @@
       <div class="modal__acoes">
         <button class="btn btn-contorno" id="btnVoltarModal">Voltar</button>
         <button class="btn btn-vermelho" id="btnConfirmarCancelamento">Cancelar horário</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmação para limpar cancelados -->
+  <div class="modal-overlay" id="modalLimparCancelados">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalLimparCancelados" aria-label="Fechar">&times;</button>
+      <h3>Limpar cancelados</h3>
+      <p>Deseja remover todo o seu histórico de agendamentos cancelados? Essa ação não pode ser desfeita.</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnVoltarLimparCancelados">Voltar</button>
+        <button class="btn btn-vermelho btn-full" id="btnConfirmarLimparCancelados">Limpar cancelados</button>
       </div>
     </div>
   </div>

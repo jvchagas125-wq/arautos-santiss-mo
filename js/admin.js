@@ -4,7 +4,7 @@ import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterDiasHorarios, salvarDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
-  ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento
+  ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
 
@@ -196,6 +196,7 @@ function configurarHorarios() {
 function configurarAcompanhamento() {
   const abas = document.querySelectorAll(".admin-aba");
   const listaAgendados = document.getElementById("listaAgendados");
+  const painelCancelados = document.getElementById("painelCancelados");
   const listaCancelados = document.getElementById("listaCancelados");
   const modalMotivo = document.getElementById("modalMotivo");
   const textoMotivo = document.getElementById("textoMotivo");
@@ -204,6 +205,8 @@ function configurarAcompanhamento() {
   const btnCancelarNaoCancelar = document.getElementById("btnNaoCancelarAgendamento");
   const btnConfirmarCancelarAgend = document.getElementById("btnConfirmarCancelarAgendamento");
   const fecharModalCancelarAgend = document.getElementById("fecharModalCancelarAgendamento");
+  const modalLimparCanceladosAdmin = document.getElementById("modalLimparCancelados");
+  const btnLimparCanceladosAdmin = document.getElementById("btnLimparCanceladosAdmin");
 
   let agendamentosAtivos = [];
   let agendamentoParaCancelar = null;
@@ -212,7 +215,7 @@ function configurarAcompanhamento() {
     aba.addEventListener("click", () => {
       abas.forEach((a) => a.classList.toggle("ativa", a === aba));
       listaAgendados.classList.toggle("oculto", aba.dataset.aba !== "agendados");
-      listaCancelados.classList.toggle("oculto", aba.dataset.aba !== "cancelados");
+      painelCancelados.classList.toggle("oculto", aba.dataset.aba !== "cancelados");
     });
   });
 
@@ -266,6 +269,7 @@ function configurarAcompanhamento() {
     listaCancelados.innerHTML = lista.length
       ? lista.map(cardCancelado).join("")
       : '<p class="mensagem-vazia">Nenhum cancelamento registrado.</p>';
+    btnLimparCanceladosAdmin.classList.toggle("oculto", lista.length === 0);
     listaCancelados.querySelectorAll("[data-motivo]").forEach((btn) => {
       btn.addEventListener("click", () => {
         textoMotivo.textContent = btn.dataset.motivo;
@@ -301,6 +305,27 @@ function configurarAcompanhamento() {
       agendamentoParaCancelar = null;
       btnConfirmarCancelarAgend.disabled = false;
       btnConfirmarCancelarAgend.textContent = "Cancelar agendamento";
+    }
+  });
+
+  btnLimparCanceladosAdmin.addEventListener("click", () => abrirModal(modalLimparCanceladosAdmin));
+  document.getElementById("fecharModalLimparCancelados").addEventListener("click", () => fecharModal(modalLimparCanceladosAdmin));
+  document.getElementById("btnVoltarLimparCanceladosAdmin").addEventListener("click", () => fecharModal(modalLimparCanceladosAdmin));
+
+  document.getElementById("btnConfirmarLimparCanceladosAdmin").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = "Limpando...";
+    try {
+      await limparAgendamentosCancelados();
+      mostrarToast("Histórico de cancelados limpo.");
+      fecharModal(modalLimparCanceladosAdmin);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível limpar agora. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Limpar cancelados";
     }
   });
 }

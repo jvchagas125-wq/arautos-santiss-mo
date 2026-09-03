@@ -1,43 +1,58 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarHora } from "./utils.js";
-import { obterConfiguracoesGerais, ouvirAgendamentosDoUsuario, cancelarAgendamento } from "./dados.js";
+import { obterConfiguracoesGerais, ouvirAgendamentosDoUsuario, cancelarAgendamento, limparAgendamentosCancelados } from "./dados.js";
 
 inicializarNavegacao("meus-agendamentos");
 
-const listaContainer = document.getElementById("listaContainer");
+const abas = document.querySelectorAll(".aba");
+const painelAgendados = document.getElementById("painelAgendados");
+const painelCancelados = document.getElementById("painelCancelados");
+const listaAgendados = document.getElementById("listaAgendados");
+const listaCancelados = document.getElementById("listaCancelados");
+const btnLimparCancelados = document.getElementById("btnLimparCancelados");
 const modalCancelar = document.getElementById("modalCancelar");
 const cancelarInfo = document.getElementById("cancelarInfo");
 const motivoCancelamento = document.getElementById("motivoCancelamento");
 const btnConfirmarCancelamento = document.getElementById("btnConfirmarCancelamento");
+const modalLimparCancelados = document.getElementById("modalLimparCancelados");
 
 let agendamentoParaCancelar = null;
+let usuarioAtual = null;
+
+abas.forEach((aba) => {
+  aba.addEventListener("click", () => {
+    abas.forEach((a) => a.classList.toggle("ativa", a === aba));
+    painelAgendados.classList.toggle("oculto", aba.dataset.aba !== "agendados");
+    painelCancelados.classList.toggle("oculto", aba.dataset.aba !== "cancelados");
+  });
+});
 
 function iconeAgendamento() {
   return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>`;
 }
 
 function renderizarLista(agendamentos) {
-  if (agendamentos.length === 0) {
-    listaContainer.innerHTML = `
-      <div class="card-vazio">
-        <img class="selo-decorativo" src="assets/selo-adoracao.png" alt="" style="margin:0 auto 14px;" />
-        <p>Você ainda não tem nenhum agendamento.<br/>Que tal reservar um tempo com Nosso Senhor?</p>
-      </div>`;
-    return;
-  }
-
-  // agendados primeiro (mais próximos), depois cancelados
   const ativos = agendamentos.filter((a) => a.status === "agendado");
   const cancelados = agendamentos.filter((a) => a.status === "cancelado");
   ativos.sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora));
   cancelados.sort((a, b) => (b.data + b.hora).localeCompare(a.data + a.hora));
 
-  const ordenados = [...ativos, ...cancelados];
+  listaAgendados.innerHTML = ativos.length
+    ? ativos.map((a) => cardHtml(a)).join("")
+    : `
+      <div class="card-vazio">
+        <img class="selo-decorativo" src="assets/selo-adoracao.png" alt="" style="margin:0 auto 14px;" />
+        <p>Você ainda não tem nenhum agendamento.<br/>Que tal reservar um tempo com Nosso Senhor?</p>
+      </div>`;
 
-  listaContainer.innerHTML = ordenados.map((a) => cardHtml(a)).join("");
+  listaCancelados.innerHTML = cancelados.length
+    ? cancelados.map((a) => cardHtml(a)).join("")
+    : '<p class="mensagem-vazia">Nenhum agendamento cancelado.</p>';
 
-  listaContainer.querySelectorAll("[data-cancelar]").forEach((btn) => {
+  btnLimparCancelados.classList.toggle("oculto", cancelados.length === 0);
+
+  listaAgendados.querySelectorAll("[data-cancelar]").forEach((btn) => {
     btn.addEventListener("click", () => abrirModalCancelamento(agendamentos.find((a) => a.id === btn.dataset.cancelar)));
   });
 }
@@ -96,8 +111,32 @@ btnConfirmarCancelamento.addEventListener("click", async () => {
   }
 });
 
+document.getElementById("fecharModalLimparCancelados").addEventListener("click", () => fecharModal(modalLimparCancelados));
+document.getElementById("btnVoltarLimparCancelados").addEventListener("click", () => fecharModal(modalLimparCancelados));
+
+btnLimparCancelados.addEventListener("click", () => abrirModal(modalLimparCancelados));
+
+document.getElementById("btnConfirmarLimparCancelados").addEventListener("click", async (e) => {
+  if (!usuarioAtual) return;
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  btn.textContent = "Limpando...";
+  try {
+    await limparAgendamentosCancelados(usuarioAtual.telefoneDigits);
+    mostrarToast("Histórico de cancelados limpo.");
+    fecharModal(modalLimparCancelados);
+  } catch (err) {
+    console.error(err);
+    mostrarToast("Não foi possível limpar agora. Tente novamente.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Limpar cancelados";
+  }
+});
+
 async function iniciar() {
   const usuario = await exigirCadastro();
+  usuarioAtual = usuario;
 
   const config = await obterConfiguracoesGerais();
   aplicarLogo(config.logoUrl);
