@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Painel Administrativo — Arautos do Evangelho</title>
+<link rel="icon" href="assets/logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/admin.css" />
+</head>
+<body class="pagina-clara admin-body">
+
+  <!-- Tela de login do admin -->
+  <div class="admin-login" id="telaLoginAdmin">
+    <div class="admin-login__caixa">
+      <img src="assets/logo.png" alt="Arautos do Evangelho" class="js-logo" />
+      <h1>Painel do Administrador</h1>
+      <p>Área restrita — digite a senha para continuar.</p>
+      <form id="formLoginAdmin">
+        <div class="campo">
+          <label for="inputSenhaAdmin">Senha</label>
+          <input type="password" id="inputSenhaAdmin" placeholder="Digite a senha" autocomplete="current-password" required />
+          <span class="campo-erro" id="erroSenhaAdmin">Senha incorreta. Tente novamente.</span>
+        </div>
+        <button type="submit" class="btn btn-vermelho btn-full">Entrar</button>
+      </form>
+      <a href="index.html" class="admin-login__voltar">← Voltar ao site</a>
+    </div>
+  </div>
+
+  <!-- Painel administrativo -->
+  <div id="painelAdmin" class="oculto">
+    <div class="overlay" id="overlay"></div>
+
+    <aside class="menu-lateral" id="menuLateral">
+      <div class="menu-lateral__topo">
+        <img src="assets/logo.png" alt="Arautos do Evangelho" class="js-logo" />
+        <span>Painel do<br/>Administrador</span>
+        <button class="menu-lateral__fechar" id="btnFecharMenu" aria-label="Fechar menu">&times;</button>
+      </div>
+      <nav>
+        <a href="#frase" data-secao="frase" class="ativa"><span class="emoji">💬</span> Frase do dia</a>
+        <a href="#horarios" data-secao="horarios"><span class="emoji">🗓️</span> Dias e horários</a>
+        <a href="#acompanhamento" data-secao="acompanhamento"><span class="emoji">📋</span> Acompanhamento</a>
+        <a href="#configuracoes" data-secao="configuracoes"><span class="emoji">⚙️</span> Configurações</a>
+      </nav>
+      <div class="menu-lateral__rodape">
+        <a href="index.html" style="display:block;margin-bottom:8px;">← Ver site</a>
+        <button id="btnSairAdmin" class="btn btn-contorno" style="width:100%;">Sair do painel</button>
+      </div>
+    </aside>
+
+    <header class="topbar">
+      <button class="topbar__btn topbar__menu" id="btnMenu" aria-label="Abrir menu">
+        <span class="icone-hamburguer"><span></span><span></span><span></span></span>
+      </button>
+      <img src="assets/logo.png" alt="Arautos do Evangelho" class="topbar__logo js-logo" />
+      <span class="admin-titulo-topo">Admin</span>
+    </header>
+
+    <main class="admin-conteudo">
+
+      <!-- FRASE DO DIA -->
+      <section class="admin-secao" id="secao-frase">
+        <h1 class="titulo-pagina">Frase do Dia</h1>
+        <div class="linha-ornamento">✝</div>
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">💬</span> Editar frase exibida na página inicial</div>
+          <form id="formFrase">
+            <div class="campo">
+              <label for="campoFraseTexto">Frase</label>
+              <textarea id="campoFraseTexto" rows="4" placeholder="Digite a frase do dia" required></textarea>
+            </div>
+            <div class="campo">
+              <label for="campoFraseAutor">Autor</label>
+              <input type="text" id="campoFraseAutor" placeholder="Ex: São João Bosco" />
+            </div>
+            <button type="submit" class="btn btn-dourado">Salvar frase</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- DIAS E HORÁRIOS -->
+      <section class="admin-secao oculto" id="secao-horarios">
+        <h1 class="titulo-pagina">Dias e Horários</h1>
+        <div class="linha-ornamento">✝</div>
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">🗓️</span> Período da adoração</div>
+          <form id="formPeriodo">
+            <div class="campo">
+              <label for="campoDataInicio">De</label>
+              <input type="date" id="campoDataInicio" required />
+            </div>
+            <div class="campo">
+              <label for="campoDataFim">Até</label>
+              <input type="date" id="campoDataFim" required />
+            </div>
+            <div class="painel__titulo" style="margin-top:6px;"><span class="emoji">🕐</span> Horários disponíveis por dia (00h às 23h)</div>
+            <div class="grade-checkbox" id="gradeHorariosAdmin"></div>
+            <div class="admin-acoes-rapidas">
+              <button type="button" class="btn btn-contorno" id="btnMarcarTodos">Marcar todos</button>
+              <button type="button" class="btn btn-contorno" id="btnDesmarcarTodos">Desmarcar todos</button>
+            </div>
+            <button type="submit" class="btn btn-dourado" style="margin-top:16px;">Salvar dias e horários</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ACOMPANHAMENTO -->
+      <section class="admin-secao oculto" id="secao-acompanhamento">
+        <h1 class="titulo-pagina">Acompanhamento</h1>
+        <div class="linha-ornamento">✝</div>
+        <div class="admin-abas">
+          <button class="admin-aba ativa" data-aba="agendados">Agendados</button>
+          <button class="admin-aba" data-aba="cancelados">Cancelados</button>
+        </div>
+        <div id="listaAgendados" class="lista-agendamentos"><div class="spinner"></div></div>
+        <div id="listaCancelados" class="lista-agendamentos oculto"><div class="spinner"></div></div>
+      </section>
+
+      <!-- CONFIGURAÇÕES -->
+      <section class="admin-secao oculto" id="secao-configuracoes">
+        <h1 class="titulo-pagina">Configurações</h1>
+        <div class="linha-ornamento">✝</div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">🖼️</span> Logo da igreja</div>
+          <div class="admin-preview"><img id="previewLogo" src="assets/logo.png" alt="Logo atual" /></div>
+          <div class="campo">
+            <label for="uploadLogo">Enviar novo arquivo (PNG recomendado)</label>
+            <input type="file" id="uploadLogo" accept="image/*" />
+          </div>
+          <div class="campo">
+            <label for="urlLogo">— ou cole o link de uma imagem já hospedada</label>
+            <input type="text" id="urlLogo" placeholder="https://..." />
+          </div>
+          <button type="button" class="btn btn-dourado" id="btnSalvarLogo">Salvar logo</button>
+        </div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">📷</span> Foto de fundo do site</div>
+          <div class="admin-preview admin-preview--fundo"><img id="previewFundo" src="assets/fundo-altar.jpg" alt="Fundo atual" /></div>
+          <div class="campo">
+            <label for="uploadFundo">Enviar novo arquivo (JPG recomendado)</label>
+            <input type="file" id="uploadFundo" accept="image/*" />
+          </div>
+          <div class="campo">
+            <label for="urlFundo">— ou cole o link de uma imagem já hospedada</label>
+            <input type="text" id="urlFundo" placeholder="https://..." />
+          </div>
+          <button type="button" class="btn btn-dourado" id="btnSalvarFundo">Salvar foto de fundo</button>
+        </div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">🔒</span> Senha do painel administrativo</div>
+          <div class="campo">
+            <label for="campoNovaSenha">Nova senha</label>
+            <input type="password" id="campoNovaSenha" placeholder="Digite a nova senha" />
+          </div>
+          <button type="button" class="btn btn-vermelho" id="btnSalvarSenha">Alterar senha</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal motivo cancelamento (apenas leitura no admin) -->
+  <div class="modal-overlay" id="modalMotivo">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalMotivo" aria-label="Fechar">&times;</button>
+      <h3>Motivo do cancelamento</h3>
+      <p id="textoMotivo">—</p>
+      <div class="modal__acoes">
+        <button class="btn btn-dourado btn-full" id="btnFecharMotivo">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

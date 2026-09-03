@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Meus Agendamentos — Adoração ao Santíssimo Sacramento</title>
+<link rel="icon" href="assets/logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="pagina-clara">
+
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="menu-lateral" id="menuLateral">
+    <div class="menu-lateral__topo">
+      <img src="assets/logo.png" alt="Arautos do Evangelho" class="js-logo" />
+      <span>Arautos do<br/>Evangelho</span>
+      <button class="menu-lateral__fechar" id="btnFecharMenu" aria-label="Fechar menu">&times;</button>
+    </div>
+    <nav>
+      <a href="index.html" data-pagina="index"><span class="emoji">🏠</span> Início</a>
+      <a href="agendamento.html" data-pagina="agendamento"><span class="emoji">📅</span> Agendar horário</a>
+      <a href="meus-agendamentos.html" data-pagina="meus-agendamentos"><span class="emoji">🗓️</span> Meus agendamentos</a>
+    </nav>
+    <div class="menu-lateral__rodape">Adoração ao Santíssimo Sacramento</div>
+  </aside>
+
+  <header class="topbar">
+    <button class="topbar__btn topbar__menu" id="btnMenu" aria-label="Abrir menu">
+      <span class="icone-hamburguer"><span></span><span></span><span></span></span>
+    </button>
+    <img src="assets/logo.png" alt="Arautos do Evangelho" class="topbar__logo js-logo" />
+    <button class="topbar__btn topbar__perfil" id="btnPerfil" aria-label="Meu perfil">
+      <svg class="icone-perfil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="dropdown-perfil" id="dropdownPerfil">
+    <div class="dropdown-perfil__avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6"/>
+      </svg>
+    </div>
+    <div class="dropdown-perfil__nome" id="perfilNome">—</div>
+    <div class="dropdown-perfil__tel" id="perfilTelefone">—</div>
+    <hr/>
+    <a href="meus-agendamentos.html">🗓️ Meus agendamentos</a>
+    <button id="btnSair">🚪 Sair</button>
+  </div>
+
+  <main class="conteudo">
+    <h1 class="titulo-pagina">Meus Agendamentos</h1>
+    <div class="linha-ornamento">✝</div>
+
+    <div id="listaContainer" class="lista-agendamentos">
+      <div class="spinner"></div>
+    </div>
+
+    <a href="agendamento.html" class="btn btn-dourado" style="margin-top:22px;">+ Novo agendamento</a>
+
+    <p class="rodape-simples">Arautos do Evangelho — Adoração Eucarística</p>
+  </main>
+
+  <!-- Modal de cancelamento -->
+  <div class="modal-overlay" id="modalCancelar">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalCancelar" aria-label="Fechar">&times;</button>
+      <div class="modal__icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+      </div>
+      <h3>Cancelar agendamento</h3>
+      <p>Seu horário era <strong id="cancelarInfo">—</strong>. Poderia nos contar o motivo do cancelamento?</p>
+      <div class="campo" style="text-align:left;">
+        <label for="motivoCancelamento">Motivo (opcional)</label>
+        <textarea id="motivoCancelamento" rows="3" placeholder="Ex: Não vou poder mais nesse horário"></textarea>
+      </div>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno" id="btnVoltarModal">Voltar</button>
+        <button class="btn btn-vermelho" id="btnConfirmarCancelamento">Cancelar horário</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/meus-agendamentos.js"></script>
+</body>
+</html>
