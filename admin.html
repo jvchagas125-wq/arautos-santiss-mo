@@ -70,6 +70,7 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
+  html{overflow-x:hidden;}
   body{
     background:
       linear-gradient(180deg, rgba(20,8,7,.6) 0%, rgba(20,8,7,.78) 100%),
@@ -78,6 +79,7 @@
     font-family:'Lora',ui-serif,Georgia,serif;
     -webkit-font-smoothing:antialiased;
     min-height:100vh;
+    min-height:100dvh;
   }
   h1,h2,h3,.font-display{font-family:'Cinzel',ui-serif,serif;letter-spacing:.02em;text-wrap:balance;}
   .font-ui{font-family:'Inter',ui-sans-serif,system-ui,sans-serif;}
@@ -153,7 +155,7 @@
   label.field input, label.field select{
     display:block;width:100%;margin-top:.35rem;
     padding:.65rem .75rem;border-radius:9px;border:1.5px solid var(--line);
-    background:var(--bg);color:var(--ink);font-size:.98rem;font-family:'Inter',sans-serif;
+    background:var(--bg);color:var(--ink);font-size:1rem;font-family:'Inter',sans-serif;
   }
   label.field input:focus, label.field select:focus{border-color:var(--focus);}
   .field-error{color:var(--danger);font-size:.76rem;margin-top:.3rem;display:none;}
@@ -207,6 +209,18 @@
     *{transition:none !important;animation:none !important;}
   }
   [hidden]{display:none !important;}
+
+  /* ---------------- mobile tuning ---------------- */
+  @media (max-width:480px){
+    .hours-grid{grid-template-columns:repeat(4,1fr);gap:.35rem;}
+    .booking-row{flex-wrap:wrap;}
+    .booking-row .time{min-width:auto;}
+    .row-actions{flex-wrap:wrap;}
+  }
+  @media (max-width:360px){
+    .hours-grid{grid-template-columns:repeat(3,1fr);}
+    .hero h1{font-size:1.5rem;}
+  }
 </style>
 </head>
 <body>
