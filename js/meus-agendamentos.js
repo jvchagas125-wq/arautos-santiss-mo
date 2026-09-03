@@ -21,9 +21,7 @@ function renderizarLista(agendamentos) {
   if (agendamentos.length === 0) {
     listaContainer.innerHTML = `
       <div class="card-vazio">
-        <svg class="selo-decorativo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1" style="margin:0 auto 14px;">
-          <circle cx="12" cy="12" r="9.2"/><path d="M12 5.5 L12 18.5 M8 9 L16 9" stroke-width="1.3"/>
-        </svg>
+        <img class="selo-decorativo" src="assets/selo-adoracao.png" alt="" style="margin:0 auto 14px;" />
         <p>Você ainda não tem nenhum agendamento.<br/>Que tal reservar um tempo com Nosso Senhor?</p>
       </div>`;
     return;
