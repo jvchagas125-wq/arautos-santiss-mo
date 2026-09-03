@@ -49,6 +49,7 @@
         <a href="#frase" data-secao="frase" class="ativa"><span class="emoji">💬</span> Frase do dia</a>
         <a href="#horarios" data-secao="horarios"><span class="emoji">🗓️</span> Dias e horários</a>
         <a href="#acompanhamento" data-secao="acompanhamento"><span class="emoji">📋</span> Acompanhamento</a>
+        <a href="#contatos" data-secao="contatos"><span class="emoji">📇</span> Contatos</a>
         <a href="#configuracoes" data-secao="configuracoes"><span class="emoji">⚙️</span> Configurações</a>
       </nav>
       <div class="menu-lateral__rodape">
@@ -149,6 +150,19 @@
         </div>
         <div id="listaAgendados" class="lista-agendamentos"><div class="spinner"></div></div>
         <div id="listaCancelados" class="lista-agendamentos oculto"><div class="spinner"></div></div>
+      </section>
+
+      <!-- CONTATOS -->
+      <section class="admin-secao oculto" id="secao-contatos">
+        <h1 class="titulo-pagina">Contatos</h1>
+        <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">📇</span> Pessoas cadastradas <span id="contagemContatos" class="contagem-contatos"></span></div>
+          <div class="campo" style="margin-bottom:6px;">
+            <input type="text" id="buscaContatos" placeholder="Buscar por nome ou telefone..." autocomplete="off" />
+          </div>
+        </div>
+        <div id="listaContatos" class="lista-agendamentos"><div class="spinner"></div></div>
       </section>
 
       <!-- CONFIGURAÇÕES -->

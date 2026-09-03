@@ -88,6 +88,27 @@
 .card-agendamento__pessoa{ font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); margin-bottom:2px; }
 .card-agendamento__tel{ color: var(--texto-suave); font-size:.88rem; margin-bottom:8px; }
 
+/* ---------- contatos ---------- */
+.contagem-contatos{
+  font-family:'JetBrains Mono','Cinzel'; font-size:.7rem; font-weight:400; color: var(--texto-suave);
+  background: rgba(122,12,30,.07); border-radius:999px; padding:2px 9px; margin-left:2px;
+}
+.card-contato{
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  background: var(--branco); border:1px solid rgba(157,122,31,.28); border-left:5px solid var(--dourado);
+  border-radius:14px; padding:14px 18px; box-shadow: 0 8px 20px rgba(74,7,17,.08);
+  animation: subir .4s ease both; transition: transform .25s ease, box-shadow .25s ease;
+}
+.card-contato:hover{ transform: translateY(-2px); box-shadow: 0 14px 28px rgba(74,7,17,.14); }
+.card-contato__nome{ font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); margin-bottom:3px; }
+.card-contato__tel{ color: var(--texto-suave); font-size:.92rem; }
+.card-contato__whats{
+  flex-shrink:0; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background: rgba(61,107,69,.1); color:#3d6b45; transition: background .2s ease, transform .2s ease;
+}
+.card-contato__whats:hover{ background: rgba(61,107,69,.2); transform: scale(1.06); }
+.card-contato__whats svg{ width:19px; height:19px; }
+
 /* ---------- configurações / preview de imagens ---------- */
 .admin-preview{
   width: 100%; max-width: 220px; margin: 0 auto 16px; padding: 14px;

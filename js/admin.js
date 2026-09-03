@@ -4,7 +4,7 @@ import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterDiasHorarios, salvarDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
-  ouvirTodosAgendamentos
+  ouvirTodosAgendamentos, ouvirTodosUsuarios
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
 
@@ -70,6 +70,7 @@ function iniciarPainel() {
   configurarFrase();
   configurarHorarios();
   configurarAcompanhamento();
+  configurarContatos();
   configurarConfiguracoes();
 }
 
@@ -257,6 +258,56 @@ function escaparHtml(texto) {
   const div = document.createElement("div");
   div.textContent = texto || "";
   return div.innerHTML;
+}
+
+/* ---------------- Contatos (pessoas cadastradas) ---------------- */
+function configurarContatos() {
+  const campoBusca = document.getElementById("buscaContatos");
+  const lista = document.getElementById("listaContatos");
+  const contagemEl = document.getElementById("contagemContatos");
+  let todosContatos = [];
+
+  function normalizar(texto) {
+    return (texto || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+
+  function cardContato(c) {
+    const numeroWhats = "55" + (c.telefoneDigits || "");
+    return `
+      <div class="card-contato">
+        <div>
+          <div class="card-contato__nome">${escaparHtml(c.nome)}</div>
+          <div class="card-contato__tel">${escaparHtml(c.telefone)}</div>
+        </div>
+        <a class="card-contato__whats" href="https://wa.me/${numeroWhats}" target="_blank" rel="noopener" title="Chamar no WhatsApp">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>
+        </a>
+      </div>`;
+  }
+
+  function renderizar() {
+    const filtro = normalizar(campoBusca.value);
+    const filtrados = !filtro
+      ? todosContatos
+      : todosContatos.filter((c) => normalizar(c.nome).includes(filtro) || normalizar(c.telefone).includes(filtro));
+
+    contagemEl.textContent = `(${filtrados.length})`;
+
+    if (filtrados.length === 0) {
+      lista.innerHTML = todosContatos.length === 0
+        ? '<p class="mensagem-vazia">Ninguém se cadastrou no site ainda.</p>'
+        : '<p class="mensagem-vazia">Nenhum contato encontrado para essa busca.</p>';
+      return;
+    }
+    lista.innerHTML = filtrados.map(cardContato).join("");
+  }
+
+  campoBusca.addEventListener("input", renderizar);
+
+  ouvirTodosUsuarios((lista_) => {
+    todosContatos = lista_;
+    renderizar();
+  });
 }
 
 /* ---------------- Configurações (logo, fundo, senha) ---------------- */

@@ -87,6 +87,15 @@ export async function cadastrarOuAtualizarUsuario(telefoneDigits, nome, telefone
   }, { merge: true });
 }
 
+// Lista (em tempo real) todas as pessoas cadastradas, para o painel admin
+export function ouvirTodosUsuarios(callback) {
+  return onSnapshot(collection(db, "usuarios"), (snap) => {
+    const lista = snap.docs.map((d) => d.data());
+    lista.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+    callback(lista);
+  });
+}
+
 /* ---------------- Agendamentos ---------------- */
 
 function chaveSlot(data, hora) {
