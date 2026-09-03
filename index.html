@@ -69,6 +69,7 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
+  html{min-height:100%;}
   body{
     background:
       linear-gradient(180deg, rgba(20,8,7,.6) 0%, rgba(20,8,7,.78) 100%),
@@ -78,6 +79,9 @@
     -webkit-font-smoothing:antialiased;
     min-height:100vh;
   }
+  #app{display:flex;flex-direction:column;min-height:100vh;}
+  .hero{flex:0 0 auto;}
+  .site-footer{flex:0 0 auto;}
   h1,h2,h3,.font-display{font-family:'Cinzel',ui-serif,serif;letter-spacing:.02em;text-wrap:balance;}
   .font-ui{font-family:'Inter',ui-sans-serif,system-ui,sans-serif;}
   button,input{font-family:inherit;}
@@ -127,6 +131,7 @@
   }
 
   .wrap{
+    flex:1 0 auto;width:100%;
     max-width:760px;margin:2.2rem auto;padding:1.8rem 1.5rem 2.4rem;
     background:var(--surface);
     border-radius:22px;
@@ -329,7 +334,25 @@
 (function(){
   "use strict";
 
-  var STATE = { config: null, counts: {}, names: {}, loaded: false, loadError: false };
+  // Sensible defaults so the page renders instantly, without waiting for /api/state.
+  // They mirror lib/firebase.js's getConfig() defaults; loadState() replaces them
+  // silently once the real data arrives (no visible "loading" step for the visitor).
+  function defaultConfig(){
+    var today = new Date();
+    var end = new Date(today); end.setDate(end.getDate() + 7);
+    return {
+      churchName: 'Adoração ao Santíssimo Sacramento',
+      subtitle: 'Reserve um horário para adorar Jesus Sacramentado',
+      contactPhone: '',
+      startDate: toKeyLocal(today),
+      endDate: toKeyLocal(end),
+      activeHours: Array.from({ length: 24 }, function(_, h){ return h; }),
+      capacity: 1
+    };
+  }
+  function toKeyLocal(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+
+  var STATE = { config: defaultConfig(), counts: {}, names: {}, loaded: true, loadError: false };
   var ui = { selectedDay: null, modalSlot: null, busy: false };
 
   // ---------------- date helpers ----------------
@@ -367,12 +390,14 @@
       return r.json().then(function(data){ return { status: r.status, data: data }; });
     });
   }
+  // Fetches the real config/counts in the background and quietly re-renders once
+  // it arrives. The page already shows sensible defaults, so there is no loading
+  // screen — on failure we just keep showing what's already on screen.
   function loadState(){
     return fetch('/api/state').then(function(r){
       return r.json().catch(function(){ return null; }).then(function(data){ return { ok: r.ok, status: r.status, data: data }; });
     }).then(function(res){
       if (!res.ok || !res.data || !res.data.config){
-        STATE.loadError = true;
         console.error('Falha ao carregar /api/state (status ' + res.status + ')', res.data);
         return;
       }
@@ -380,11 +405,10 @@
       STATE.counts = res.data.counts || {};
       STATE.names = res.data.names || {};
       STATE.loaded = true;
-      STATE.loadError = false;
+      render();
     }).catch(function(err){
-      STATE.loadError = true;
       console.error('Erro de rede ao carregar /api/state', err);
-    }).then(render);
+    });
   }
 
   // ---------------- toast ----------------
@@ -483,12 +507,6 @@
 
   function render(){
     var app = document.getElementById('app');
-    if (!STATE.loaded){
-      app.innerHTML = STATE.loadError
-        ? '<p class="empty-state">Não foi possível carregar a página. Verifique sua conexão e recarregue.</p>'
-        : '<p class="empty-state">Carregando...</p>';
-      return;
-    }
     var days = listDays();
     var todayD = now();
     if (!ui.selectedDay || !days.some(function(d){ return toKey(d)===ui.selectedDay; })){
