@@ -4,7 +4,7 @@ import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterDiasHorarios, salvarDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
-  ouvirTodosAgendamentos, ouvirTodosUsuarios
+  ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
 
@@ -265,7 +265,13 @@ function configurarContatos() {
   const campoBusca = document.getElementById("buscaContatos");
   const lista = document.getElementById("listaContatos");
   const contagemEl = document.getElementById("contagemContatos");
+  const modalRemover = document.getElementById("modalRemoverContato");
+  const nomeRemoverEl = document.getElementById("nomeRemoverContato");
+  const btnCancelarRemover = document.getElementById("btnCancelarRemoverContato");
+  const btnConfirmarRemover = document.getElementById("btnConfirmarRemoverContato");
+  const fecharModalRemover = document.getElementById("fecharModalRemoverContato");
   let todosContatos = [];
+  let telefoneParaRemover = null;
 
   function normalizar(texto) {
     return (texto || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -279,9 +285,14 @@ function configurarContatos() {
           <div class="card-contato__nome">${escaparHtml(c.nome)}</div>
           <div class="card-contato__tel">${escaparHtml(c.telefone)}</div>
         </div>
-        <a class="card-contato__whats" href="https://wa.me/${numeroWhats}" target="_blank" rel="noopener" title="Chamar no WhatsApp">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>
-        </a>
+        <div class="card-contato__acoes">
+          <a class="card-contato__whats" href="https://wa.me/${numeroWhats}" target="_blank" rel="noopener" title="Chamar no WhatsApp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>
+          </a>
+          <button type="button" class="card-contato__excluir" data-tel="${escaparHtml(c.telefoneDigits)}" data-nome="${escaparHtml(c.nome)}" title="Remover cadastro">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>
+          </button>
+        </div>
       </div>`;
   }
 
@@ -300,7 +311,40 @@ function configurarContatos() {
       return;
     }
     lista.innerHTML = filtrados.map(cardContato).join("");
+
+    lista.querySelectorAll(".card-contato__excluir").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        telefoneParaRemover = btn.dataset.tel;
+        nomeRemoverEl.textContent = btn.dataset.nome || "esta pessoa";
+        abrirModal(modalRemover);
+      });
+    });
   }
+
+  function fecharRemocao() {
+    fecharModal(modalRemover);
+    telefoneParaRemover = null;
+  }
+  btnCancelarRemover.addEventListener("click", fecharRemocao);
+  fecharModalRemover.addEventListener("click", fecharRemocao);
+
+  btnConfirmarRemover.addEventListener("click", async () => {
+    if (!telefoneParaRemover) return;
+    btnConfirmarRemover.disabled = true;
+    btnConfirmarRemover.textContent = "Removendo...";
+    try {
+      await excluirUsuario(telefoneParaRemover);
+      mostrarToast("Cadastro removido com sucesso.");
+      fecharModal(modalRemover);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível remover o cadastro. Tente novamente.");
+    } finally {
+      telefoneParaRemover = null;
+      btnConfirmarRemover.disabled = false;
+      btnConfirmarRemover.textContent = "Remover cadastro";
+    }
+  });
 
   campoBusca.addEventListener("input", renderizar);
 

@@ -3,7 +3,7 @@
 import { cadastrarOuAtualizarUsuario, obterUsuario } from "./dados.js";
 import {
   capitalizarNome, vincularMascaraTelefone, telefoneValido, telefoneParaDigits,
-  obterUsuarioSessao, salvarUsuarioSessao, abrirModal, fecharModal, mostrarToast
+  obterUsuarioSessao, salvarUsuarioSessao, limparUsuarioSessao, abrirModal, fecharModal, mostrarToast
 } from "./utils.js";
 
 const CHAVE_ULTIMO_TELEFONE = "arautos_ultimo_telefone";
@@ -34,11 +34,23 @@ const MODAL_HTML = `
 </div>`;
 
 export function exigirCadastro() {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const usuarioExistente = obterUsuarioSessao();
     if (usuarioExistente && usuarioExistente.nome && usuarioExistente.telefone) {
-      resolve(usuarioExistente);
-      return;
+      // confirma no banco que o cadastro ainda existe (o padre pode ter removido pelo painel admin)
+      try {
+        const aindaCadastrado = await obterUsuario(usuarioExistente.telefoneDigits);
+        if (aindaCadastrado && aindaCadastrado.nome) {
+          resolve(usuarioExistente);
+          return;
+        }
+        limparUsuarioSessao();
+      } catch (err) {
+        // sem conexão no momento: não bloqueia quem já estava logado neste aparelho
+        console.error(err);
+        resolve(usuarioExistente);
+        return;
+      }
     }
 
     document.body.insertAdjacentHTML("beforeend", MODAL_HTML);

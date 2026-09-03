@@ -96,6 +96,12 @@ export function ouvirTodosUsuarios(callback) {
   });
 }
 
+// Remove o cadastro de uma pessoa (usado pelo painel admin em "Contatos").
+// Depois disso, a pessoa precisa se cadastrar novamente (nome + telefone) para usar o site.
+export async function excluirUsuario(telefoneDigits) {
+  await deleteDoc(doc(db, "usuarios", telefoneDigits));
+}
+
 /* ---------------- Agendamentos ---------------- */
 
 function chaveSlot(data, hora) {

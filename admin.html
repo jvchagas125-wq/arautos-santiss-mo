@@ -217,6 +217,19 @@
     </main>
   </div>
 
+  <!-- Modal confirmação de remoção de contato -->
+  <div class="modal-overlay" id="modalRemoverContato">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalRemoverContato" aria-label="Fechar">&times;</button>
+      <h3>Remover cadastro</h3>
+      <p>Deseja mesmo remover o cadastro de <strong id="nomeRemoverContato">—</strong>? Ela precisará se cadastrar novamente (nome e telefone) para usar o site.</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnCancelarRemoverContato">Cancelar</button>
+        <button class="btn btn-vermelho btn-full" id="btnConfirmarRemoverContato">Remover cadastro</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal motivo cancelamento (apenas leitura no admin) -->
   <div class="modal-overlay" id="modalMotivo">
     <div class="modal">
