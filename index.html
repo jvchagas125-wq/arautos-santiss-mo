@@ -221,30 +221,26 @@
   .site-footer{
     margin-top:1rem;
     position:relative;
-    padding:3rem 1.5rem 2.2rem;
+    padding:1.6rem 1.5rem 1.4rem;
     background:linear-gradient(160deg, var(--red-deep) 0%, #240201 100%);
     border-top:3px solid var(--gold);
     text-align:center;
     font-family:'Inter',sans-serif;
   }
-  .footer-inner{max-width:720px;margin:0 auto;}
-  .footer-badge{
-    display:inline-flex;align-items:center;justify-content:center;
-    background:#fffaf6;
-    padding:.7rem 1.2rem;
-    border-radius:14px;
-    box-shadow:0 10px 24px -12px rgba(0,0,0,.5);
-    margin-bottom:1.3rem;
+  .footer-inner{max-width:760px;margin:0 auto;}
+  .footer-row{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+    gap:.9rem 1.1rem;
+    margin-bottom:.6rem;
   }
-  .footer-badge .footer-logo{height:46px;width:auto;display:block;}
-  .footer-divider{
-    width:56px;height:2px;margin:0 auto 1.2rem;
-    background:var(--gold);opacity:.6;border-radius:1px;
+  .footer-logo{
+    height:34px;width:auto;flex-shrink:0;
+    filter:drop-shadow(0 2px 5px rgba(0,0,0,.6));
   }
   .footer-contact{
     display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
     gap:.6rem 1.3rem;
-    margin-bottom:1.4rem;
+    margin:0;
   }
   .footer-line{
     margin:0;font-size:.85rem;color:#f1e3d9;white-space:nowrap;
@@ -259,10 +255,10 @@
     .footer-sep{display:none;}
   }
   .footer-caption{
-    margin:0;padding-top:1.2rem;
+    margin:0;padding-top:.7rem;
     border-top:1px solid rgba(255,255,255,.14);
     font-family:'Cinzel',ui-serif,serif;
-    font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;
+    font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
     color:rgba(241,227,217,.65);
   }
   .admin-trigger{
@@ -524,12 +520,13 @@
     html += '</main>';
 
     html += '<footer class="site-footer"><div class="footer-inner">' +
-      '<div class="footer-badge"><img class="footer-logo" src="assets/logo-arautos.png" alt="Arautos do Evangelho"></div>' +
-      '<div class="footer-divider"></div>' +
-      '<div class="footer-contact">' +
-        '<p class="footer-line"><svg class="footer-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Rua Pedro Maciel Netto 242, Pq. Imperial, Campos dos Goytacazes - RJ</p>' +
-        '<span class="footer-sep" aria-hidden="true">•</span>' +
-        '<p class="footer-line"><svg class="footer-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z"/></svg><a href="tel:+552227356577">(22) 2735-6577</a></p>' +
+      '<div class="footer-row">' +
+        '<img class="footer-logo" src="assets/logo-arautos.png" alt="Arautos do Evangelho">' +
+        '<div class="footer-contact">' +
+          '<p class="footer-line"><svg class="footer-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Rua Pedro Maciel Netto 242, Pq. Imperial, Campos dos Goytacazes - RJ</p>' +
+          '<span class="footer-sep" aria-hidden="true">•</span>' +
+          '<p class="footer-line"><svg class="footer-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.46.57 3.58a1 1 0 0 1-.25 1.01l-2.2 2.2z"/></svg><a href="tel:+552227356577">(22) 2735-6577</a></p>' +
+        '</div>' +
       '</div>' +
       '<p class="footer-caption">' + escapeHtml(STATE.config.churchName) + '</p>' +
     '</div></footer>';
