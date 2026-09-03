@@ -13,12 +13,12 @@
    ========================================================= */
 
 export const firebaseConfig = {
-  apiKey: "COLE_AQUI_SUA_API_KEY",
-  authDomain: "COLE_AQUI.firebaseapp.com",
-  projectId: "COLE_AQUI_O_PROJECT_ID",
-  storageBucket: "COLE_AQUI.appspot.com",
-  messagingSenderId: "COLE_AQUI",
-  appId: "COLE_AQUI_O_APP_ID"
+  apiKey: "AIzaSyD9iWPLJcLQhteOfzcB2Metp1CfoETF2QY",
+  authDomain: "arautos-santissimo.firebaseapp.com",
+  projectId: "arautos-santissimo",
+  storageBucket: "arautos-santissimo.firebasestorage.app",
+  messagingSenderId: "879082779467",
+  appId: "1:879082779467:web:f42656ebdffe3733ce2ece"
 };
 
 /* Senha inicial do painel administrativo (do Padre).
