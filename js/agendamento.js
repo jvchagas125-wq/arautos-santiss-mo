@@ -11,7 +11,7 @@ let mesAtual = null; // Date (dia 1 do mês visível)
 let dataSelecionada = null; // string iso
 let horaSelecionada = null; // number
 let pararEscutaHorarios = null;
-let horariosOcupados = [];
+let horariosOcupados = []; // [{ hora, nome, telefone, telefoneDigits }]
 
 const dataInput = document.getElementById("dataInput");
 const calendario = document.getElementById("calendario");
@@ -128,6 +128,10 @@ function selecionarData(iso) {
   });
 }
 
+function textoHora(hora) {
+  return `${String(hora).padStart(2,"0")}:00 - ${String((hora+1)%24).padStart(2,"0")}:00`;
+}
+
 function renderizarHorarios() {
   const horariosAtivos = [...(diasHorarios.horariosAtivos || [])].sort((a, b) => a - b);
   gradeHorarios.innerHTML = "";
@@ -139,22 +143,46 @@ function renderizarHorarios() {
   semHorarios.classList.add("oculto");
 
   horariosAtivos.forEach((hora) => {
-    const ocupado = horariosOcupados.includes(hora);
+    const ocupacao = horariosOcupados.find((o) => o.hora === hora);
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "horario-btn";
-    btn.textContent = `${String(hora).padStart(2,"0")}:00 - ${String((hora+1)%24).padStart(2,"0")}:00`;
-    btn.disabled = ocupado;
-    if (hora === horaSelecionada) btn.classList.add("selecionado");
-    btn.addEventListener("click", () => {
-      horaSelecionada = hora;
-      btnConfirmarAgendamento.disabled = false;
-      document.querySelectorAll(".horario-btn").forEach((b) => b.classList.remove("selecionado"));
-      btn.classList.add("selecionado");
-    });
+
+    if (ocupacao) {
+      btn.className = "horario-btn ocupado";
+      btn.innerHTML = `<span class="horario-btn__hora">${textoHora(hora)}</span><span class="horario-btn__reservado">Reservado · Ver detalhes</span>`;
+      btn.addEventListener("click", () => abrirModalDetalhesOcupado(hora, ocupacao));
+    } else {
+      btn.className = "horario-btn";
+      btn.textContent = textoHora(hora);
+      if (hora === horaSelecionada) btn.classList.add("selecionado");
+      btn.addEventListener("click", () => {
+        horaSelecionada = hora;
+        btnConfirmarAgendamento.disabled = false;
+        document.querySelectorAll(".horario-btn").forEach((b) => b.classList.remove("selecionado"));
+        btn.classList.add("selecionado");
+      });
+    }
     gradeHorarios.appendChild(btn);
   });
 }
+
+const modalDetalhesOcupado = document.getElementById("modalDetalhesOcupado");
+const detalhesOcupadoHora = document.getElementById("detalhesOcupadoHora");
+const detalhesOcupadoNome = document.getElementById("detalhesOcupadoNome");
+const detalhesOcupadoTelefone = document.getElementById("detalhesOcupadoTelefone");
+const btnWhatsappOcupado = document.getElementById("btnWhatsappOcupado");
+
+function abrirModalDetalhesOcupado(hora, ocupacao) {
+  detalhesOcupadoHora.textContent = `${formatarDataBR(dataSelecionada)} — ${textoHora(hora)}`;
+  detalhesOcupadoNome.textContent = ocupacao.nome || "—";
+  detalhesOcupadoTelefone.textContent = ocupacao.telefone || "—";
+  const numeroWhats = "55" + (ocupacao.telefoneDigits || "");
+  btnWhatsappOcupado.href = `https://wa.me/${numeroWhats}`;
+  abrirModal(modalDetalhesOcupado);
+}
+
+document.getElementById("fecharModalDetalhesOcupado").addEventListener("click", () => fecharModal(modalDetalhesOcupado));
+document.getElementById("btnFecharDetalhesOcupado").addEventListener("click", () => fecharModal(modalDetalhesOcupado));
 
 btnConfirmarAgendamento.addEventListener("click", () => {
   if (!dataSelecionada || horaSelecionada === null) return;

@@ -103,6 +103,24 @@
     </div>
   </div>
 
+  <!-- Modal de detalhes de horário já reservado -->
+  <div class="modal-overlay" id="modalDetalhesOcupado">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalDetalhesOcupado" aria-label="Fechar">&times;</button>
+      <div class="modal__icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6"/></svg>
+      </div>
+      <h3>Horário já reservado</h3>
+      <p><strong id="detalhesOcupadoHora">—</strong> já foi agendado por:</p>
+      <p style="font-family:'Cinzel'; font-weight:600; color:var(--vermelho-escuro); font-size:1.05rem; margin-bottom:2px;" id="detalhesOcupadoNome">—</p>
+      <p style="color:var(--texto-suave); margin-bottom:0;" id="detalhesOcupadoTelefone">—</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnFecharDetalhesOcupado">Fechar</button>
+        <a class="btn btn-dourado btn-full" id="btnWhatsappOcupado" href="#" target="_blank" rel="noopener">Chamar no WhatsApp</a>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="js/agendamento.js"></script>
 </body>
 </html>

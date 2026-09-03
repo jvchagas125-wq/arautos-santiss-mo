@@ -415,6 +415,12 @@ img{ max-width: 100%; display:block; }
   border-color: var(--vermelho-escuro); color:#fff; box-shadow: 0 6px 16px var(--vermelho-glow);
 }
 .horario-btn:disabled{ opacity:.4; text-decoration: line-through; cursor:not-allowed; background:#f1ece2; }
+.horario-btn.ocupado{
+  display:flex; flex-direction:column; gap:3px; opacity:.85; background:#f5efe3; cursor:pointer;
+}
+.horario-btn.ocupado:hover{ border-color: var(--vermelho); background:#f1e7dc; }
+.horario-btn__hora{ text-decoration: line-through; color: var(--texto-suave); }
+.horario-btn__reservado{ font-family:'EB Garamond', serif; font-weight:600; font-size:.72rem; color: var(--vermelho); text-decoration:none; }
 .mensagem-vazia{ text-align:center; color: var(--texto-suave); font-style:italic; padding: 18px 0; }
 
 /* ============ ABAS (agendados / cancelados) ============ */

@@ -119,6 +119,8 @@ export async function obterHorariosOcupados(data) {
   return snap.docs.map((d) => d.data().hora);
 }
 
+// Retorna os agendamentos já feitos numa data, com nome/telefone de quem agendou
+// (usado para mostrar "Ver detalhes" em horários ocupados na tela de agendamento)
 export function ouvirAgendamentosDaData(data, callback) {
   const q = query(
     collection(db, "agendamentos"),
@@ -126,7 +128,10 @@ export function ouvirAgendamentosDaData(data, callback) {
     where("status", "==", "agendado")
   );
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => d.data().hora));
+    callback(snap.docs.map((d) => {
+      const dados = d.data();
+      return { hora: dados.hora, nome: dados.nome, telefone: dados.telefone, telefoneDigits: dados.telefoneDigits };
+    }));
   });
 }
 
