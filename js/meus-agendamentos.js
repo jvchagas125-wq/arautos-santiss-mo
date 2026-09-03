@@ -1,7 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarHora } from "./utils.js";
-import { obterConfiguracoesGerais, ouvirAgendamentosDoUsuario, cancelarAgendamento, limparAgendamentosCancelados } from "./dados.js";
+import { obterConfiguracoesGerais, ouvirAgendamentosDoUsuario, cancelarAgendamento, ocultarCanceladosDoUsuario } from "./dados.js";
 
 inicializarNavegacao("meus-agendamentos");
 
@@ -34,7 +34,7 @@ function iconeAgendamento() {
 
 function renderizarLista(agendamentos) {
   const ativos = agendamentos.filter((a) => a.status === "agendado");
-  const cancelados = agendamentos.filter((a) => a.status === "cancelado");
+  const cancelados = agendamentos.filter((a) => a.status === "cancelado" && !a.ocultoParaUsuario);
   ativos.sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora));
   cancelados.sort((a, b) => (b.data + b.hora).localeCompare(a.data + a.hora));
 
@@ -122,7 +122,7 @@ document.getElementById("btnConfirmarLimparCancelados").addEventListener("click"
   btn.disabled = true;
   btn.textContent = "Limpando...";
   try {
-    await limparAgendamentosCancelados(usuarioAtual.telefoneDigits);
+    await ocultarCanceladosDoUsuario(usuarioAtual.telefoneDigits);
     mostrarToast("Histórico de cancelados limpo.");
     fecharModal(modalLimparCancelados);
   } catch (err) {

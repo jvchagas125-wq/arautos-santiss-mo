@@ -175,14 +175,24 @@ export function ouvirAgendamentosDoUsuario(telefoneDigits, callback) {
   });
 }
 
-// Remove permanentemente os agendamentos cancelados.
-// Sem telefoneDigits: limpa todos (uso do painel admin). Com telefoneDigits: limpa só os da pessoa.
-export async function limparAgendamentosCancelados(telefoneDigits) {
-  const clausulas = [where("status", "==", "cancelado")];
-  if (telefoneDigits) clausulas.push(where("telefoneDigits", "==", telefoneDigits));
-  const q = query(collection(db, "agendamentos"), ...clausulas);
+// Usado pelo painel admin: apaga de verdade os agendamentos cancelados (limpeza geral, de todo mundo).
+export async function limparAgendamentosCancelados() {
+  const q = query(collection(db, "agendamentos"), where("status", "==", "cancelado"));
   const snap = await getDocs(q);
   await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, "agendamentos", d.id))));
+  return snap.docs.length;
+}
+
+// Usado pela própria pessoa em "Meus Agendamentos": NÃO apaga do banco, só marca como
+// oculto para ela — o padre continua vendo esses cancelamentos no painel admin normalmente.
+export async function ocultarCanceladosDoUsuario(telefoneDigits) {
+  const q = query(
+    collection(db, "agendamentos"),
+    where("status", "==", "cancelado"),
+    where("telefoneDigits", "==", telefoneDigits)
+  );
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map((d) => updateDoc(doc(db, "agendamentos", d.id), { ocultoParaUsuario: true })));
   return snap.docs.length;
 }
 
