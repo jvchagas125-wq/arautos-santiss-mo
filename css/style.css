@@ -237,6 +237,10 @@ img{ max-width: 100%; display:block; }
   content:""; height:1px; width:46px;
   background: linear-gradient(90deg, transparent, var(--dourado-claro));
 }
+.linha-ornamento img{
+  height: 24px; width: auto; display:block;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.25));
+}
 .linha-ornamento::after{ background: linear-gradient(90deg, var(--dourado-claro), transparent); }
 
 .card-frase{
