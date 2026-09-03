@@ -73,12 +73,17 @@
   body{
     background:
       linear-gradient(180deg, rgba(20,8,7,.6) 0%, rgba(20,8,7,.78) 100%),
-      url('assets/site-bg.jpg') center/cover no-repeat fixed;
+      url('assets/site-bg.jpg') center/cover no-repeat scroll;
     color:var(--ink);
     font-family:'Lora',ui-serif,Georgia,serif;
     -webkit-font-smoothing:antialiased;
     min-height:100vh;
     min-height:100dvh;
+  }
+  /* background-attachment:fixed is a known source of scroll jank on phones —
+     keep the parallax-style fixed backdrop on desktop only. */
+  @media (min-width:769px){
+    body{background-attachment:fixed;}
   }
   #app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;}
   .hero{flex:0 0 auto;}
@@ -134,13 +139,10 @@
   .wrap{
     flex:1 0 auto;width:100%;
     max-width:760px;margin:2.2rem auto;padding:1.8rem 1.5rem 2.4rem;
-    background:var(--surface);
-    border-radius:22px;
-    box-shadow:0 30px 70px -30px rgba(0,0,0,.6);
     position:relative;
   }
   @media (max-width:600px){
-    .wrap{margin:1.4rem .8rem;border-radius:18px;padding:1.4rem 1rem 2rem;}
+    .wrap{margin:1.4rem .8rem;padding:1.4rem 1rem 2rem;}
   }
 
   .legend{
@@ -149,13 +151,14 @@
     margin:0 0 1.6rem;
     font-family:'Inter',sans-serif;
     font-size:.78rem;
-    color:var(--ink-soft);
+    color:#f1e3d9;
+    text-shadow:0 1px 3px rgba(0,0,0,.45);
   }
   .legend span{display:inline-flex;align-items:center;gap:.4rem;}
   .legend i{width:.7rem;height:.7rem;border-radius:3px;display:inline-block;}
   .legend i.avail{background:var(--surface);border:1.5px solid var(--red-bright);}
   .legend i.full{background:var(--full-bg);border:1.5px solid var(--full-bg);}
-  .legend i.closed{background:transparent;border:1.5px dashed var(--line);}
+  .legend i.closed{background:rgba(255,255,255,.1);border:1.5px dashed rgba(255,255,255,.5);}
 
   .day-strip{
     display:flex;gap:.55rem;overflow-x:auto;padding:.3rem .1rem 1rem;
@@ -191,7 +194,8 @@
     font-size:.78rem;
     text-transform:uppercase;
     letter-spacing:.1em;
-    color:var(--ink-soft);
+    color:#f1e3d9;
+    text-shadow:0 1px 3px rgba(0,0,0,.45);
     margin:0 0 .8rem;
   }
 
@@ -224,7 +228,8 @@
   }
   .slot.closed{opacity:.45;border-style:dashed;cursor:not-allowed;}
   .empty-state{
-    text-align:center;color:var(--ink-soft);font-style:italic;padding:2rem 1rem;
+    text-align:center;color:#f1e3d9;font-style:italic;padding:2rem 1rem;
+    text-shadow:0 1px 3px rgba(0,0,0,.45);
   }
 
   .site-footer{
