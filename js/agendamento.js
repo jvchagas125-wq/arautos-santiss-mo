@@ -182,7 +182,6 @@ function abrirModalDetalhesOcupado(hora, ocupacao) {
 }
 
 document.getElementById("fecharModalDetalhesOcupado").addEventListener("click", () => fecharModal(modalDetalhesOcupado));
-document.getElementById("btnFecharDetalhesOcupado").addEventListener("click", () => fecharModal(modalDetalhesOcupado));
 
 btnConfirmarAgendamento.addEventListener("click", () => {
   if (!dataSelecionada || horaSelecionada === null) return;

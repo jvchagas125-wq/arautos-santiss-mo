@@ -421,6 +421,13 @@ img{ max-width: 100%; display:block; }
 .horario-btn.ocupado:hover{ border-color: var(--vermelho); background:#f1e7dc; }
 .horario-btn__hora{ text-decoration: line-through; color: var(--texto-suave); }
 .horario-btn__reservado{ font-family:'EB Garamond', serif; font-weight:600; font-size:.72rem; color: var(--vermelho); text-decoration:none; }
+
+.link-whatsapp{
+  flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background: rgba(61,107,69,.1); color:#3d6b45; transition: background .2s ease, transform .2s ease;
+}
+.link-whatsapp:hover{ background: rgba(61,107,69,.2); transform: scale(1.06); }
+.link-whatsapp svg{ width:17px; height:17px; }
 .mensagem-vazia{ text-align:center; color: var(--texto-suave); font-style:italic; padding: 18px 0; }
 
 /* ============ ABAS (agendados / cancelados) ============ */
