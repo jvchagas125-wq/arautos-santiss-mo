@@ -406,7 +406,7 @@ img{ max-width: 100%; display:block; }
 }
 .horario-btn{
   padding: 12px 8px; border-radius:10px; border: 1.5px solid rgba(157,122,31,.3);
-  background: #fffefb; font-family:'Cinzel'; font-size:.82rem; color: var(--texto);
+  background: #fffefb; font-family:'Cinzel'; font-size:.82rem; font-weight:600; color: var(--texto);
   transition: all .2s ease; animation: escala .35s ease both;
 }
 .horario-btn:hover:not(:disabled){ border-color: var(--dourado); background: rgba(205,164,52,.1); transform: translateY(-2px); }
