@@ -69,7 +69,7 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  html{min-height:100%;}
+  html{min-height:100%;overflow-x:hidden;}
   body{
     background:
       linear-gradient(180deg, rgba(20,8,7,.6) 0%, rgba(20,8,7,.78) 100%),
@@ -78,8 +78,9 @@
     font-family:'Lora',ui-serif,Georgia,serif;
     -webkit-font-smoothing:antialiased;
     min-height:100vh;
+    min-height:100dvh;
   }
-  #app{display:flex;flex-direction:column;min-height:100vh;}
+  #app{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;}
   .hero{flex:0 0 auto;}
   .site-footer{flex:0 0 auto;}
   h1,h2,h3,.font-display{font-family:'Cinzel',ui-serif,serif;letter-spacing:.02em;text-wrap:balance;}
@@ -159,9 +160,12 @@
   .day-strip{
     display:flex;gap:.55rem;overflow-x:auto;padding:.3rem .1rem 1rem;
     scrollbar-width:thin;
+    -webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;
   }
   .day-chip{
     flex:0 0 auto;
+    scroll-snap-align:start;
     font-family:'Inter',sans-serif;
     border:1.5px solid var(--line);
     background:var(--surface);
@@ -296,7 +300,7 @@
   label.field input, label.field select{
     display:block;width:100%;margin-top:.35rem;
     padding:.65rem .75rem;border-radius:9px;border:1.5px solid var(--line);
-    background:var(--bg);color:var(--ink);font-size:.98rem;font-family:'Inter',sans-serif;
+    background:var(--bg);color:var(--ink);font-size:1rem;font-family:'Inter',sans-serif;
   }
   label.field input:focus, label.field select:focus{border-color:var(--focus);}
   .field-error{color:var(--danger);font-size:.76rem;margin-top:.3rem;display:none;}
@@ -326,6 +330,25 @@
     *{transition:none !important;animation:none !important;}
   }
   [hidden]{display:none !important;}
+
+  /* ---------------- mobile tuning ---------------- */
+  @media (max-width:480px){
+    .slot-grid{grid-template-columns:repeat(3,1fr);gap:.5rem;}
+    .slot{padding:.55rem .35rem;}
+    .modal-actions{flex-direction:column-reverse;}
+    .modal-actions .btn{width:100%;}
+    .modal-card{padding:1.3rem;}
+  }
+  @media (max-width:400px){
+    .hero{padding:2.2rem 1rem 2.5rem;}
+    .hero-brand{gap:.6rem;}
+    .hero-logo{height:56px;}
+    .hero h1{font-size:1.32rem;margin-bottom:.4rem;}
+    .hero .subtitle{font-size:.85rem;}
+    .slot-grid{grid-template-columns:repeat(2,1fr);}
+    .day-chip{padding:.5rem .75rem;}
+    .day-chip span{font-size:.92rem;}
+  }
 </style>
 </head>
 <body>
