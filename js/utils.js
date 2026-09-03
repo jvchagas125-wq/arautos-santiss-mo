@@ -5,6 +5,9 @@ export const MESES = [
   "julho","agosto","setembro","outubro","novembro","dezembro"
 ];
 export const DIAS_SEMANA_ABREV = ["dom","seg","ter","qua","qui","sex","sáb"];
+export const DIAS_SEMANA_COMPLETO = [
+  "Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"
+];
 
 /* ---------- Nome: primeira letra maiúscula em cada palavra ---------- */
 const MINUSCULAS = ["de","da","do","das","dos","e"];
@@ -62,6 +65,10 @@ export function formatarDataBR(iso) {
 export function formatarDataExtenso(iso) {
   const d = isoParaData(iso);
   return `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+export function formatarDataComDiaSemana(iso) {
+  const d = isoParaData(iso);
+  return `${formatarDataBR(iso)} - ${DIAS_SEMANA_COMPLETO[d.getDay()]}`;
 }
 export function formatarHora(hora) {
   const h = String(hora).padStart(2, "0");

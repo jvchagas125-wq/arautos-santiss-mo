@@ -230,6 +230,19 @@
     </div>
   </div>
 
+  <!-- Modal confirmação de cancelamento de agendamento -->
+  <div class="modal-overlay" id="modalCancelarAgendamento">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalCancelarAgendamento" aria-label="Fechar">&times;</button>
+      <h3>Cancelar agendamento</h3>
+      <p>Deseja cancelar o agendamento de <strong id="nomeCancelarAgendamento">—</strong>? O horário será liberado para outras pessoas.</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnNaoCancelarAgendamento">Voltar</button>
+        <button class="btn btn-vermelho btn-full" id="btnConfirmarCancelarAgendamento">Cancelar agendamento</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal motivo cancelamento (apenas leitura no admin) -->
   <div class="modal-overlay" id="modalMotivo">
     <div class="modal">

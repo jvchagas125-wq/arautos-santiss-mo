@@ -1,10 +1,10 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
-  formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario } from "./utils.js";
+  formatarDataComDiaSemana, formatarHora, vincularOlhoSenha, criarCalendario } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterDiasHorarios, salvarDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
-  ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario
+  ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
 
@@ -199,6 +199,14 @@ function configurarAcompanhamento() {
   const listaCancelados = document.getElementById("listaCancelados");
   const modalMotivo = document.getElementById("modalMotivo");
   const textoMotivo = document.getElementById("textoMotivo");
+  const modalCancelarAgend = document.getElementById("modalCancelarAgendamento");
+  const nomeCancelarAgendEl = document.getElementById("nomeCancelarAgendamento");
+  const btnCancelarNaoCancelar = document.getElementById("btnNaoCancelarAgendamento");
+  const btnConfirmarCancelarAgend = document.getElementById("btnConfirmarCancelarAgendamento");
+  const fecharModalCancelarAgend = document.getElementById("fecharModalCancelarAgendamento");
+
+  let agendamentosAtivos = [];
+  let agendamentoParaCancelar = null;
 
   abas.forEach((aba) => {
     aba.addEventListener("click", () => {
@@ -217,8 +225,11 @@ function configurarAcompanhamento() {
         <div class="card-agendamento__status">Confirmado</div>
         <div class="card-agendamento__pessoa">${escaparHtml(a.nome)}</div>
         <div class="card-agendamento__tel">${escaparHtml(a.telefone)}</div>
-        <div class="card-agendamento__data">${formatarDataBR(a.data)}</div>
+        <div class="card-agendamento__data">${formatarDataComDiaSemana(a.data)}</div>
         <div class="card-agendamento__hora">${formatarHora(a.hora)}</div>
+        <div class="card-agendamento__acoes">
+          <button class="btn btn-contorno" data-cancelar-agendamento="${a.id}">Cancelar agendamento</button>
+        </div>
       </div>`;
   }
   function cardCancelado(a) {
@@ -227,7 +238,7 @@ function configurarAcompanhamento() {
         <div class="card-agendamento__status">Cancelado</div>
         <div class="card-agendamento__pessoa">${escaparHtml(a.nome)}</div>
         <div class="card-agendamento__tel">${escaparHtml(a.telefone)}</div>
-        <div class="card-agendamento__data">${formatarDataBR(a.data)}</div>
+        <div class="card-agendamento__data">${formatarDataComDiaSemana(a.data)}</div>
         <div class="card-agendamento__hora">${formatarHora(a.hora)}</div>
         <div class="card-agendamento__acoes">
           <button class="btn btn-contorno" data-motivo="${escaparHtml(a.motivoCancelamento || "Nenhum motivo informado.")}">Ver motivo</button>
@@ -236,9 +247,19 @@ function configurarAcompanhamento() {
   }
 
   ouvirTodosAgendamentos("agendado", (lista) => {
+    agendamentosAtivos = lista;
     listaAgendados.innerHTML = lista.length
       ? lista.map(cardAgendado).join("")
       : '<p class="mensagem-vazia">Nenhum agendamento no momento.</p>';
+
+    listaAgendados.querySelectorAll("[data-cancelar-agendamento]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        agendamentoParaCancelar = agendamentosAtivos.find((a) => a.id === btn.dataset.cancelarAgendamento);
+        if (!agendamentoParaCancelar) return;
+        nomeCancelarAgendEl.textContent = agendamentoParaCancelar.nome || "esta pessoa";
+        abrirModal(modalCancelarAgend);
+      });
+    });
   });
 
   ouvirTodosAgendamentos("cancelado", (lista) => {
@@ -251,6 +272,36 @@ function configurarAcompanhamento() {
         abrirModal(modalMotivo);
       });
     });
+  });
+
+  function fecharCancelamentoAgend() {
+    fecharModal(modalCancelarAgend);
+    agendamentoParaCancelar = null;
+  }
+  btnCancelarNaoCancelar.addEventListener("click", fecharCancelamentoAgend);
+  fecharModalCancelarAgend.addEventListener("click", fecharCancelamentoAgend);
+
+  btnConfirmarCancelarAgend.addEventListener("click", async () => {
+    if (!agendamentoParaCancelar) return;
+    btnConfirmarCancelarAgend.disabled = true;
+    btnConfirmarCancelarAgend.textContent = "Cancelando...";
+    try {
+      await cancelarAgendamento(
+        agendamentoParaCancelar.id,
+        agendamentoParaCancelar.data,
+        agendamentoParaCancelar.hora,
+        "Cancelado pelo painel administrativo."
+      );
+      mostrarToast("Agendamento cancelado. O horário foi liberado.");
+      fecharModal(modalCancelarAgend);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível cancelar agora. Tente novamente.");
+    } finally {
+      agendamentoParaCancelar = null;
+      btnConfirmarCancelarAgend.disabled = false;
+      btnConfirmarCancelarAgend.textContent = "Cancelar agendamento";
+    }
   });
 }
 

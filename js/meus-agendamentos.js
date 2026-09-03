@@ -1,6 +1,6 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
-  formatarDataBR, formatarHora } from "./utils.js";
+  formatarDataComDiaSemana, formatarHora } from "./utils.js";
 import { obterConfiguracoesGerais, ouvirAgendamentosDoUsuario, cancelarAgendamento } from "./dados.js";
 
 inicializarNavegacao("meus-agendamentos");
@@ -47,7 +47,7 @@ function cardHtml(a) {
   return `
     <div class="card-agendamento" style="${cancelado ? "opacity:.65;" : ""}">
       <div class="card-agendamento__status">${cancelado ? "Cancelado" : "Confirmado"}</div>
-      <div class="card-agendamento__data">${iconeAgendamento()} &nbsp;${formatarDataBR(a.data)}</div>
+      <div class="card-agendamento__data">${iconeAgendamento()} &nbsp;${formatarDataComDiaSemana(a.data)}</div>
       <div class="card-agendamento__hora">${formatarHora(a.hora)}</div>
       ${cancelado && a.motivoCancelamento ? `<div class="card-agendamento__hora">Motivo: ${escaparHtml(a.motivoCancelamento)}</div>` : ""}
       ${!cancelado ? `
@@ -65,7 +65,7 @@ function escaparHtml(texto) {
 
 function abrirModalCancelamento(agendamento) {
   agendamentoParaCancelar = agendamento;
-  cancelarInfo.textContent = `${formatarDataBR(agendamento.data)} — ${formatarHora(agendamento.hora)}`;
+  cancelarInfo.textContent = `${formatarDataComDiaSemana(agendamento.data)} — ${formatarHora(agendamento.hora)}`;
   motivoCancelamento.value = "";
   abrirModal(modalCancelar);
 }
