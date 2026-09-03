@@ -1,9 +1,0 @@
-{
-  "name": "arautos-santissimo",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Agendamento de horarios de Adoracao ao Santissimo Sacramento",
-  "dependencies": {
-    "firebase-admin": "^12.7.0"
-  }
-}
