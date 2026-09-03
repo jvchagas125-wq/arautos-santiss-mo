@@ -25,7 +25,13 @@ export function capitalizarNome(nome) {
 
 /* ---------- Telefone: máscara (XX) XXXXX-XXXX ---------- */
 export function aplicarMascaraTelefone(valor) {
-  let d = valor.replace(/\D/g, "").slice(0, 11);
+  let d = valor.replace(/\D/g, "");
+  // Celulares/autopreenchimento às vezes trazem o código do país (+55) junto,
+  // ex: "+55 (11) 91234-5678" -> sem isso, os 2 dígitos finais do número eram cortados.
+  if (d.length > 11 && d.startsWith("55")) {
+    d = d.slice(2);
+  }
+  d = d.slice(0, 11);
   if (d.length === 0) return "";
   if (d.length <= 2) return `(${d}`;
   if (d.length <= 7) return `(${d.slice(0,2)}) ${d.slice(2)}`;

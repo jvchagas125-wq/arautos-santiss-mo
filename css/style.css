@@ -356,6 +356,10 @@ img{ max-width: 100%; display:block; }
 .campo.invalido .campo-erro{ display:block; }
 
 /* ============ CALENDÁRIO PERSONALIZADO ============ */
+/* garante que o painel com o calendário fique acima do painel de horários que vem depois dele
+   (o painel de horários também recebe posição/contexto de empilhamento pela animação de entrada) */
+#painelData{ position:relative; z-index: 2; }
+
 .calendario{
   position:absolute; z-index: 120; margin-top:8px;
   width: min(320px, 88vw);
