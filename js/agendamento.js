@@ -157,7 +157,7 @@ function renderizarHorarios() {
     if (ocupacoes.length > 0) {
       btn.classList.add("ocupado");
       btn.innerHTML = `
-        <span class="horario-btn__hora">${textoHora(hora)} <span class="horario-btn__contador">+${ocupacoes.length}</span></span>
+        <span class="horario-btn__hora">${textoHora(hora)}</span>
         <span class="horario-btn__reservado">${textoReservado(ocupacoes.length)}</span>
       `;
       btn.querySelector(".horario-btn__reservado").addEventListener("click", (e) => {

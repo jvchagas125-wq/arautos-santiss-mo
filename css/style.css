@@ -420,11 +420,6 @@ img{ max-width: 100%; display:block; }
 }
 .horario-btn.ocupado:hover:not(.selecionado){ border-color: var(--dourado); background:#f1e7dc; }
 .horario-btn__hora{ color: var(--texto); }
-.horario-btn__contador{
-  display:inline-block; font-family:'Cinzel'; font-size:.68rem; font-weight:700;
-  color: var(--vermelho); background: rgba(122,12,30,.1); border-radius:999px;
-  padding: 1px 6px; vertical-align: middle; margin-left:2px;
-}
 .horario-btn__reservado{
   font-family:'EB Garamond', serif; font-weight:600; font-size:.72rem; color: var(--vermelho);
   text-decoration: underline; text-underline-offset: 2px; cursor:pointer;
@@ -435,8 +430,17 @@ img{ max-width: 100%; display:block; }
   border-color: var(--vermelho-escuro);
 }
 .horario-btn.ocupado.selecionado .horario-btn__hora{ color:#fff; }
-.horario-btn.ocupado.selecionado .horario-btn__contador{ color:#fff; background: rgba(255,255,255,.22); }
 .horario-btn.ocupado.selecionado .horario-btn__reservado{ color: rgba(255,255,255,.92); }
+
+/* ---------- observação sobre agendar horários já ocupados ---------- */
+.aviso-info{
+  display:flex; align-items:flex-start; gap:10px; text-align:left;
+  background: rgba(205,164,52,.12); border:1.5px solid rgba(157,122,31,.4);
+  border-radius: 12px; padding: 14px 16px; margin-top:18px; width:100%;
+}
+.aviso-info__icone{ font-size:1.05rem; line-height:1.5; flex-shrink:0; }
+.aviso-info p{ margin:0; font-size:.84rem; line-height:1.55; color: var(--texto-suave); }
+.aviso-info strong{ color: var(--vermelho-escuro); }
 
 .link-whatsapp{
   flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
