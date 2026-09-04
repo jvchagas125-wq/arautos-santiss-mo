@@ -88,6 +88,48 @@
 .card-agendamento__pessoa{ font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); margin-bottom:2px; }
 .card-agendamento__tel{ color: var(--texto-suave); font-size:.88rem; margin-bottom:8px; }
 
+/* ---------- calendário grande de agendados (Acompanhamento) ---------- */
+.calendario-grande{
+  width:100%; max-width: 460px; margin: 0 auto 20px;
+  background: var(--branco); border: 1.5px solid var(--dourado); border-radius:14px;
+  box-shadow: 0 14px 36px rgba(74,7,17,.12); padding: 20px;
+}
+.calendario__dia.tem-agendamentos{
+  position:relative; cursor:pointer; font-weight:700;
+  background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro));
+  color:#fff; transition: transform .2s ease, box-shadow .2s ease;
+}
+.calendario__dia.tem-agendamentos:hover{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--vermelho-glow); }
+.calendario__dia-badge{
+  position:absolute; top:-5px; right:-5px; min-width:16px; height:16px; padding:0 3px;
+  border-radius:999px; background: var(--dourado); color: var(--vermelho-escuro);
+  font-family:'Cinzel'; font-size:.6rem; font-weight:700; line-height:16px; text-align:center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+}
+.calendario__legenda-dupla{ margin-top:14px; display:flex; flex-direction:column; gap:6px; font-size:.72rem; color:var(--texto-suave); }
+.calendario__legenda-dupla span{ display:flex; align-items:center; gap:7px; }
+.legenda-dot{ width:10px; height:10px; border-radius:3px; display:inline-block; flex-shrink:0; }
+.legenda-dot--disponivel{ background: rgba(205,164,52,.35); }
+.legenda-dot--agendado{ background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro)); }
+
+/* ---------- modal de detalhes do dia ---------- */
+.modal--largo{ max-width: 480px; }
+/* o modal de confirmar cancelamento pode abrir por cima do modal de detalhes do dia */
+#modalCancelarAgendamento{ z-index: 410; }
+.grupo-horario-dia{ margin-bottom:18px; }
+.grupo-horario-dia:last-child{ margin-bottom:0; }
+.grupo-horario-dia__titulo{
+  font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); font-size:.92rem;
+  margin-bottom:8px; display:flex; align-items:center; gap:8px;
+}
+.pessoa-ocupado-item__acoes{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.btn-cancelar-item{
+  flex-shrink:0; width:32px; height:32px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center;
+  background: rgba(122,12,30,.08); color: var(--vermelho); transition: background .2s ease, transform .2s ease;
+}
+.btn-cancelar-item:hover{ background: rgba(122,12,30,.18); transform: scale(1.06); }
+.btn-cancelar-item svg{ width:16px; height:16px; }
+
 /* ---------- contatos ---------- */
 .contagem-contatos{
   font-family:'JetBrains Mono','Cinzel'; font-size:.7rem; font-weight:400; color: var(--texto-suave);

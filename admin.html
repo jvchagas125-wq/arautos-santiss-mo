@@ -148,7 +148,35 @@
           <button class="admin-aba ativa" data-aba="agendados">Agendados</button>
           <button class="admin-aba" data-aba="cancelados">Cancelados</button>
         </div>
-        <div id="listaAgendados" class="lista-agendamentos"><div class="spinner"></div></div>
+
+        <div id="painelAgendados">
+          <div class="calendario-grande" id="calendarioAgendados">
+            <div class="calendario__cabecalho">
+              <button type="button" class="calendario__nav" id="calAgendadosMesAnterior" aria-label="Mês anterior">‹</button>
+              <strong id="calAgendadosMesAno">—</strong>
+              <button type="button" class="calendario__nav" id="calAgendadosMesProximo" aria-label="Próximo mês">›</button>
+            </div>
+            <div class="calendario__semana">
+              <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+            </div>
+            <div class="calendario__dias" id="calAgendadosDias"></div>
+            <div class="calendario__legenda-dupla">
+              <span><i class="legenda-dot legenda-dot--disponivel"></i> dia disponível, sem agendamentos</span>
+              <span><i class="legenda-dot legenda-dot--agendado"></i> tem agendamento — toque para ver detalhes</span>
+            </div>
+          </div>
+
+          <p class="mensagem-vazia oculto" id="avisoSemPeriodoAgendados">Nenhum período de adoração está configurado. Configure em "Dias e horários".</p>
+
+          <div class="acoes-lista" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <span class="contagem-contatos" id="contagemAgendadosTotal">0 agendamentos</span>
+            <button type="button" class="btn btn-contorno btn-pequeno" id="btnExportarExcel">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px; vertical-align:-2px;"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+              Exportar planilha (Excel)
+            </button>
+          </div>
+        </div>
+
         <div id="painelCancelados" class="oculto">
           <div class="acoes-lista">
             <button type="button" class="btn btn-contorno btn-pequeno" id="btnLimparCanceladosAdmin">Limpar cancelados</button>
@@ -273,6 +301,16 @@
     </div>
   </div>
 
+  <!-- Modal de detalhes de um dia (Acompanhamento > Agendados) -->
+  <div class="modal-overlay" id="modalDiaAgendados">
+    <div class="modal modal--largo">
+      <button class="modal--fechar" id="fecharModalDiaAgendados" aria-label="Fechar">&times;</button>
+      <h3 id="diaAgendadosTitulo">—</h3>
+      <div id="diaAgendadosConteudo" style="text-align:left;"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script type="module" src="js/admin.js"></script>
 </body>
 </html>

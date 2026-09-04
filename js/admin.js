@@ -1,8 +1,9 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
-  formatarDataComDiaSemana, formatarHora, vincularOlhoSenha, criarCalendario } from "./utils.js";
+  formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario,
+  isoParaData, dataParaIso, MESES } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
-  obterDiasHorarios, salvarDiasHorarios,
+  obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
   ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados
 } from "./dados.js";
@@ -195,7 +196,7 @@ function configurarHorarios() {
 /* ---------------- Acompanhamento ---------------- */
 function configurarAcompanhamento() {
   const abas = document.querySelectorAll(".admin-aba");
-  const listaAgendados = document.getElementById("listaAgendados");
+  const painelAgendados = document.getElementById("painelAgendados");
   const painelCancelados = document.getElementById("painelCancelados");
   const listaCancelados = document.getElementById("listaCancelados");
   const modalMotivo = document.getElementById("modalMotivo");
@@ -208,13 +209,30 @@ function configurarAcompanhamento() {
   const modalLimparCanceladosAdmin = document.getElementById("modalLimparCancelados");
   const btnLimparCanceladosAdmin = document.getElementById("btnLimparCanceladosAdmin");
 
+  // ---- calendário grande de agendados ----
+  const calendarioAgendados = document.getElementById("calendarioAgendados");
+  const avisoSemPeriodoAgendados = document.getElementById("avisoSemPeriodoAgendados");
+  const calAgendadosMesAno = document.getElementById("calAgendadosMesAno");
+  const calAgendadosDias = document.getElementById("calAgendadosDias");
+  const calAgendadosMesAnterior = document.getElementById("calAgendadosMesAnterior");
+  const calAgendadosMesProximo = document.getElementById("calAgendadosMesProximo");
+  const contagemAgendadosTotal = document.getElementById("contagemAgendadosTotal");
+  const btnExportarExcel = document.getElementById("btnExportarExcel");
+
+  // ---- modal de detalhes do dia ----
+  const modalDiaAgendados = document.getElementById("modalDiaAgendados");
+  const diaAgendadosTitulo = document.getElementById("diaAgendadosTitulo");
+  const diaAgendadosConteudo = document.getElementById("diaAgendadosConteudo");
+
   let agendamentosAtivos = [];
   let agendamentoParaCancelar = null;
+  let diasHorariosAtual = { dataInicio: "", dataFim: "" };
+  let mesAtualAgendados = null;
 
   abas.forEach((aba) => {
     aba.addEventListener("click", () => {
       abas.forEach((a) => a.classList.toggle("ativa", a === aba));
-      listaAgendados.classList.toggle("oculto", aba.dataset.aba !== "agendados");
+      painelAgendados.classList.toggle("oculto", aba.dataset.aba !== "agendados");
       painelCancelados.classList.toggle("oculto", aba.dataset.aba !== "cancelados");
     });
   });
@@ -222,19 +240,251 @@ function configurarAcompanhamento() {
   document.getElementById("fecharModalMotivo").addEventListener("click", () => fecharModal(modalMotivo));
   document.getElementById("btnFecharMotivo").addEventListener("click", () => fecharModal(modalMotivo));
 
-  function cardAgendado(a) {
-    return `
-      <div class="card-agendamento">
-        <div class="card-agendamento__status">Confirmado</div>
-        <div class="card-agendamento__pessoa">${escaparHtml(a.nome)}</div>
-        <div class="card-agendamento__tel">${escaparHtml(a.telefone)}</div>
-        <div class="card-agendamento__data">${formatarDataComDiaSemana(a.data)}</div>
-        <div class="card-agendamento__hora">${formatarHora(a.hora)}</div>
-        <div class="card-agendamento__acoes">
-          <button class="btn btn-contorno" data-cancelar-agendamento="${a.id}">Cancelar agendamento</button>
-        </div>
-      </div>`;
+  /* ---- calendário: renderização ---- */
+  function agendamentosDoDia(iso) {
+    return agendamentosAtivos.filter((a) => a.data === iso);
   }
+
+  function renderizarCalendarioAgendados() {
+    if (!diasHorariosAtual.dataInicio || !diasHorariosAtual.dataFim || !mesAtualAgendados) {
+      calendarioAgendados.classList.add("oculto");
+      avisoSemPeriodoAgendados.classList.remove("oculto");
+      return;
+    }
+    avisoSemPeriodoAgendados.classList.add("oculto");
+    calendarioAgendados.classList.remove("oculto");
+
+    const nomeMes = MESES[mesAtualAgendados.getMonth()];
+    calAgendadosMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesAtualAgendados.getFullYear()}`;
+    calAgendadosDias.innerHTML = "";
+
+    const primeiroDiaSemana = new Date(mesAtualAgendados.getFullYear(), mesAtualAgendados.getMonth(), 1).getDay();
+    const totalDias = new Date(mesAtualAgendados.getFullYear(), mesAtualAgendados.getMonth() + 1, 0).getDate();
+
+    for (let i = 0; i < primeiroDiaSemana; i++) {
+      const vazio = document.createElement("span");
+      vazio.className = "calendario__vazio";
+      calAgendadosDias.appendChild(vazio);
+    }
+
+    for (let dia = 1; dia <= totalDias; dia++) {
+      const d = new Date(mesAtualAgendados.getFullYear(), mesAtualAgendados.getMonth(), dia);
+      const iso = dataParaIso(d);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "calendario__dia";
+      btn.textContent = dia;
+
+      const dentroPeriodo = iso >= diasHorariosAtual.dataInicio && iso <= diasHorariosAtual.dataFim;
+      if (dentroPeriodo) {
+        btn.classList.add("disponivel");
+        const qtd = agendamentosDoDia(iso).length;
+        if (qtd > 0) {
+          btn.classList.add("tem-agendamentos");
+          btn.title = `${qtd} ${qtd === 1 ? "agendamento" : "agendamentos"} — toque para ver detalhes`;
+          const badge = document.createElement("span");
+          badge.className = "calendario__dia-badge";
+          badge.textContent = String(qtd);
+          btn.appendChild(badge);
+          btn.addEventListener("click", () => abrirModalDiaAgendados(iso));
+        }
+      }
+      calAgendadosDias.appendChild(btn);
+    }
+
+    const mesInicioPeriodo = isoParaData(diasHorariosAtual.dataInicio);
+    const mesFimPeriodo = isoParaData(diasHorariosAtual.dataFim);
+    const anteriorHabilitado = new Date(mesAtualAgendados.getFullYear(), mesAtualAgendados.getMonth(), 0) >=
+      new Date(mesInicioPeriodo.getFullYear(), mesInicioPeriodo.getMonth(), 1);
+    const proximoHabilitado = new Date(mesAtualAgendados.getFullYear(), mesAtualAgendados.getMonth() + 1, 1) <=
+      new Date(mesFimPeriodo.getFullYear(), mesFimPeriodo.getMonth(), 1);
+    calAgendadosMesAnterior.disabled = !anteriorHabilitado;
+    calAgendadosMesProximo.disabled = !proximoHabilitado;
+  }
+
+  calAgendadosMesAnterior.addEventListener("click", () => {
+    mesAtualAgendados = new Date(mesAtualAgendados.getFullYear(), mesAtualAgendados.getMonth() - 1, 1);
+    renderizarCalendarioAgendados();
+  });
+  calAgendadosMesProximo.addEventListener("click", () => {
+    mesAtualAgendados = new Date(mesAtualAgendados.getFullYear(), mesAtualAgendados.getMonth() + 1, 1);
+    renderizarCalendarioAgendados();
+  });
+
+  ouvirDiasHorarios((dh) => {
+    diasHorariosAtual = dh;
+    if (dh.dataInicio && dh.dataFim) {
+      const novoMesInicio = new Date(isoParaData(dh.dataInicio).getFullYear(), isoParaData(dh.dataInicio).getMonth(), 1);
+      if (!mesAtualAgendados) {
+        mesAtualAgendados = novoMesInicio;
+      } else {
+        const mesFimPeriodo = isoParaData(dh.dataFim);
+        const limiteFim = new Date(mesFimPeriodo.getFullYear(), mesFimPeriodo.getMonth(), 1);
+        if (mesAtualAgendados < novoMesInicio || mesAtualAgendados > limiteFim) {
+          mesAtualAgendados = novoMesInicio;
+        }
+      }
+    } else {
+      mesAtualAgendados = null;
+    }
+    renderizarCalendarioAgendados();
+  });
+
+  /* ---- modal de detalhes do dia ---- */
+  function abrirModalDiaAgendados(iso) {
+    const doDia = agendamentosDoDia(iso).sort((a, b) => a.hora - b.hora);
+    diaAgendadosTitulo.textContent = formatarDataComDiaSemana(iso);
+    diaAgendadosConteudo.innerHTML = "";
+
+    const porHora = new Map();
+    doDia.forEach((a) => {
+      if (!porHora.has(a.hora)) porHora.set(a.hora, []);
+      porHora.get(a.hora).push(a);
+    });
+
+    [...porHora.keys()].sort((a, b) => a - b).forEach((hora) => {
+      const pessoas = porHora.get(hora);
+      const grupo = document.createElement("div");
+      grupo.className = "grupo-horario-dia";
+
+      const titulo = document.createElement("div");
+      titulo.className = "grupo-horario-dia__titulo";
+      titulo.innerHTML = `${formatarHora(hora)} <span class="contagem-contatos">${pessoas.length}</span>`;
+      grupo.appendChild(titulo);
+
+      const listaEl = document.createElement("div");
+      listaEl.className = "lista-pessoas-ocupado";
+
+      pessoas.forEach((a) => {
+        const item = document.createElement("div");
+        item.className = "pessoa-ocupado-item";
+
+        const info = document.createElement("div");
+        const nome = document.createElement("div");
+        nome.className = "pessoa-ocupado-item__nome";
+        nome.textContent = a.nome || "—";
+        const tel = document.createElement("div");
+        tel.className = "pessoa-ocupado-item__tel";
+        tel.textContent = a.telefone || "—";
+        info.appendChild(nome);
+        info.appendChild(tel);
+
+        const acoes = document.createElement("div");
+        acoes.className = "pessoa-ocupado-item__acoes";
+
+        const linkWhats = document.createElement("a");
+        linkWhats.className = "link-whatsapp";
+        linkWhats.href = `https://wa.me/55${a.telefoneDigits || ""}`;
+        linkWhats.target = "_blank";
+        linkWhats.rel = "noopener";
+        linkWhats.title = "Chamar no WhatsApp";
+        linkWhats.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>`;
+
+        const btnCancelar = document.createElement("button");
+        btnCancelar.type = "button";
+        btnCancelar.className = "btn-cancelar-item";
+        btnCancelar.title = "Cancelar agendamento";
+        btnCancelar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>`;
+        btnCancelar.addEventListener("click", () => {
+          agendamentoParaCancelar = a;
+          nomeCancelarAgendEl.textContent = a.nome || "esta pessoa";
+          abrirModal(modalCancelarAgend);
+        });
+
+        acoes.appendChild(linkWhats);
+        acoes.appendChild(btnCancelar);
+        item.appendChild(info);
+        item.appendChild(acoes);
+        listaEl.appendChild(item);
+      });
+
+      grupo.appendChild(listaEl);
+      diaAgendadosConteudo.appendChild(grupo);
+    });
+
+    abrirModal(modalDiaAgendados);
+  }
+
+  document.getElementById("fecharModalDiaAgendados").addEventListener("click", () => fecharModal(modalDiaAgendados));
+
+  /* ---- exportar planilha (Excel) ---- */
+  async function exportarAgendadosParaExcel(lista) {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "Arautos do Evangelho";
+    wb.created = new Date();
+    const ws = wb.addWorksheet("Agendamentos", { views: [{ state: "frozen", ySplit: 1 }] });
+
+    ws.columns = [
+      { header: "Nome", key: "nome", width: 30 },
+      { header: "Telefone", key: "telefone", width: 18 },
+      { header: "Data", key: "data", width: 14 },
+      { header: "Dia da semana", key: "diaSemana", width: 16 },
+      { header: "Horário", key: "horario", width: 18 },
+    ];
+
+    const headerRow = ws.getRow(1);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFDF8" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF7A0C1E" } };
+      cell.alignment = { vertical: "middle", horizontal: "left" };
+    });
+    headerRow.height = 20;
+
+    const ordenados = [...lista].sort((a, b) =>
+      (a.data + String(a.hora).padStart(2, "0")).localeCompare(b.data + String(b.hora).padStart(2, "0"))
+    );
+    ordenados.forEach((a) => {
+      const diaSemana = formatarDataComDiaSemana(a.data).split(" - ")[1] || "";
+      const row = ws.addRow({
+        nome: a.nome || "",
+        telefone: a.telefone || "",
+        data: formatarDataBR(a.data),
+        diaSemana,
+        horario: formatarHora(a.hora),
+      });
+      row.eachCell((cell) => { cell.alignment = { vertical: "middle" }; });
+    });
+
+    ws.autoFilter = { from: "A1", to: "E1" };
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const hoje = new Date();
+    const carimbo = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    a.download = `agendamentos-arautos-${carimbo}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  btnExportarExcel.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    if (agendamentosAtivos.length === 0) {
+      mostrarToast("Não há agendamentos para exportar.");
+      return;
+    }
+    if (typeof ExcelJS === "undefined") {
+      mostrarToast("Não foi possível carregar o gerador de planilhas. Verifique sua conexão.");
+      return;
+    }
+    const htmlOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = "Gerando planilha...";
+    try {
+      await exportarAgendadosParaExcel(agendamentosAtivos);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível gerar a planilha. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = htmlOriginal;
+    }
+  });
+
   function cardCancelado(a) {
     return `
       <div class="card-agendamento" style="opacity:.75;">
@@ -251,18 +501,8 @@ function configurarAcompanhamento() {
 
   ouvirTodosAgendamentos("agendado", (lista) => {
     agendamentosAtivos = lista;
-    listaAgendados.innerHTML = lista.length
-      ? lista.map(cardAgendado).join("")
-      : '<p class="mensagem-vazia">Nenhum agendamento no momento.</p>';
-
-    listaAgendados.querySelectorAll("[data-cancelar-agendamento]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        agendamentoParaCancelar = agendamentosAtivos.find((a) => a.id === btn.dataset.cancelarAgendamento);
-        if (!agendamentoParaCancelar) return;
-        nomeCancelarAgendEl.textContent = agendamentoParaCancelar.nome || "esta pessoa";
-        abrirModal(modalCancelarAgend);
-      });
-    });
+    contagemAgendadosTotal.textContent = `${lista.length} ${lista.length === 1 ? "agendamento" : "agendamentos"}`;
+    renderizarCalendarioAgendados();
   });
 
   ouvirTodosAgendamentos("cancelado", (lista) => {
@@ -296,8 +536,9 @@ function configurarAcompanhamento() {
         agendamentoParaCancelar.hora,
         "Cancelado pelo painel administrativo."
       );
-      mostrarToast("Agendamento cancelado. O horário foi liberado.");
+      mostrarToast("Agendamento cancelado.");
       fecharModal(modalCancelarAgend);
+      fecharModal(modalDiaAgendados);
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível cancelar agora. Tente novamente.");
