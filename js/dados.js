@@ -2,7 +2,7 @@
 import {
   db, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc,
   collection, query, where, getDocs, onSnapshot, orderBy,
-  runTransaction, serverTimestamp
+  serverTimestamp
 } from "./firebase-init.js";
 
 /* ---------------- Configurações gerais (frase do dia, logo, fundo) ---------------- */
@@ -104,11 +104,8 @@ export async function excluirUsuario(telefoneDigits) {
 
 /* ---------------- Agendamentos ---------------- */
 
-function chaveSlot(data, hora) {
-  return `${data}_${String(hora).padStart(2, "0")}`;
-}
-
 // Retorna o conjunto de horas (números) já ocupadas (status "agendado") numa data
+// (uma hora pode aparecer mais de uma vez: mais de uma pessoa pode agendar o mesmo horário)
 export async function obterHorariosOcupados(data) {
   const q = query(
     collection(db, "agendamentos"),
@@ -135,37 +132,25 @@ export function ouvirAgendamentosDaData(data, callback) {
   });
 }
 
-// Cria o agendamento de forma segura (transação evita dois agendamentos no mesmo horário)
+// Cria o agendamento. Mais de uma pessoa pode agendar o mesmo dia e horário
+// (não há mais exclusividade por horário — cada agendamento é independente).
 export async function criarAgendamento({ nome, telefoneDigits, telefone, data, hora }) {
-  const idSlot = chaveSlot(data, hora);
-  const refSlot = doc(db, "slots", idSlot);
   const refAgendamento = doc(collection(db, "agendamentos"));
-
-  await runTransaction(db, async (tx) => {
-    const slotSnap = await tx.get(refSlot);
-    if (slotSnap.exists() && slotSnap.data().status === "agendado") {
-      throw new Error("HORARIO_OCUPADO");
-    }
-    tx.set(refSlot, { data, hora, status: "agendado", agendamentoId: refAgendamento.id });
-    tx.set(refAgendamento, {
-      nome, telefoneDigits, telefone, data, hora,
-      status: "agendado",
-      motivoCancelamento: "",
-      criadoEm: serverTimestamp()
-    });
+  await setDoc(refAgendamento, {
+    nome, telefoneDigits, telefone, data, hora,
+    status: "agendado",
+    motivoCancelamento: "",
+    criadoEm: serverTimestamp()
   });
-
   return refAgendamento.id;
 }
 
 export async function cancelarAgendamento(agendamentoId, data, hora, motivo) {
-  const idSlot = chaveSlot(data, hora);
   await updateDoc(doc(db, "agendamentos", agendamentoId), {
     status: "cancelado",
     motivoCancelamento: motivo || "",
     canceladoEm: serverTimestamp()
   });
-  await setDoc(doc(db, "slots", idSlot), { data, hora, status: "livre" }, { merge: true });
 }
 
 export function ouvirAgendamentosDoUsuario(telefoneDigits, callback) {

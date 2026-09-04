@@ -132,6 +132,10 @@ function textoHora(hora) {
   return `${String(hora).padStart(2,"0")}:00 - ${String((hora+1)%24).padStart(2,"0")}:00`;
 }
 
+function textoReservado(qtd) {
+  return qtd === 1 ? "1 agendou · Ver detalhes" : `${qtd} agendaram · Ver detalhes`;
+}
+
 function renderizarHorarios() {
   const horariosAtivos = [...(diasHorarios.horariosAtivos || [])].sort((a, b) => a - b);
   gradeHorarios.innerHTML = "";
@@ -143,41 +147,74 @@ function renderizarHorarios() {
   semHorarios.classList.add("oculto");
 
   horariosAtivos.forEach((hora) => {
-    const ocupacao = horariosOcupados.find((o) => o.hora === hora);
+    // pode haver mais de uma pessoa agendada para o mesmo dia e horário
+    const ocupacoes = horariosOcupados.filter((o) => o.hora === hora);
     const btn = document.createElement("button");
     btn.type = "button";
+    btn.className = "horario-btn";
+    if (hora === horaSelecionada) btn.classList.add("selecionado");
 
-    if (ocupacao) {
-      btn.className = "horario-btn ocupado";
-      btn.innerHTML = `<span class="horario-btn__hora">${textoHora(hora)}</span><span class="horario-btn__reservado">Reservado · Ver detalhes</span>`;
-      btn.addEventListener("click", () => abrirModalDetalhesOcupado(hora, ocupacao));
-    } else {
-      btn.className = "horario-btn";
-      btn.textContent = textoHora(hora);
-      if (hora === horaSelecionada) btn.classList.add("selecionado");
-      btn.addEventListener("click", () => {
-        horaSelecionada = hora;
-        btnConfirmarAgendamento.disabled = false;
-        document.querySelectorAll(".horario-btn").forEach((b) => b.classList.remove("selecionado"));
-        btn.classList.add("selecionado");
+    if (ocupacoes.length > 0) {
+      btn.classList.add("ocupado");
+      btn.innerHTML = `
+        <span class="horario-btn__hora">${textoHora(hora)} <span class="horario-btn__contador">+${ocupacoes.length}</span></span>
+        <span class="horario-btn__reservado">${textoReservado(ocupacoes.length)}</span>
+      `;
+      btn.querySelector(".horario-btn__reservado").addEventListener("click", (e) => {
+        e.stopPropagation();
+        abrirModalDetalhesOcupado(hora, ocupacoes);
       });
+    } else {
+      btn.textContent = textoHora(hora);
     }
+
+    // o horário continua disponível para novos agendamentos, mesmo já tendo gente inscrita nele
+    btn.addEventListener("click", () => {
+      horaSelecionada = hora;
+      btnConfirmarAgendamento.disabled = false;
+      document.querySelectorAll(".horario-btn").forEach((b) => b.classList.remove("selecionado"));
+      btn.classList.add("selecionado");
+    });
+
     gradeHorarios.appendChild(btn);
   });
 }
 
 const modalDetalhesOcupado = document.getElementById("modalDetalhesOcupado");
 const detalhesOcupadoHora = document.getElementById("detalhesOcupadoHora");
-const detalhesOcupadoNome = document.getElementById("detalhesOcupadoNome");
-const detalhesOcupadoTelefone = document.getElementById("detalhesOcupadoTelefone");
-const btnWhatsappOcupado = document.getElementById("btnWhatsappOcupado");
+const detalhesOcupadoLista = document.getElementById("detalhesOcupadoLista");
 
-function abrirModalDetalhesOcupado(hora, ocupacao) {
+function abrirModalDetalhesOcupado(hora, ocupacoes) {
   detalhesOcupadoHora.textContent = `${formatarDataBR(dataSelecionada)} — ${textoHora(hora)}`;
-  detalhesOcupadoNome.textContent = ocupacao.nome || "—";
-  detalhesOcupadoTelefone.textContent = ocupacao.telefone || "—";
-  const numeroWhats = "55" + (ocupacao.telefoneDigits || "");
-  btnWhatsappOcupado.href = `https://wa.me/${numeroWhats}`;
+  detalhesOcupadoLista.innerHTML = "";
+
+  ocupacoes.forEach((o) => {
+    const item = document.createElement("div");
+    item.className = "pessoa-ocupado-item";
+
+    const info = document.createElement("div");
+    const nome = document.createElement("div");
+    nome.className = "pessoa-ocupado-item__nome";
+    nome.textContent = o.nome || "—";
+    const tel = document.createElement("div");
+    tel.className = "pessoa-ocupado-item__tel";
+    tel.textContent = o.telefone || "—";
+    info.appendChild(nome);
+    info.appendChild(tel);
+
+    const link = document.createElement("a");
+    link.className = "link-whatsapp";
+    link.href = `https://wa.me/55${o.telefoneDigits || ""}`;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.title = "Chamar no WhatsApp";
+    link.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>`;
+
+    item.appendChild(info);
+    item.appendChild(link);
+    detalhesOcupadoLista.appendChild(item);
+  });
+
   abrirModal(modalDetalhesOcupado);
 }
 
@@ -208,11 +245,7 @@ document.getElementById("btnConfirmarModal").addEventListener("click", async (e)
   } catch (err) {
     console.error(err);
     fecharModal(modalConfirmacao);
-    if (err.message === "HORARIO_OCUPADO") {
-      mostrarToast("Esse horário acabou de ser reservado por outra pessoa. Escolha outro.");
-    } else {
-      mostrarToast("Não foi possível agendar. Verifique sua conexão e tente novamente.");
-    }
+    mostrarToast("Não foi possível agendar. Verifique sua conexão e tente novamente.");
   } finally {
     btn.disabled = false;
     btn.textContent = "Confirmar";

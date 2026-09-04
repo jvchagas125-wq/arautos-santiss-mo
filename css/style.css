@@ -416,11 +416,27 @@ img{ max-width: 100%; display:block; }
 }
 .horario-btn:disabled{ opacity:.4; text-decoration: line-through; cursor:not-allowed; background:#f1ece2; }
 .horario-btn.ocupado{
-  display:flex; flex-direction:column; gap:3px; opacity:.85; background:#f5efe3; cursor:pointer;
+  display:flex; flex-direction:column; gap:3px; background:#f5efe3;
 }
-.horario-btn.ocupado:hover{ border-color: var(--vermelho); background:#f1e7dc; }
-.horario-btn__hora{ text-decoration: line-through; color: var(--texto-suave); }
-.horario-btn__reservado{ font-family:'EB Garamond', serif; font-weight:600; font-size:.72rem; color: var(--vermelho); text-decoration:none; }
+.horario-btn.ocupado:hover:not(.selecionado){ border-color: var(--dourado); background:#f1e7dc; }
+.horario-btn__hora{ color: var(--texto); }
+.horario-btn__contador{
+  display:inline-block; font-family:'Cinzel'; font-size:.68rem; font-weight:700;
+  color: var(--vermelho); background: rgba(122,12,30,.1); border-radius:999px;
+  padding: 1px 6px; vertical-align: middle; margin-left:2px;
+}
+.horario-btn__reservado{
+  font-family:'EB Garamond', serif; font-weight:600; font-size:.72rem; color: var(--vermelho);
+  text-decoration: underline; text-underline-offset: 2px; cursor:pointer;
+}
+/* horário ocupado + selecionado ao mesmo tempo: precisa vencer a especificidade de .ocupado */
+.horario-btn.ocupado.selecionado{
+  background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro));
+  border-color: var(--vermelho-escuro);
+}
+.horario-btn.ocupado.selecionado .horario-btn__hora{ color:#fff; }
+.horario-btn.ocupado.selecionado .horario-btn__contador{ color:#fff; background: rgba(255,255,255,.22); }
+.horario-btn.ocupado.selecionado .horario-btn__reservado{ color: rgba(255,255,255,.92); }
 
 .link-whatsapp{
   flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -429,6 +445,16 @@ img{ max-width: 100%; display:block; }
 .link-whatsapp:hover{ background: rgba(61,107,69,.2); transform: scale(1.06); }
 .link-whatsapp svg{ width:17px; height:17px; }
 .mensagem-vazia{ text-align:center; color: var(--texto-suave); font-style:italic; padding: 18px 0; }
+
+/* ---------- lista de pessoas no modal "Ver detalhes" ---------- */
+.lista-pessoas-ocupado{ display:flex; flex-direction:column; gap:10px; text-align:left; margin-top:14px; }
+.pessoa-ocupado-item{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background: rgba(122,12,30,.05); border:1px solid rgba(157,122,31,.25);
+  border-radius:12px; padding:10px 14px;
+}
+.pessoa-ocupado-item__nome{ font-family:'Cinzel'; font-weight:600; color:var(--vermelho-escuro); font-size:.92rem; margin-bottom:2px; }
+.pessoa-ocupado-item__tel{ color: var(--texto-suave); font-size:.85rem; }
 
 /* ============ ABAS (agendados / cancelados) ============ */
 .abas{ display:flex; gap:10px; margin-bottom:18px; width:100%; }
