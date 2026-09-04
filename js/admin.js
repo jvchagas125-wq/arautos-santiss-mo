@@ -9,7 +9,11 @@ import {
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
 
-const CHAVE_SESSAO_ADMIN = "arautos_admin_logado";
+// Guarda a própria senha (não apenas um sinalizador) para que o acesso automático
+// só continue válido enquanto essa for a senha atual do painel — se o padre trocar
+// a senha em "Configurações", todo mundo que tinha login automático precisa digitar
+// a nova senha uma vez.
+const CHAVE_SENHA_ADMIN_LOCAL = "arautos_admin_senha";
 let painelJaIniciado = false;
 
 /* ---------------- Login do admin ---------------- */
@@ -27,9 +31,24 @@ function mostrarPainel() {
   iniciarPainel();
 }
 
-if (sessionStorage.getItem(CHAVE_SESSAO_ADMIN) === "1") {
-  mostrarPainel();
+async function tentarLoginAutomatico() {
+  const senhaSalva = localStorage.getItem(CHAVE_SENHA_ADMIN_LOCAL);
+  if (!senhaSalva) return;
+  try {
+    const senhaCorreta = await obterSenhaAdmin(SENHA_ADMIN_PADRAO);
+    if (senhaSalva === senhaCorreta) {
+      mostrarPainel();
+    } else {
+      // a senha foi trocada desde o último acesso: pede login novamente
+      localStorage.removeItem(CHAVE_SENHA_ADMIN_LOCAL);
+    }
+  } catch (err) {
+    console.error(err);
+    // sem conexão no momento: não bloqueia quem já tinha acesso salvo neste aparelho
+    mostrarPainel();
+  }
 }
+tentarLoginAutomatico();
 
 formLoginAdmin.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -39,7 +58,7 @@ formLoginAdmin.addEventListener("submit", async (e) => {
   try {
     const senhaCorreta = await obterSenhaAdmin(SENHA_ADMIN_PADRAO);
     if (inputSenhaAdmin.value === senhaCorreta) {
-      sessionStorage.setItem(CHAVE_SESSAO_ADMIN, "1");
+      localStorage.setItem(CHAVE_SENHA_ADMIN_LOCAL, senhaCorreta);
       mostrarPainel();
     } else {
       erroSenhaAdmin.style.display = "block";
@@ -63,7 +82,7 @@ function iniciarPainel() {
   inicializarNavegacao("admin");
 
   document.getElementById("btnSairAdmin").addEventListener("click", () => {
-    sessionStorage.removeItem(CHAVE_SESSAO_ADMIN);
+    localStorage.removeItem(CHAVE_SENHA_ADMIN_LOCAL);
     location.reload();
   });
 
@@ -759,7 +778,10 @@ function configurarConfiguracoes() {
       return;
     }
     try {
-      await salvarSenhaAdmin(campo.value.trim());
+      const novaSenha = campo.value.trim();
+      await salvarSenhaAdmin(novaSenha);
+      // mantém este aparelho logado com a nova senha (só os outros precisarão digitá-la de novo)
+      localStorage.setItem(CHAVE_SENHA_ADMIN_LOCAL, novaSenha);
       campo.value = "";
       mostrarToast("Senha alterada com sucesso!");
     } catch (err) {

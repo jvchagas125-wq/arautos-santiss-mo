@@ -180,6 +180,13 @@ img{ max-width: 100%; display:block; }
   margin-top:auto; padding: 16px 22px 0; border-top: 1.5px solid rgba(157,122,31,.3);
   font-size:.78rem; color: var(--texto-suave); text-align:center;
 }
+.menu-lateral__admin-btn{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding: 10px 14px; border-radius: 10px; border: 1.5px solid rgba(157,122,31,.35);
+  font-family:'Cinzel'; font-size:.78rem; color: var(--texto-suave);
+  transition: background var(--transicao), color var(--transicao), border-color var(--transicao);
+}
+.menu-lateral__admin-btn:hover{ background: rgba(122,12,30,.08); color: var(--vermelho); border-color: var(--dourado); }
 
 /* ============ DROPDOWN PERFIL ============ */
 .dropdown-perfil{
