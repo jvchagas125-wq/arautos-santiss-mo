@@ -150,10 +150,23 @@ function configurarHorarios() {
   const form = document.getElementById("formPeriodo");
   const campoInicio = document.getElementById("campoDataInicio");
   const campoFim = document.getElementById("campoDataFim");
+  const grupoDataFim = document.getElementById("grupoDataFim");
+  const campoSomenteEsseDia = document.getElementById("campoSomenteEsseDia");
   const grade = document.getElementById("gradeHorariosAdmin");
 
-  const calInicio = criarCalendario(document.getElementById("calendarioInicio"), campoInicio, {});
   const calFim = criarCalendario(document.getElementById("calendarioFim"), campoFim, {});
+  const calInicio = criarCalendario(document.getElementById("calendarioInicio"), campoInicio, {
+    aoSelecionar: (iso) => {
+      if (campoSomenteEsseDia.checked) calFim.definirValor(iso);
+    }
+  });
+
+  function aplicarEstadoSomenteEsseDia(ativo) {
+    grupoDataFim.classList.toggle("campo-desativado", ativo);
+    campoFim.disabled = ativo;
+    if (ativo) calFim.definirValor(calInicio.obterValor());
+  }
+  campoSomenteEsseDia.addEventListener("change", () => aplicarEstadoSomenteEsseDia(campoSomenteEsseDia.checked));
 
   for (let h = 0; h < 24; h++) {
     const label = document.createElement("label");
@@ -174,6 +187,8 @@ function configurarHorarios() {
       cb.checked = ativos.has(Number(cb.value));
       cb.closest("label").classList.toggle("marcado", cb.checked);
     });
+    campoSomenteEsseDia.checked = !!dh.somenteEsseDia;
+    aplicarEstadoSomenteEsseDia(campoSomenteEsseDia.checked);
   });
 
   document.getElementById("btnMarcarTodos").addEventListener("click", () => {
@@ -185,22 +200,29 @@ function configurarHorarios() {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const somenteEsseDia = campoSomenteEsseDia.checked;
     const dataInicio = calInicio.obterValor();
-    const dataFim = calFim.obterValor();
-    if (!dataInicio || !dataFim) {
-      mostrarToast("Selecione as duas datas do período.");
+    if (!dataInicio) {
+      mostrarToast(somenteEsseDia ? "Selecione a data do dia de adoração." : "Selecione as duas datas do período.");
       return;
     }
-    if (dataFim < dataInicio) {
-      mostrarToast('A data "até" precisa ser igual ou depois da data "de".');
-      return;
+    let dataFim = somenteEsseDia ? dataInicio : calFim.obterValor();
+    if (!somenteEsseDia) {
+      if (!dataFim) {
+        mostrarToast("Selecione as duas datas do período.");
+        return;
+      }
+      if (dataFim < dataInicio) {
+        mostrarToast('A data "até" precisa ser igual ou depois da data "de".');
+        return;
+      }
     }
     const horariosAtivos = checkboxes().filter((cb) => cb.checked).map((cb) => Number(cb.value));
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
-      await salvarDiasHorarios({ dataInicio, dataFim, horariosAtivos });
+      await salvarDiasHorarios({ dataInicio, dataFim, horariosAtivos, somenteEsseDia });
       mostrarToast("Dias e horários atualizados!");
     } catch (err) {
       console.error(err);

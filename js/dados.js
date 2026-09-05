@@ -40,7 +40,8 @@ export async function salvarConfiguracoesGerais(dadosParciais) {
 const PADRAO_DIAS_HORARIOS = {
   dataInicio: "",
   dataFim: "",
-  horariosAtivos: Array.from({ length: 24 }, (_, i) => i) // 0..23 (todas as horas ativas por padrão)
+  horariosAtivos: Array.from({ length: 24 }, (_, i) => i), // 0..23 (todas as horas ativas por padrão)
+  somenteEsseDia: false // quando true, a adoração vale só para a data em "dataInicio" (dataFim = dataInicio)
 };
 
 export async function obterDiasHorarios() {

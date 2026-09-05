@@ -112,7 +112,7 @@
                 </div>
               </div>
             </div>
-            <div class="campo">
+            <div class="campo" id="grupoDataFim">
               <label for="campoDataFim">Até</label>
               <div style="position:relative;">
                 <input type="text" id="campoDataFim" class="campo-clicavel" placeholder="Clique aqui para selecionar o dia" readonly autocomplete="off" required />
@@ -128,6 +128,12 @@
                   <div class="calendario__dias" data-dias></div>
                 </div>
               </div>
+            </div>
+            <div class="campo campo-checkbox-simples">
+              <label>
+                <input type="checkbox" id="campoSomenteEsseDia" />
+                <span>Somente esse dia <small>(ignora o campo "Até" — a adoração ficará disponível apenas na data marcada em "De")</small></span>
+              </label>
             </div>
             <div class="painel__titulo" style="margin-top:6px;"><span class="emoji">🕐</span> Horários disponíveis por dia (00h às 23h)</div>
             <div class="grade-checkbox" id="gradeHorariosAdmin"></div>
