@@ -13,6 +13,8 @@
   --dourado: #cda434;
   --dourado-claro: #f0d78c;
   --dourado-escuro: #9c7a1f;
+  --verde-escuro: #2f5233;
+  --verde-glow: rgba(47,82,51,.4);
   --branco: #fffdf8;
   --creme: #faf3e6;
   --texto: #2b1810;
@@ -416,7 +418,10 @@ img{ max-width: 100%; display:block; }
   background: #fffefb; font-family:'Cinzel'; font-size:.82rem; font-weight:600; color: var(--texto);
   transition: all .2s ease; animation: escala .35s ease both;
 }
-.horario-btn:hover:not(:disabled):not(.selecionado){ border-color: var(--dourado); background: rgba(205,164,52,.1); transform: translateY(-2px); }
+.horario-btn:hover:not(:disabled):not(.selecionado):not(.ocupado){
+  border-color: var(--verde-escuro); background: rgba(47,82,51,.1); color: var(--verde-escuro);
+  transform: translateY(-2px);
+}
 .horario-btn.selecionado{
   background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro));
   border-color: var(--vermelho-escuro); color:#fff; box-shadow: 0 6px 16px var(--vermelho-glow);
@@ -425,7 +430,7 @@ img{ max-width: 100%; display:block; }
 .horario-btn.ocupado{
   display:flex; flex-direction:column; gap:3px; background:#f5efe3;
 }
-.horario-btn.ocupado:hover:not(.selecionado){ border-color: var(--dourado); background:#f1e7dc; }
+.horario-btn.ocupado:hover:not(.selecionado){ border-color: var(--vermelho); background: rgba(122,12,30,.08); }
 .horario-btn__hora{ color: var(--texto); }
 .horario-btn__reservado{
   font-family:'EB Garamond', serif; font-weight:600; font-size:.72rem; color: var(--vermelho);
