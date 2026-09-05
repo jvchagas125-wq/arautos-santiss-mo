@@ -13,6 +13,7 @@
   --dourado: #cda434;
   --dourado-claro: #f0d78c;
   --dourado-escuro: #9c7a1f;
+  --verde-2: #3d7247;
   --verde-escuro: #2f5233;
   --verde-glow: rgba(47,82,51,.4);
   --branco: #fffdf8;
@@ -423,8 +424,8 @@ img{ max-width: 100%; display:block; }
   transform: translateY(-2px);
 }
 .horario-btn.selecionado{
-  background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro));
-  border-color: var(--vermelho-escuro); color:#fff; box-shadow: 0 6px 16px var(--vermelho-glow);
+  background: linear-gradient(135deg, var(--verde-2), var(--verde-escuro));
+  border-color: var(--verde-escuro); color:#fff; box-shadow: 0 6px 16px var(--verde-glow);
 }
 .horario-btn:disabled{ opacity:.4; text-decoration: line-through; cursor:not-allowed; background:#f1ece2; }
 .horario-btn.ocupado{
