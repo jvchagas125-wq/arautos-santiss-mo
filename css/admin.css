@@ -73,6 +73,29 @@
 .admin-acoes-rapidas{ display:flex; gap:10px; margin-top: 10px; }
 .admin-acoes-rapidas .btn{ padding: 8px 14px; font-size:.76rem; }
 
+/* ---------- lista de 30 frases (Frase do dia) ---------- */
+.lista-frases{
+  display:flex; flex-direction:column; gap:10px;
+  max-height: 480px; overflow-y:auto; padding-right:4px; margin-top:4px;
+}
+.linha-frase{
+  display:flex; gap:10px; align-items:flex-start;
+  border:1.5px solid rgba(157,122,31,.25); border-radius:10px; padding:10px;
+  background:#fffefb;
+}
+.linha-frase__numero{
+  flex-shrink:0; width:26px; height:26px; border-radius:50%;
+  background: linear-gradient(135deg, var(--dourado-claro), var(--dourado));
+  color: var(--vermelho-escuro); font-family:'Cinzel'; font-weight:700; font-size:.78rem;
+  display:flex; align-items:center; justify-content:center; margin-top:2px;
+}
+.linha-frase__campos{ flex:1; display:flex; flex-direction:column; gap:6px; }
+.linha-frase textarea, .linha-frase input{
+  width:100%; border:1px solid rgba(157,122,31,.3); border-radius:8px; padding:7px 9px;
+  font-family:'EB Garamond', serif; font-size:.9rem; color: var(--texto); background:#fff; resize:vertical;
+}
+.linha-frase textarea:focus, .linha-frase input:focus{ outline:none; border-color: var(--dourado); }
+
 /* ---------- checkbox simples (ex: "Somente esse dia") ---------- */
 .campo-checkbox-simples{ margin-top:-6px; margin-bottom:18px; }
 .campo-checkbox-simples label{
@@ -183,3 +206,41 @@
 @media (min-width: 720px){
   .grade-checkbox{ grid-template-columns: repeat(auto-fill, minmax(90px,1fr)); }
 }
+
+/* ---------- Intenções da missa (admin) ---------- */
+.campo-legenda{
+  font-family:'Cinzel'; font-size:.78rem; color: var(--texto-suave); text-transform:uppercase;
+  letter-spacing:.04em; margin:0 0 6px;
+}
+.quadro-intencao{
+  border:1.5px solid rgba(157,122,31,.3); border-radius:12px; margin-bottom:12px; overflow:hidden; background:#fffefb;
+}
+.quadro-intencao__cabecalho{
+  display:flex; align-items:center; gap:10px; padding:13px 14px; cursor:pointer; user-select:none;
+}
+.quadro-intencao__seta{
+  width:17px; height:17px; flex-shrink:0; color: var(--vermelho); transition: transform .2s ease;
+}
+.quadro-intencao.aberto .quadro-intencao__seta{ transform: rotate(180deg); }
+.quadro-intencao__titulo{
+  flex:1; font-family:'Cinzel'; font-size:.85rem; color: var(--vermelho-escuro); line-height:1.4;
+}
+.quadro-intencao__lixeira{
+  flex-shrink:0; width:34px; height:34px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center;
+  background: rgba(122,12,30,.08); color: var(--vermelho); transition: background .2s ease, transform .2s ease;
+}
+.quadro-intencao__lixeira:hover{ background: rgba(122,12,30,.18); transform: scale(1.06); }
+.quadro-intencao__lixeira svg{ width:16px; height:16px; }
+.quadro-intencao__corpo{ padding: 4px 16px 16px; border-top:1px solid rgba(157,122,31,.2); }
+
+/* ---------- Avisos (admin) ---------- */
+.cartao-aviso-admin{
+  border:1.5px solid rgba(157,122,31,.3); border-radius:12px; overflow:hidden; margin-bottom:14px; background:#fffefb;
+}
+.cartao-aviso-admin__img{ width:100%; max-height:160px; object-fit:cover; display:block; }
+.cartao-aviso-admin__corpo{ padding:14px; }
+.cartao-aviso-admin__titulo{ font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); font-size:.95rem; margin-bottom:6px; }
+.cartao-aviso-admin__texto{ margin:0 0 12px; font-size:.88rem; line-height:1.6; color: var(--texto); white-space:pre-wrap; }
+.cartao-aviso-admin__acoes{ display:flex; gap:10px; }
+.form-editar-aviso{ margin-top:12px; padding-top:12px; border-top:1px dashed rgba(157,122,31,.3); }
+.form-editar-aviso .campo{ margin-bottom:10px; }

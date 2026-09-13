@@ -1,6 +1,6 @@
 import { exigirCadastro } from "./auth.js";
-import { inicializarNavegacao, aplicarLogo, aplicarFundo } from "./utils.js";
-import { obterConfiguracoesGerais } from "./dados.js";
+import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia } from "./utils.js";
+import { obterConfiguracoesGerais, obterFrases } from "./dados.js";
 
 inicializarNavegacao("index");
 
@@ -11,11 +11,18 @@ exigirCadastro().then(() => {
 obterConfiguracoesGerais().then((config) => {
   aplicarLogo(config.logoUrl);
   aplicarFundo(config.fundoUrl);
-  document.getElementById("fraseTexto").textContent = `"${config.fraseDoDia}"`;
-  document.getElementById("fraseAutor").textContent = config.autorFrase ? `— ${config.autorFrase}` : "";
+}).catch((err) => console.error("Erro ao carregar configurações:", err));
+
+const FRASE_PADRAO = {
+  frase: "Não omitais nunca a visita a cada dia ao Santíssimo Sacramento, ainda que seja muito breve, mas contanto que seja constante.",
+  autor: "São João Bosco"
+};
+obterFrases().then((dados) => {
+  const escolhida = escolherFraseDoDia(dados.lista) || FRASE_PADRAO;
+  document.getElementById("fraseTexto").textContent = `"${escolhida.frase}"`;
+  document.getElementById("fraseAutor").textContent = escolhida.autor ? `— ${escolhida.autor}` : "";
 }).catch((err) => {
-  console.error("Erro ao carregar configurações:", err);
-  document.getElementById("fraseTexto").textContent =
-    '"Não omitais nunca a visita a cada dia ao Santíssimo Sacramento, ainda que seja muito breve, mas contanto que seja constante."';
-  document.getElementById("fraseAutor").textContent = "— São João Bosco";
+  console.error("Erro ao carregar frases:", err);
+  document.getElementById("fraseTexto").textContent = `"${FRASE_PADRAO.frase}"`;
+  document.getElementById("fraseAutor").textContent = `— ${FRASE_PADRAO.autor}`;
 });

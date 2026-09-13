@@ -10,6 +10,8 @@ import {
 const REF_CONFIG_GERAL = doc(db, "configuracoes", "geral");
 const REF_DIAS_HORARIOS = doc(db, "configuracoes", "diasHorarios");
 const REF_ADMIN = doc(db, "configuracoes", "admin");
+const REF_FRASES = doc(db, "configuracoes", "frases");
+const REF_INTENCOES_CONFIG = doc(db, "configuracoes", "intencoes");
 
 const PADRAO_CONFIG_GERAL = {
   tituloIgreja: "Arautos do Evangelho",
@@ -33,6 +35,25 @@ export function ouvirConfiguracoesGerais(callback) {
 
 export async function salvarConfiguracoesGerais(dadosParciais) {
   await setDoc(REF_CONFIG_GERAL, dadosParciais, { merge: true });
+}
+
+/* ---------------- Frase do dia (até 30 frases, uma por dia em rotação) ---------------- */
+
+const PADRAO_FRASES = {
+  lista: Array.from({ length: 30 }, () => ({ frase: "", autor: "" }))
+};
+
+export async function obterFrases() {
+  const snap = await getDoc(REF_FRASES);
+  if (!snap.exists() || !Array.isArray(snap.data().lista)) return { ...PADRAO_FRASES, lista: [...PADRAO_FRASES.lista] };
+  // garante sempre 30 posições, mesmo que o documento salvo tenha menos
+  const lista = [...snap.data().lista];
+  while (lista.length < 30) lista.push({ frase: "", autor: "" });
+  return { lista: lista.slice(0, 30) };
+}
+
+export async function salvarFrases(lista) {
+  await setDoc(REF_FRASES, { lista }, { merge: true });
 }
 
 /* ---------------- Dias e horários disponíveis ---------------- */
@@ -197,4 +218,98 @@ export function ouvirTodosAgendamentos(status, callback) {
     lista.sort((a, b) => (b.data + String(b.hora).padStart(2,"0")).localeCompare(a.data + String(a.hora).padStart(2,"0")));
     callback(lista);
   });
+}
+
+/* ---------------- Intenções da missa ---------------- */
+
+const PADRAO_CONFIG_INTENCOES = {
+  horariosSemana: [7, 19],   // segunda a sábado
+  horariosDomingo: [10, 18], // domingo
+  horasAntes: 3              // a lista fecha X horas antes da missa
+};
+
+export async function obterConfigIntencoes() {
+  const snap = await getDoc(REF_INTENCOES_CONFIG);
+  if (!snap.exists()) return { ...PADRAO_CONFIG_INTENCOES };
+  return { ...PADRAO_CONFIG_INTENCOES, ...snap.data() };
+}
+
+export function ouvirConfigIntencoes(callback) {
+  return onSnapshot(REF_INTENCOES_CONFIG, (snap) => {
+    callback(snap.exists() ? { ...PADRAO_CONFIG_INTENCOES, ...snap.data() } : { ...PADRAO_CONFIG_INTENCOES });
+  });
+}
+
+export async function salvarConfigIntencoes(dados) {
+  await setDoc(REF_INTENCOES_CONFIG, dados, { merge: true });
+}
+
+// Envia uma intenção para a lista da missa indicada. Anônimo: não guarda nome/telefone.
+export async function criarIntencao({ dataMissa, horaMissa, categoria, texto }) {
+  const ref = doc(collection(db, "intencoes"));
+  await setDoc(ref, {
+    dataMissa, horaMissa, categoria, texto,
+    criadoEm: serverTimestamp()
+  });
+  return ref.id;
+}
+
+// Escuta em tempo real as intenções já enviadas para uma lista específica (dataMissa + horaMissa).
+export function ouvirIntencoesDaLista(dataMissa, horaMissa, callback) {
+  const q = query(
+    collection(db, "intencoes"),
+    where("dataMissa", "==", dataMissa),
+    where("horaMissa", "==", horaMissa)
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
+// Usado pelo painel admin: todas as intenções já enviadas, de todas as listas (agrupamento é feito na UI).
+export function ouvirTodasIntencoes(callback) {
+  return onSnapshot(collection(db, "intencoes"), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
+// Apaga todas as intenções de uma lista específica (usado pelo padre no painel admin, com confirmação).
+export async function excluirListaIntencoes(dataMissa, horaMissa) {
+  const q = query(
+    collection(db, "intencoes"),
+    where("dataMissa", "==", dataMissa),
+    where("horaMissa", "==", horaMissa)
+  );
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, "intencoes", d.id))));
+  return snap.docs.length;
+}
+
+/* ---------------- Avisos ---------------- */
+
+// Lista (em tempo real) todos os avisos, mais recentes primeiro — para o site público e o painel admin.
+export function ouvirAvisos(callback) {
+  return onSnapshot(collection(db, "avisos"), (snap) => {
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    lista.sort((a, b) => (b.criadoEmOrdenacao || 0) - (a.criadoEmOrdenacao || 0));
+    callback(lista);
+  });
+}
+
+export async function criarAviso({ titulo, texto, imagemUrl }) {
+  const ref = doc(collection(db, "avisos"));
+  await setDoc(ref, {
+    titulo, texto, imagemUrl: imagemUrl || "",
+    criadoEmOrdenacao: Date.now(),
+    criadoEm: serverTimestamp()
+  });
+  return ref.id;
+}
+
+export async function atualizarAviso(id, { titulo, texto, imagemUrl }) {
+  await updateDoc(doc(db, "avisos", id), { titulo, texto, imagemUrl: imagemUrl || "" });
+}
+
+export async function excluirAviso(id) {
+  await deleteDoc(doc(db, "avisos", id));
 }

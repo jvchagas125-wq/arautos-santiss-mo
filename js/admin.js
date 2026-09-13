@@ -1,11 +1,14 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario,
-  isoParaData, dataParaIso, MESES } from "./utils.js";
+  isoParaData, dataParaIso, MESES, CATEGORIAS_INTENCAO } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
+  obterFrases, salvarFrases,
   obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
-  ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados
+  ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
+  obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
+  ouvirAvisos, criarAviso, atualizarAviso, excluirAviso
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
 
@@ -89,6 +92,8 @@ function iniciarPainel() {
   configurarMenuSecoes();
   configurarFrase();
   configurarHorarios();
+  configurarIntencoes();
+  configurarAvisos();
   configurarAcompanhamento();
   configurarContatos();
   configurarConfiguracoes();
@@ -113,34 +118,55 @@ function configurarMenuSecoes() {
   });
 }
 
-/* ---------------- Frase do dia ---------------- */
+/* ---------------- Frase do dia (até 30, em rotação) ---------------- */
 function configurarFrase() {
   const form = document.getElementById("formFrase");
-  const campoTexto = document.getElementById("campoFraseTexto");
-  const campoAutor = document.getElementById("campoFraseAutor");
+  const lista = document.getElementById("listaFrases");
 
-  obterConfiguracoesGerais().then((config) => {
-    campoTexto.value = config.fraseDoDia || "";
-    campoAutor.value = config.autorFrase || "";
+  for (let i = 0; i < 30; i++) {
+    const linha = document.createElement("div");
+    linha.className = "linha-frase";
+    linha.innerHTML = `
+      <span class="linha-frase__numero">${i + 1}</span>
+      <div class="linha-frase__campos">
+        <textarea rows="2" class="campo-frase-texto" placeholder="Frase ${i + 1} (opcional)"></textarea>
+        <input type="text" class="campo-frase-autor" placeholder="Autor (opcional)" />
+      </div>
+    `;
+    lista.appendChild(linha);
+  }
+  const camposTexto = () => Array.from(lista.querySelectorAll(".campo-frase-texto"));
+  const camposAutor = () => Array.from(lista.querySelectorAll(".campo-frase-autor"));
+
+  obterFrases().then((dados) => {
+    const textos = camposTexto();
+    const autores = camposAutor();
+    dados.lista.forEach((item, i) => {
+      if (textos[i]) textos[i].value = item?.frase || "";
+      if (autores[i]) autores[i].value = item?.autor || "";
+    });
   });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const textos = camposTexto();
+    const autores = camposAutor();
+    const novaLista = textos.map((campo, i) => ({
+      frase: campo.value.trim(),
+      autor: autores[i].value.trim()
+    }));
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
-      await salvarConfiguracoesGerais({
-        fraseDoDia: campoTexto.value.trim(),
-        autorFrase: campoAutor.value.trim()
-      });
-      mostrarToast("Frase do dia atualizada!");
+      await salvarFrases(novaLista);
+      mostrarToast("Frases atualizadas!");
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível salvar. Tente novamente.");
     } finally {
       btn.disabled = false;
-      btn.textContent = "Salvar frase";
+      btn.textContent = "Salvar frases";
     }
   });
 }
@@ -230,6 +256,307 @@ function configurarHorarios() {
     } finally {
       btn.disabled = false;
       btn.textContent = "Salvar dias e horários";
+    }
+  });
+}
+
+/* ---------------- Intenções da missa ---------------- */
+function configurarIntencoes() {
+  const form = document.getElementById("formHorariosMissas");
+  const gradeSemana = document.getElementById("gradeMissasSemana");
+  const gradeDomingo = document.getElementById("gradeMissasDomingo");
+  const campoHorasAntes = document.getElementById("campoHorasAntes");
+  const listaQuadros = document.getElementById("listaQuadrosIntencoes");
+  const avisoSemIntencoes = document.getElementById("avisoSemIntencoes");
+
+  const modalExcluirLista = document.getElementById("modalExcluirLista");
+  const nomeExcluirLista = document.getElementById("nomeExcluirLista");
+  let listaParaExcluir = null; // { dataMissa, horaMissa, rotulo }
+
+  function montarGrade(container) {
+    for (let h = 0; h < 24; h++) {
+      const label = document.createElement("label");
+      label.innerHTML = `<input type="checkbox" value="${h}" /> ${String(h).padStart(2,"0")}h`;
+      container.appendChild(label);
+    }
+    container.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+      cb.addEventListener("change", () => cb.closest("label").classList.toggle("marcado", cb.checked));
+    });
+  }
+  montarGrade(gradeSemana);
+  montarGrade(gradeDomingo);
+
+  function marcarHoras(container, horas) {
+    const ativos = new Set(horas || []);
+    container.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+      cb.checked = ativos.has(Number(cb.value));
+      cb.closest("label").classList.toggle("marcado", cb.checked);
+    });
+  }
+  function horasMarcadas(container) {
+    return Array.from(container.querySelectorAll("input[type=checkbox]"))
+      .filter((cb) => cb.checked).map((cb) => Number(cb.value));
+  }
+
+  obterConfigIntencoes().then((config) => {
+    marcarHoras(gradeSemana, config.horariosSemana);
+    marcarHoras(gradeDomingo, config.horariosDomingo);
+    campoHorasAntes.value = config.horasAntes;
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const horariosSemana = horasMarcadas(gradeSemana);
+    const horariosDomingo = horasMarcadas(gradeDomingo);
+    const horasAntes = Number(campoHorasAntes.value) || 3;
+    if (horariosSemana.length === 0 && horariosDomingo.length === 0) {
+      mostrarToast("Selecione pelo menos um horário de missa.");
+      return;
+    }
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true;
+    btn.textContent = "Salvando...";
+    try {
+      await salvarConfigIntencoes({ horariosSemana, horariosDomingo, horasAntes });
+      mostrarToast("Horários das missas atualizados!");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Salvar horários das missas";
+    }
+  });
+
+  function tituloLista(dataMissa, horaMissa) {
+    return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2,"0")}:00`;
+  }
+
+  function renderizarQuadros(entradas) {
+    const grupos = new Map(); // "data|hora" -> [entradas]
+    entradas.forEach((it) => {
+      const chave = `${it.dataMissa}|${it.horaMissa}`;
+      if (!grupos.has(chave)) grupos.set(chave, []);
+      grupos.get(chave).push(it);
+    });
+
+    const chavesOrdenadas = [...grupos.keys()].sort((a, b) => b.localeCompare(a));
+    listaQuadros.innerHTML = "";
+    avisoSemIntencoes.classList.toggle("oculto", chavesOrdenadas.length > 0);
+
+    chavesOrdenadas.forEach((chave) => {
+      const [dataMissa, horaMissaStr] = chave.split("|");
+      const horaMissa = Number(horaMissaStr);
+      const itens = grupos.get(chave);
+      const rotulo = tituloLista(dataMissa, horaMissa);
+
+      const quadro = document.createElement("div");
+      quadro.className = "quadro-intencao";
+
+      const cabecalho = document.createElement("div");
+      cabecalho.className = "quadro-intencao__cabecalho";
+      cabecalho.innerHTML = `
+        <svg class="quadro-intencao__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        <span class="quadro-intencao__titulo">${rotulo} — ${itens.length} ${itens.length === 1 ? "intenção" : "intenções"}</span>
+        <button type="button" class="quadro-intencao__lixeira" title="Apagar lista">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
+        </button>
+      `;
+
+      const corpo = document.createElement("div");
+      corpo.className = "quadro-intencao__corpo oculto";
+      CATEGORIAS_INTENCAO.forEach(({ chave: chaveCategoria, rotulo: rotuloCategoria }) => {
+        const doGrupo = itens.filter((it) => it.categoria === chaveCategoria);
+        if (doGrupo.length === 0) return;
+        const bloco = document.createElement("div");
+        bloco.className = "grupo-horario-dia";
+        const titulo = document.createElement("div");
+        titulo.className = "grupo-horario-dia__titulo";
+        titulo.textContent = `${rotuloCategoria} (${doGrupo.length})`;
+        bloco.appendChild(titulo);
+        doGrupo.forEach((it) => {
+          const item = document.createElement("div");
+          item.className = "intencao-item";
+          item.textContent = it.texto;
+          bloco.appendChild(item);
+        });
+        corpo.appendChild(bloco);
+      });
+
+      cabecalho.addEventListener("click", () => {
+        quadro.classList.toggle("aberto");
+        corpo.classList.toggle("oculto");
+      });
+      cabecalho.querySelector(".quadro-intencao__lixeira").addEventListener("click", (e) => {
+        e.stopPropagation();
+        listaParaExcluir = { dataMissa, horaMissa, rotulo };
+        nomeExcluirLista.textContent = rotulo;
+        abrirModal(modalExcluirLista);
+      });
+
+      quadro.appendChild(cabecalho);
+      quadro.appendChild(corpo);
+      listaQuadros.appendChild(quadro);
+    });
+  }
+
+  ouvirTodasIntencoes(renderizarQuadros);
+
+  document.getElementById("fecharModalExcluirLista").addEventListener("click", () => fecharModal(modalExcluirLista));
+  document.getElementById("btnVoltarExcluirLista").addEventListener("click", () => fecharModal(modalExcluirLista));
+  document.getElementById("btnConfirmarExcluirLista").addEventListener("click", async (e) => {
+    if (!listaParaExcluir) return;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = "Apagando...";
+    try {
+      await excluirListaIntencoes(listaParaExcluir.dataMissa, listaParaExcluir.horaMissa);
+      mostrarToast("Lista de intenções apagada.");
+      fecharModal(modalExcluirLista);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível apagar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Apagar lista";
+    }
+  });
+}
+
+/* ---------------- Avisos ---------------- */
+function configurarAvisos() {
+  const formNovo = document.getElementById("formNovoAviso");
+  const campoTitulo = document.getElementById("campoAvisoTitulo");
+  const campoTexto = document.getElementById("campoAvisoTexto");
+  const campoImagem = document.getElementById("campoAvisoImagem");
+  const listaAvisosAdmin = document.getElementById("listaAvisosAdmin");
+  const avisoSemAvisos = document.getElementById("avisoSemAvisos");
+
+  const modalExcluirAviso = document.getElementById("modalExcluirAviso");
+  const nomeExcluirAviso = document.getElementById("nomeExcluirAviso");
+  let avisoParaExcluir = null;
+
+  formNovo.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = formNovo.querySelector("button[type=submit]");
+    btn.disabled = true;
+    btn.textContent = "Publicando...";
+    try {
+      await criarAviso({
+        titulo: campoTitulo.value.trim(),
+        texto: campoTexto.value.trim(),
+        imagemUrl: campoImagem.value.trim()
+      });
+      formNovo.reset();
+      mostrarToast("Aviso publicado!");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível publicar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Publicar aviso";
+    }
+  });
+
+  function renderizarAvisos(lista) {
+    listaAvisosAdmin.innerHTML = "";
+    avisoSemAvisos.classList.toggle("oculto", lista.length > 0);
+
+    lista.forEach((aviso) => {
+      const card = document.createElement("div");
+      card.className = "cartao-aviso-admin";
+      card.innerHTML = `
+        ${aviso.imagemUrl ? `<img src="${aviso.imagemUrl}" alt="" class="cartao-aviso-admin__img" />` : ""}
+        <div class="cartao-aviso-admin__corpo">
+          <div class="cartao-aviso-admin__titulo">${aviso.titulo}</div>
+          <p class="cartao-aviso-admin__texto">${aviso.texto}</p>
+          <div class="cartao-aviso-admin__acoes">
+            <button type="button" class="btn btn-contorno btn-pequeno btn-editar-aviso">Editar</button>
+            <button type="button" class="btn btn-vermelho btn-pequeno btn-excluir-aviso">Excluir</button>
+          </div>
+          <form class="form-editar-aviso oculto">
+            <div class="campo">
+              <label>Título</label>
+              <input type="text" class="campo-edit-titulo" value="${aviso.titulo.replace(/"/g,"&quot;")}" required />
+            </div>
+            <div class="campo">
+              <label>Texto</label>
+              <textarea rows="3" class="campo-edit-texto" required>${aviso.texto}</textarea>
+            </div>
+            <div class="campo">
+              <label>URL da imagem (opcional)</label>
+              <input type="url" class="campo-edit-imagem" value="${(aviso.imagemUrl || "").replace(/"/g,"&quot;")}" />
+            </div>
+            <div class="cartao-aviso-admin__acoes">
+              <button type="button" class="btn btn-contorno btn-pequeno btn-cancelar-edicao-aviso">Cancelar</button>
+              <button type="submit" class="btn btn-dourado btn-pequeno">Salvar</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      const formEdicao = card.querySelector(".form-editar-aviso");
+      const btnEditar = card.querySelector(".btn-editar-aviso");
+      const btnExcluir = card.querySelector(".btn-excluir-aviso");
+      const btnCancelarEdicao = card.querySelector(".btn-cancelar-edicao-aviso");
+
+      btnEditar.addEventListener("click", () => {
+        formEdicao.classList.remove("oculto");
+        btnEditar.closest(".cartao-aviso-admin__acoes").classList.add("oculto");
+      });
+      btnCancelarEdicao.addEventListener("click", () => {
+        formEdicao.classList.add("oculto");
+        btnEditar.closest(".cartao-aviso-admin__acoes").classList.remove("oculto");
+      });
+      btnExcluir.addEventListener("click", () => {
+        avisoParaExcluir = aviso.id;
+        nomeExcluirAviso.textContent = aviso.titulo;
+        abrirModal(modalExcluirAviso);
+      });
+      formEdicao.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btnSalvar = formEdicao.querySelector("button[type=submit]");
+        btnSalvar.disabled = true;
+        btnSalvar.textContent = "Salvando...";
+        try {
+          await atualizarAviso(aviso.id, {
+            titulo: formEdicao.querySelector(".campo-edit-titulo").value.trim(),
+            texto: formEdicao.querySelector(".campo-edit-texto").value.trim(),
+            imagemUrl: formEdicao.querySelector(".campo-edit-imagem").value.trim()
+          });
+          mostrarToast("Aviso atualizado!");
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível salvar. Tente novamente.");
+        } finally {
+          btnSalvar.disabled = false;
+          btnSalvar.textContent = "Salvar";
+        }
+      });
+
+      listaAvisosAdmin.appendChild(card);
+    });
+  }
+
+  ouvirAvisos(renderizarAvisos);
+
+  document.getElementById("fecharModalExcluirAviso").addEventListener("click", () => fecharModal(modalExcluirAviso));
+  document.getElementById("btnVoltarExcluirAviso").addEventListener("click", () => fecharModal(modalExcluirAviso));
+  document.getElementById("btnConfirmarExcluirAviso").addEventListener("click", async (e) => {
+    if (!avisoParaExcluir) return;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = "Apagando...";
+    try {
+      await excluirAviso(avisoParaExcluir);
+      mostrarToast("Aviso apagado.");
+      fecharModal(modalExcluirAviso);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível apagar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Apagar aviso";
     }
   });
 }

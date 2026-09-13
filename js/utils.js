@@ -85,6 +85,71 @@ export function hojeIso() {
   return dataParaIso(new Date());
 }
 
+/* ---------- Frase do dia: rotação cíclica de até 30 frases ----------
+   Todo mundo vê a mesma frase no mesmo dia (calculado pela data local do aparelho).
+   Ao chegar na 30ª, volta para a 1ª. Frases vazias são puladas automaticamente. */
+const EPOCA_FRASES = new Date(2024, 0, 1); // ponto fixo para contar o ciclo de 30 dias
+export function indiceFraseDoDia(agora = new Date()) {
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const dias = Math.floor((hoje - EPOCA_FRASES) / 86400000);
+  return ((dias % 30) + 30) % 30;
+}
+export function escolherFraseDoDia(lista, agora = new Date()) {
+  const l = Array.isArray(lista) ? lista : [];
+  if (l.length === 0) return null;
+  const inicio = indiceFraseDoDia(agora) % l.length;
+  for (let i = 0; i < l.length; i++) {
+    const item = l[(inicio + i) % l.length];
+    if (item && item.frase && item.frase.trim()) return item;
+  }
+  return null;
+}
+
+/* ---------- Intenções da missa: categorias fixas ---------- */
+export const CATEGORIAS_INTENCAO = [
+  { chave: "gracas", rotulo: "Agradecem graças" },
+  { chave: "alma", rotulo: "Por alma" },
+  { chave: "aniversarios", rotulo: "Aniversários" }
+];
+
+/* ---------- Intenções da missa: qual lista está aberta agora ----------
+   config: { horariosSemana: [7,19], horariosDomingo: [10,18], horasAntes: 3 }
+   Retorna a próxima(s) missa(s) a partir de "agora", em ordem, como objetos Date. */
+export function proximasMissas(config, agora = new Date(), quantidade = 6) {
+  const horariosSemana = [...(config.horariosSemana || [])].sort((a, b) => a - b);
+  const horariosDomingo = [...(config.horariosDomingo || [])].sort((a, b) => a - b);
+  const resultado = [];
+  let cursor = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  let dias = 0;
+  while (resultado.length < quantidade && dias < 30) {
+    const horas = cursor.getDay() === 0 ? horariosDomingo : horariosSemana;
+    horas.forEach((h) => {
+      const dt = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), h, 0, 0, 0);
+      if (dt > agora) resultado.push(dt);
+    });
+    cursor.setDate(cursor.getDate() + 1);
+    dias++;
+  }
+  return resultado.sort((a, b) => a - b).slice(0, quantidade);
+}
+
+// Decide se a lista de intenções da próxima missa está aberta para preenchimento,
+// ou bloqueada (dentro da janela de "horasAntes" antes da missa).
+export function calcularListaIntencoesAtual(config, agora = new Date()) {
+  const horasAntes = Number(config.horasAntes) > 0 ? Number(config.horasAntes) : 3;
+  const [proximaMissa] = proximasMissas(config, agora, 1);
+  if (!proximaMissa) return { aberta: false, dataMissa: null, horaMissa: null, proximaMissa: null, fechamento: null };
+  const fechamento = new Date(proximaMissa.getTime() - horasAntes * 3600000);
+  const aberta = agora < fechamento;
+  return {
+    aberta,
+    dataMissa: dataParaIso(proximaMissa),
+    horaMissa: proximaMissa.getHours(),
+    proximaMissa,
+    fechamento
+  };
+}
+
 /* ---------- Toast ---------- */
 let toastTimeout;
 export function mostrarToast(mensagem) {

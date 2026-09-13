@@ -48,6 +48,8 @@
       <nav>
         <a href="#frase" data-secao="frase" class="ativa"><span class="emoji">💬</span> Frase do dia</a>
         <a href="#horarios" data-secao="horarios"><span class="emoji">🗓️</span> Dias e horários</a>
+        <a href="#intencoes" data-secao="intencoes"><span class="emoji">🙏</span> Intenções</a>
+        <a href="#avisos" data-secao="avisos"><span class="emoji">📢</span> Avisos</a>
         <a href="#acompanhamento" data-secao="acompanhamento"><span class="emoji">📋</span> Acompanhamento</a>
         <a href="#contatos" data-secao="contatos"><span class="emoji">📇</span> Contatos</a>
         <a href="#configuracoes" data-secao="configuracoes"><span class="emoji">⚙️</span> Configurações</a>
@@ -73,17 +75,14 @@
         <h1 class="titulo-pagina">Frase do Dia</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
         <div class="painel">
-          <div class="painel__titulo"><span class="emoji">💬</span> Editar frase exibida na página inicial</div>
+          <div class="painel__titulo"><span class="emoji">💬</span> Frases exibidas na página inicial</div>
+          <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
+            Cadastre até 30 frases. Uma frase diferente é exibida por dia, na ordem, e ao chegar na 30ª volta para a
+            1ª. Se alguma ficar em branco, ela é pulada automaticamente.
+          </p>
           <form id="formFrase">
-            <div class="campo">
-              <label for="campoFraseTexto">Frase</label>
-              <textarea id="campoFraseTexto" rows="4" placeholder="Digite a frase do dia" required></textarea>
-            </div>
-            <div class="campo">
-              <label for="campoFraseAutor">Autor</label>
-              <input type="text" id="campoFraseAutor" placeholder="Ex: São João Bosco" />
-            </div>
-            <button type="submit" class="btn btn-dourado">Salvar frase</button>
+            <div class="lista-frases" id="listaFrases"></div>
+            <button type="submit" class="btn btn-dourado" style="margin-top:16px;">Salvar frases</button>
           </form>
         </div>
       </section>
@@ -143,6 +142,68 @@
             </div>
             <button type="submit" class="btn btn-dourado" style="margin-top:16px;">Salvar dias e horários</button>
           </form>
+        </div>
+      </section>
+
+      <!-- INTENÇÕES DA MISSA -->
+      <section class="admin-secao oculto" id="secao-intencoes">
+        <h1 class="titulo-pagina">Intenções da Missa</h1>
+        <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">⛪</span> Horários das missas</div>
+          <form id="formHorariosMissas">
+            <p class="campo-legenda">Segunda a sábado</p>
+            <div class="grade-checkbox" id="gradeMissasSemana"></div>
+            <p class="campo-legenda" style="margin-top:14px;">Domingo</p>
+            <div class="grade-checkbox" id="gradeMissasDomingo"></div>
+            <div class="campo" style="margin-top:16px; max-width:220px;">
+              <label for="campoHorasAntes">Fechar a lista quantas horas antes da missa</label>
+              <input type="number" id="campoHorasAntes" min="1" max="12" step="1" required />
+            </div>
+            <button type="submit" class="btn btn-dourado" style="margin-top:10px;">Salvar horários das missas</button>
+          </form>
+          <div class="aviso-info" style="margin-top:20px;">
+            <span class="aviso-info__icone">ℹ️</span>
+            <p><strong>Como funciona:</strong> a lista de intenções da próxima missa fica aberta até a quantidade de horas configurada acima antes do horário da missa. Depois disso ela fecha, e assim que a missa acontece a lista da missa seguinte já abre automaticamente no site público.</p>
+          </div>
+        </div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">📋</span> Listas preenchidas</div>
+          <p class="mensagem-vazia oculto" id="avisoSemIntencoes">Nenhuma intenção foi enviada ainda.</p>
+          <div id="listaQuadrosIntencoes"></div>
+        </div>
+      </section>
+
+      <!-- AVISOS -->
+      <section class="admin-secao oculto" id="secao-avisos">
+        <h1 class="titulo-pagina">Avisos</h1>
+        <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">📢</span> Publicar novo aviso</div>
+          <form id="formNovoAviso">
+            <div class="campo">
+              <label for="campoAvisoTitulo">Título</label>
+              <input type="text" id="campoAvisoTitulo" placeholder="Ex: Missa de Ação de Graças" required />
+            </div>
+            <div class="campo">
+              <label for="campoAvisoTexto">Texto</label>
+              <textarea id="campoAvisoTexto" rows="4" placeholder="Digite o aviso" required></textarea>
+            </div>
+            <div class="campo">
+              <label for="campoAvisoImagem">URL da imagem (opcional)</label>
+              <input type="url" id="campoAvisoImagem" placeholder="https://..." />
+            </div>
+            <button type="submit" class="btn btn-dourado">Publicar aviso</button>
+          </form>
+        </div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">🗂️</span> Avisos publicados</div>
+          <p class="mensagem-vazia oculto" id="avisoSemAvisos">Nenhum aviso publicado ainda.</p>
+          <div id="listaAvisosAdmin"></div>
         </div>
       </section>
 
@@ -318,6 +379,32 @@
       <button class="modal--fechar" id="fecharModalDiaAgendados" aria-label="Fechar">&times;</button>
       <h3 id="diaAgendadosTitulo">—</h3>
       <div id="diaAgendadosConteudo" style="text-align:left;"></div>
+    </div>
+  </div>
+
+  <!-- Modal confirmação: apagar uma lista de intenções -->
+  <div class="modal-overlay" id="modalExcluirLista">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalExcluirLista" aria-label="Fechar">&times;</button>
+      <h3>Apagar lista de intenções</h3>
+      <p>Deseja apagar todas as intenções de <strong id="nomeExcluirLista">—</strong>? Essa ação não pode ser desfeita.</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnVoltarExcluirLista">Voltar</button>
+        <button class="btn btn-vermelho btn-full" id="btnConfirmarExcluirLista">Apagar lista</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmação: apagar um aviso -->
+  <div class="modal-overlay" id="modalExcluirAviso">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalExcluirAviso" aria-label="Fechar">&times;</button>
+      <h3>Apagar aviso</h3>
+      <p>Deseja apagar o aviso <strong id="nomeExcluirAviso">—</strong>? Essa ação não pode ser desfeita.</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnVoltarExcluirAviso">Voltar</button>
+        <button class="btn btn-vermelho btn-full" id="btnConfirmarExcluirAviso">Apagar aviso</button>
+      </div>
     </div>
   </div>
 
