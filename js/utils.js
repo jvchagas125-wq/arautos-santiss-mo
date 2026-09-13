@@ -113,16 +113,17 @@ export const CATEGORIAS_INTENCAO = [
 ];
 
 /* ---------- Intenções da missa: qual lista está aberta agora ----------
-   config: { horariosSemana: [7,19], horariosDomingo: [10,18], horasAntes: 3 }
-   Retorna a próxima(s) missa(s) a partir de "agora", em ordem, como objetos Date. */
+   config: { horariosPorDia: [ [domingo], [segunda], [terça], [quarta], [quinta], [sexta], [sábado] ], horasAntes: 3 }
+   (índice de horariosPorDia = Date.getDay(): 0=domingo ... 6=sábado; um dia sem horários fica com array vazio)
+   Retorna a próxima(s) missa(s) a partir de "agora", em ordem, como objetos Date. Dias sem horário configurado
+   são simplesmente pulados, então a lista "pula" para o próximo dia que realmente tem missa marcada. */
 export function proximasMissas(config, agora = new Date(), quantidade = 6) {
-  const horariosSemana = [...(config.horariosSemana || [])].sort((a, b) => a - b);
-  const horariosDomingo = [...(config.horariosDomingo || [])].sort((a, b) => a - b);
+  const horariosPorDia = Array.isArray(config.horariosPorDia) ? config.horariosPorDia : [];
   const resultado = [];
   let cursor = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
   let dias = 0;
-  while (resultado.length < quantidade && dias < 30) {
-    const horas = cursor.getDay() === 0 ? horariosDomingo : horariosSemana;
+  while (resultado.length < quantidade && dias < 60) {
+    const horas = [...(horariosPorDia[cursor.getDay()] || [])].sort((a, b) => a - b);
     horas.forEach((h) => {
       const dt = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), h, 0, 0, 0);
       if (dt > agora) resultado.push(dt);

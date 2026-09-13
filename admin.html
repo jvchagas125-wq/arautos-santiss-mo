@@ -152,11 +152,12 @@
 
         <div class="painel">
           <div class="painel__titulo"><span class="emoji">⛪</span> Horários das missas</div>
+          <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
+            Toque em cada dia para marcar os horários de missa daquele dia. Um dia sem nenhum horário marcado
+            fica sem lista de intenções — o site público pula direto para o próximo dia que tiver missa.
+          </p>
           <form id="formHorariosMissas">
-            <p class="campo-legenda">Segunda a sábado</p>
-            <div class="grade-checkbox" id="gradeMissasSemana"></div>
-            <p class="campo-legenda" style="margin-top:14px;">Domingo</p>
-            <div class="grade-checkbox" id="gradeMissasDomingo"></div>
+            <div id="gradesPorDia"></div>
             <div class="campo" style="margin-top:16px; max-width:220px;">
               <label for="campoHorasAntes">Fechar a lista quantas horas antes da missa</label>
               <input type="number" id="campoHorasAntes" min="1" max="12" step="1" required />

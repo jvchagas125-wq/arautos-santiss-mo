@@ -222,21 +222,39 @@ export function ouvirTodosAgendamentos(status, callback) {
 
 /* ---------------- Intenções da missa ---------------- */
 
-const PADRAO_CONFIG_INTENCOES = {
-  horariosSemana: [7, 19],   // segunda a sábado
-  horariosDomingo: [10, 18], // domingo
-  horasAntes: 3              // a lista fecha X horas antes da missa
-};
+// horariosPorDia: um array por dia da semana, índice = Date.getDay() (0=domingo ... 6=sábado).
+// Um dia com array vazio significa "sem missa nesse dia" — a lista de intenções simplesmente pula esse dia.
+function horariosPorDiaPadrao() {
+  return [[10, 18], [7, 19], [7, 19], [7, 19], [7, 19], [7, 19], [7, 19]];
+}
+const HORAS_ANTES_PADRAO = 3;
+
+// Aceita tanto o formato novo (horariosPorDia) quanto o formato antigo (horariosSemana/horariosDomingo,
+// salvo antes dessa opção por dia existir), convertendo o antigo automaticamente.
+function normalizarConfigIntencoes(dados) {
+  if (Array.isArray(dados.horariosPorDia) && dados.horariosPorDia.length === 7) {
+    return { horariosPorDia: dados.horariosPorDia, horasAntes: dados.horasAntes ?? HORAS_ANTES_PADRAO };
+  }
+  if (Array.isArray(dados.horariosSemana) || Array.isArray(dados.horariosDomingo)) {
+    const semana = dados.horariosSemana || [];
+    const domingo = dados.horariosDomingo || [];
+    return {
+      horariosPorDia: [domingo, semana, semana, semana, semana, semana, semana],
+      horasAntes: dados.horasAntes ?? HORAS_ANTES_PADRAO
+    };
+  }
+  return { horariosPorDia: horariosPorDiaPadrao(), horasAntes: HORAS_ANTES_PADRAO };
+}
 
 export async function obterConfigIntencoes() {
   const snap = await getDoc(REF_INTENCOES_CONFIG);
-  if (!snap.exists()) return { ...PADRAO_CONFIG_INTENCOES };
-  return { ...PADRAO_CONFIG_INTENCOES, ...snap.data() };
+  if (!snap.exists()) return { horariosPorDia: horariosPorDiaPadrao(), horasAntes: HORAS_ANTES_PADRAO };
+  return normalizarConfigIntencoes(snap.data());
 }
 
 export function ouvirConfigIntencoes(callback) {
   return onSnapshot(REF_INTENCOES_CONFIG, (snap) => {
-    callback(snap.exists() ? { ...PADRAO_CONFIG_INTENCOES, ...snap.data() } : { ...PADRAO_CONFIG_INTENCOES });
+    callback(snap.exists() ? normalizarConfigIntencoes(snap.data()) : { horariosPorDia: horariosPorDiaPadrao(), horasAntes: HORAS_ANTES_PADRAO });
   });
 }
 

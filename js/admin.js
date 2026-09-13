@@ -1,6 +1,6 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario,
-  isoParaData, dataParaIso, MESES, CATEGORIAS_INTENCAO } from "./utils.js";
+  isoParaData, dataParaIso, MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterFrases, salvarFrases,
@@ -263,8 +263,7 @@ function configurarHorarios() {
 /* ---------------- Intenções da missa ---------------- */
 function configurarIntencoes() {
   const form = document.getElementById("formHorariosMissas");
-  const gradeSemana = document.getElementById("gradeMissasSemana");
-  const gradeDomingo = document.getElementById("gradeMissasDomingo");
+  const gradesPorDia = document.getElementById("gradesPorDia");
   const campoHorasAntes = document.getElementById("campoHorasAntes");
   const listaQuadros = document.getElementById("listaQuadrosIntencoes");
   const avisoSemIntencoes = document.getElementById("avisoSemIntencoes");
@@ -273,43 +272,88 @@ function configurarIntencoes() {
   const nomeExcluirLista = document.getElementById("nomeExcluirLista");
   let listaParaExcluir = null; // { dataMissa, horaMissa, rotulo }
 
-  function montarGrade(container) {
+  // um "quadro" colapsável por dia da semana (índice = Date.getDay(): 0=domingo ... 6=sábado),
+  // exibidos na ordem segunda...domingo para ficar mais natural de ler
+  const ORDEM_EXIBICAO = [1, 2, 3, 4, 5, 6, 0];
+  const gradesPorIndice = []; // gradesPorIndice[diaSemana] = elemento .grade-checkbox
+
+  ORDEM_EXIBICAO.forEach((diaSemana) => {
+    const quadro = document.createElement("div");
+    quadro.className = "quadro-dia-missa";
+
+    const cabecalho = document.createElement("div");
+    cabecalho.className = "quadro-dia-missa__cabecalho";
+    cabecalho.innerHTML = `
+      <svg class="quadro-dia-missa__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      <span class="quadro-dia-missa__titulo">${DIAS_SEMANA_COMPLETO[diaSemana]}</span>
+      <span class="quadro-dia-missa__resumo" data-resumo>Sem horário</span>
+    `;
+
+    const corpo = document.createElement("div");
+    corpo.className = "quadro-dia-missa__corpo oculto";
+    const grade = document.createElement("div");
+    grade.className = "grade-checkbox";
     for (let h = 0; h < 24; h++) {
       const label = document.createElement("label");
       label.innerHTML = `<input type="checkbox" value="${h}" /> ${String(h).padStart(2,"0")}h`;
-      container.appendChild(label);
+      grade.appendChild(label);
     }
-    container.querySelectorAll("input[type=checkbox]").forEach((cb) => {
-      cb.addEventListener("change", () => cb.closest("label").classList.toggle("marcado", cb.checked));
-    });
-  }
-  montarGrade(gradeSemana);
-  montarGrade(gradeDomingo);
+    corpo.appendChild(grade);
+    gradesPorIndice[diaSemana] = grade;
 
-  function marcarHoras(container, horas) {
+    const resumoEl = cabecalho.querySelector("[data-resumo]");
+    function atualizarResumo() {
+      const qtd = grade.querySelectorAll("input:checked").length;
+      resumoEl.textContent = qtd === 0 ? "Sem horário" : `${qtd} ${qtd === 1 ? "horário" : "horários"}`;
+      quadro.classList.toggle("quadro-dia-missa--vazio", qtd === 0);
+    }
+    grade.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+      cb.addEventListener("change", () => {
+        cb.closest("label").classList.toggle("marcado", cb.checked);
+        atualizarResumo();
+      });
+    });
+    atualizarResumo();
+
+    cabecalho.addEventListener("click", () => {
+      quadro.classList.toggle("aberto");
+      corpo.classList.toggle("oculto");
+    });
+
+    quadro.appendChild(cabecalho);
+    quadro.appendChild(corpo);
+    gradesPorDia.appendChild(quadro);
+  });
+
+  function marcarHoras(diaSemana, horas) {
     const ativos = new Set(horas || []);
-    container.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+    const grade = gradesPorIndice[diaSemana];
+    grade.querySelectorAll("input[type=checkbox]").forEach((cb) => {
       cb.checked = ativos.has(Number(cb.value));
       cb.closest("label").classList.toggle("marcado", cb.checked);
     });
+    const qtd = grade.querySelectorAll("input:checked").length;
+    const quadro = grade.closest(".quadro-dia-missa");
+    const resumoEl = quadro.querySelector("[data-resumo]");
+    resumoEl.textContent = qtd === 0 ? "Sem horário" : `${qtd} ${qtd === 1 ? "horário" : "horários"}`;
+    quadro.classList.toggle("quadro-dia-missa--vazio", qtd === 0);
   }
-  function horasMarcadas(container) {
-    return Array.from(container.querySelectorAll("input[type=checkbox]"))
+  function horasMarcadas(diaSemana) {
+    return Array.from(gradesPorIndice[diaSemana].querySelectorAll("input[type=checkbox]"))
       .filter((cb) => cb.checked).map((cb) => Number(cb.value));
   }
 
   obterConfigIntencoes().then((config) => {
-    marcarHoras(gradeSemana, config.horariosSemana);
-    marcarHoras(gradeDomingo, config.horariosDomingo);
+    for (let d = 0; d < 7; d++) marcarHoras(d, config.horariosPorDia[d]);
     campoHorasAntes.value = config.horasAntes;
   });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const horariosSemana = horasMarcadas(gradeSemana);
-    const horariosDomingo = horasMarcadas(gradeDomingo);
+    const horariosPorDia = [];
+    for (let d = 0; d < 7; d++) horariosPorDia.push(horasMarcadas(d));
     const horasAntes = Number(campoHorasAntes.value) || 3;
-    if (horariosSemana.length === 0 && horariosDomingo.length === 0) {
+    if (horariosPorDia.every((h) => h.length === 0)) {
       mostrarToast("Selecione pelo menos um horário de missa.");
       return;
     }
@@ -317,7 +361,7 @@ function configurarIntencoes() {
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
-      await salvarConfigIntencoes({ horariosSemana, horariosDomingo, horasAntes });
+      await salvarConfigIntencoes({ horariosPorDia, horasAntes });
       mostrarToast("Horários das missas atualizados!");
     } catch (err) {
       console.error(err);
