@@ -645,21 +645,31 @@ function corDoGrupoPorHora(hora) {
   return CORES_EXPORT.madalena; // 12h-20h
 }
 
-// Divide o período todo (De -> Até) em blocos de até 7 dias corridos, um bloco = uma aba da planilha.
+// Divide o período todo (De -> Até) em blocos de 7 dias corridos, um bloco = uma aba da planilha.
+// Quando sobra um resto pequeno no final (ex.: o período termina num único sábado avulso depois
+// da última semana cheia), esse resto é incorporado à última semana em vez de virar uma aba nova
+// quase vazia — assim uma semana de sábado a sábado (8 dias) sai numa aba só.
 function gerarBlocosDeSemana(dataInicio, dataFim) {
+  const todosDias = [];
+  let d = isoParaData(dataInicio);
+  while (dataParaIso(d) <= dataFim) {
+    todosDias.push(dataParaIso(d));
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  }
+  if (todosDias.length === 0) return [];
+
+  const numSemanasCheias = Math.floor(todosDias.length / 7);
+  const resto = todosDias.length % 7;
+  const semanasAntesDaUltima = resto === 0 ? numSemanasCheias : numSemanasCheias - 1;
+
   const blocos = [];
-  let cursor = dataInicio;
-  while (cursor <= dataFim) {
-    const dias = [];
-    let d = isoParaData(cursor);
-    while (dias.length < 7 && dataParaIso(d) <= dataFim) {
-      dias.push(dataParaIso(d));
-      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
-    }
-    blocos.push(dias);
-    const ultimo = isoParaData(dias[dias.length - 1]);
-    const proximo = new Date(ultimo.getFullYear(), ultimo.getMonth(), ultimo.getDate() + 1);
-    cursor = dataParaIso(proximo);
+  let i = 0;
+  for (let s = 0; s < semanasAntesDaUltima; s++) {
+    blocos.push(todosDias.slice(i, i + 7));
+    i += 7;
+  }
+  if (i < todosDias.length) {
+    blocos.push(todosDias.slice(i));
   }
   return blocos;
 }
