@@ -635,7 +635,7 @@ const CORES_EXPORT = {
   madalena: "FFF4D9A0",   // 12h-20h
   extra: "FFCBB6E8",      // agendamento marcado como "extra" no painel
   aberto: "FFE06666",     // horário livre, sem ninguém agendado
-  missa: "FFFFF2A8",      // horário marcado como Missa no painel
+  missa: "FFFFD700",      // horário marcado como Missa no painel (amarelo forte, pra destacar)
   bloqueado: "FF1A1A1A"   // hora fora do período configurado (antes/depois do limite do dia)
 };
 
