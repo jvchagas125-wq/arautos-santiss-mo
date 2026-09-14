@@ -1,5 +1,5 @@
 import { exigirCadastro } from "./auth.js";
-import { inicializarNavegacao, aplicarLogo, aplicarFundo } from "./utils.js";
+import { inicializarNavegacao, aplicarLogo, aplicarFundo, linkificarTexto } from "./utils.js";
 import { obterConfiguracoesGerais, ouvirAvisos } from "./dados.js";
 
 inicializarNavegacao("avisos");
@@ -41,7 +41,7 @@ ouvirAvisos((avisos) => {
 
     const texto = document.createElement("p");
     texto.className = "cartao-aviso__texto";
-    texto.textContent = aviso.texto || "";
+    linkificarTexto(aviso.texto || "", texto);
     corpo.appendChild(texto);
 
     card.appendChild(corpo);

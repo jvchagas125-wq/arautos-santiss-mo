@@ -138,6 +138,34 @@ export function statusMissaEspecifica(iso, hora, horasAntes, agora = new Date())
   };
 }
 
+/* ---------- Avisos: transforma links (http://, https:// ou www.) dentro do texto em
+   elementos <a> clicáveis, preservando o resto do texto como texto puro (sem risco de HTML
+   injetado). Zera e reconstrói o conteúdo do elemento recebido. ---------- */
+const URL_REGEX = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+\.[a-z]{2,}[^\s<>"']*)/gi;
+export function linkificarTexto(texto, elemento) {
+  elemento.textContent = "";
+  const partes = String(texto || "").split(URL_REGEX);
+  partes.forEach((parte) => {
+    if (!parte) return;
+    if (/^(https?:\/\/|www\.)/i.test(parte)) {
+      // separa pontuação de fim de frase (. , ! ? ; : ) ]) que não faz parte do link
+      const m = parte.match(/^(.*?)([.,!?;:)\]]*)$/s);
+      const url = m ? m[1] : parte;
+      const sobra = m ? m[2] : "";
+      const a = document.createElement("a");
+      a.href = url.startsWith("http") ? url : `https://${url}`;
+      a.textContent = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.className = "link-aviso";
+      elemento.appendChild(a);
+      if (sobra) elemento.appendChild(document.createTextNode(sobra));
+    } else {
+      elemento.appendChild(document.createTextNode(parte));
+    }
+  });
+}
+
 /* ---------- Toast ---------- */
 let toastTimeout;
 export function mostrarToast(mensagem) {

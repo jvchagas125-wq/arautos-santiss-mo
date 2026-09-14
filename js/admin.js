@@ -1,6 +1,6 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario,
-  isoParaData, dataParaIso, MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO } from "./utils.js";
+  isoParaData, dataParaIso, MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterFrases, salvarFrases,
@@ -513,10 +513,13 @@ function configurarAvisos() {
         ${aviso.imagemUrl ? `<img src="${aviso.imagemUrl}" alt="" class="cartao-aviso-admin__img" />` : ""}
         <div class="cartao-aviso-admin__corpo">
           <div class="cartao-aviso-admin__titulo">${aviso.titulo}</div>
-          <p class="cartao-aviso-admin__texto">${aviso.texto}</p>
+          <p class="cartao-aviso-admin__texto"></p>
           <div class="cartao-aviso-admin__acoes">
             <button type="button" class="btn btn-contorno btn-pequeno btn-editar-aviso">Editar</button>
-            <button type="button" class="btn btn-vermelho btn-pequeno btn-excluir-aviso">Excluir</button>
+            <button type="button" class="btn btn-vermelho btn-pequeno btn-excluir-aviso" title="Apagar aviso">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px; vertical-align:-2px;"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
+              Excluir
+            </button>
           </div>
           <form class="form-editar-aviso oculto">
             <div class="campo">
@@ -538,6 +541,8 @@ function configurarAvisos() {
           </form>
         </div>
       `;
+
+      linkificarTexto(aviso.texto || "", card.querySelector(".cartao-aviso-admin__texto"));
 
       const formEdicao = card.querySelector(".form-editar-aviso");
       const btnEditar = card.querySelector(".btn-editar-aviso");

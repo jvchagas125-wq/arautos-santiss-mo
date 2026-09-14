@@ -473,6 +473,11 @@ img{ max-width: 100%; display:block; }
 .cartao-aviso__corpo{ padding:16px 18px; }
 .cartao-aviso__titulo{ font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); font-size:1.02rem; margin-bottom:8px; }
 .cartao-aviso__texto{ margin:0; font-size:.92rem; line-height:1.7; color: var(--texto); white-space:pre-wrap; }
+.link-aviso{
+  color: var(--vermelho-escuro); font-weight:600; text-decoration:underline;
+  word-break:break-word; text-underline-offset:2px;
+}
+.link-aviso:hover{ color: var(--vermelho); }
 
 /* ---------- Intenções da missa ---------- */
 .intencoes-aviso-fecha{
