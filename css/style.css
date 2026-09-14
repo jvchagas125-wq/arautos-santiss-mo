@@ -479,7 +479,8 @@ img{ max-width: 100%; display:block; }
   margin:0 0 20px; font-size:.82rem; color: var(--texto-suave); font-style:italic;
 }
 #listaMissasDoDia > .painel:first-child,
-#avisoSemMissaNoDia{ margin-top:20px; }
+#avisoSemMissaNoDia,
+#avisoSelecioneData{ margin-top:20px; }
 .categoria-intencao{ margin-bottom:26px; }
 .categoria-intencao:last-child{ margin-bottom:0; }
 .categoria-intencao__titulo{

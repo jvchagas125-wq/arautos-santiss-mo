@@ -1,7 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast,
-  formatarDataBR, dataParaIso, hojeIso, criarCalendario,
+  formatarDataBR, dataParaIso, criarCalendario,
   horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO
 } from "./utils.js";
 import { obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao } from "./dados.js";
@@ -19,18 +19,18 @@ const dataInput = document.getElementById("dataIntencoesInput");
 const calendarioEl = document.getElementById("calendarioIntencoes");
 const listaMissasDoDia = document.getElementById("listaMissasDoDia");
 const avisoSemMissa = document.getElementById("avisoSemMissaNoDia");
+const avisoSelecioneData = document.getElementById("avisoSelecioneData");
 
 function formatarHoraSimples(hora) {
   return `${String(hora).padStart(2, "0")}:00`;
 }
 
 let configAtual = null;
-let diaSelecionado = hojeIso();
+let diaSelecionado = null; // nada selecionado até a pessoa escolher no calendário
 let pararEscutas = []; // unsubscribes das listas do dia atualmente exibido
 let ultimaAssinatura = null; // evita recriar o DOM (e perder o que a pessoa está digitando) sem necessidade
 
 const calendario = criarCalendario(calendarioEl, dataInput, {
-  valorInicial: diaSelecionado,
   aoSelecionar: (iso) => {
     diaSelecionado = iso;
     renderizarDiaSeNecessario();
@@ -150,6 +150,16 @@ function criarCardMissaFechada(hora, status) {
 function renderizarDiaSeNecessario() {
   if (!configAtual) return;
   elCarregando.classList.add("oculto");
+
+  if (!diaSelecionado) {
+    pararTodasEscutas();
+    listaMissasDoDia.innerHTML = "";
+    avisoSemMissa.classList.add("oculto");
+    avisoSelecioneData.classList.remove("oculto");
+    ultimaAssinatura = null;
+    return;
+  }
+  avisoSelecioneData.classList.add("oculto");
 
   const horas = horariosDoDia(configAtual, diaSelecionado);
   const agora = new Date();

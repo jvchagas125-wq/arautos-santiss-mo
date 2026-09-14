@@ -63,7 +63,7 @@
     <div class="painel" id="painelDataIntencoes">
       <div class="painel__titulo"><span class="emoji">📅</span> Selecione o dia da missa</div>
       <div class="campo" style="position:relative; margin-bottom:0;">
-        <input type="text" id="dataIntencoesInput" class="campo-clicavel" placeholder="Toque para escolher uma data" readonly autocomplete="off" />
+        <input type="text" id="dataIntencoesInput" class="campo-clicavel" placeholder="Clique aqui e selecione o dia" readonly autocomplete="off" />
         <div class="calendario" id="calendarioIntencoes">
           <div class="calendario__cabecalho">
             <button type="button" class="calendario__nav" data-nav-anterior aria-label="Mês anterior">‹</button>
@@ -85,6 +85,10 @@
 
     <p class="mensagem-vazia oculto" id="avisoSemMissaNoDia">
       Não há nenhuma missa configurada para este dia. Selecione outra data no calendário.
+    </p>
+
+    <p class="mensagem-vazia" id="avisoSelecioneData">
+      Toque no campo acima e escolha no calendário o dia da missa para ver as listas de intenções.
     </p>
 
     <div class="aviso-info">
