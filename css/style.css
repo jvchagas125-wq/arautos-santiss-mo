@@ -659,6 +659,47 @@ img{ max-width: 100%; display:block; }
   padding-right:6px; margin-right:-6px;
 }
 
+/* ============ BOTÃO "INSTALAR APP" (PWA) ============ */
+.btn-instalar-app{
+  position: fixed; right: 18px; bottom: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 350;
+  display:flex; align-items:center; gap:10px;
+  padding: 10px 18px 10px 10px; border: none; border-radius: 999px; cursor:pointer;
+  background: linear-gradient(135deg, var(--dourado-claro), var(--dourado) 55%, var(--dourado-escuro));
+  color: var(--vermelho-escuro);
+  font-family:'Cinzel'; font-weight:600; font-size:.82rem; letter-spacing:.02em;
+  box-shadow: 0 10px 26px rgba(157,122,31,.5), inset 0 1px 0 rgba(255,255,255,.6);
+  opacity:0; transform: translateY(16px) scale(.92); pointer-events:none;
+  transition: opacity .35s ease, transform .35s ease, box-shadow var(--transicao);
+}
+.btn-instalar-app.visivel{ opacity:1; transform: translateY(0) scale(1); pointer-events:auto; }
+.btn-instalar-app:hover{ box-shadow: 0 14px 32px rgba(157,122,31,.65), inset 0 1px 0 rgba(255,255,255,.7); transform: translateY(-2px); }
+.btn-instalar-app img{
+  width: 30px; height:30px; border-radius:50%; display:block;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.5);
+}
+.btn-instalar-app span{ white-space:nowrap; }
+@media (max-width: 420px){
+  .btn-instalar-app span{ display:none; }
+  .btn-instalar-app{ padding: 8px; }
+}
+
+.popover-instalar-ios{
+  position: fixed; right: 18px; bottom: 78px;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  z-index: 351; max-width: 260px;
+  background: linear-gradient(180deg, #fffdf8, #faf3e6);
+  border: 1.5px solid var(--dourado); border-radius: 16px;
+  padding: 16px 18px; box-shadow: 0 16px 40px rgba(0,0,0,.35);
+  animation: subir .35s ease both;
+}
+.popover-instalar-ios p{ margin:0; font-size:.85rem; line-height:1.5; color: var(--texto-suave); padding-right:16px; }
+.popover-instalar-ios strong{ color: var(--vermelho-escuro); }
+.popover-instalar-ios__fechar{
+  position:absolute; top:8px; right:10px; background:none; border:none; font-size:1.1rem; color: var(--texto-suave); cursor:pointer;
+}
+
 /* ============ TOAST ============ */
 .toast{
   position: fixed; bottom: 26px; left:50%; transform: translateX(-50%) translateY(30px);
