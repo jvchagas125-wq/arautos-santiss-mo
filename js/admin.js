@@ -1,5 +1,5 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
-  formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario,
+  formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -188,6 +188,8 @@ function configurarHorarios() {
       if (campoSomenteEsseDia.checked) calFim.definirValor(iso);
     }
   });
+  const seletorHoraInicio = criarSeletorHora(document.getElementById("seletorHoraInicioPrimeiroDia"), campoHoraInicioPrimeiroDia, {});
+  const seletorHoraFim = criarSeletorHora(document.getElementById("seletorHoraFimUltimoDia"), campoHoraFimUltimoDia, {});
 
   function aplicarEstadoSomenteEsseDia(ativo) {
     grupoDataFim.classList.toggle("campo-desativado", ativo);
@@ -217,8 +219,8 @@ function configurarHorarios() {
     });
     campoSomenteEsseDia.checked = !!dh.somenteEsseDia;
     aplicarEstadoSomenteEsseDia(campoSomenteEsseDia.checked);
-    campoHoraInicioPrimeiroDia.value = dh.horaInicioPrimeiroDia || "";
-    campoHoraFimUltimoDia.value = dh.horaFimUltimoDia || "";
+    seletorHoraInicio.definirValor(dh.horaInicioPrimeiroDia || "");
+    seletorHoraFim.definirValor(dh.horaFimUltimoDia || "");
   });
 
   document.getElementById("btnMarcarTodos").addEventListener("click", () => {
@@ -248,8 +250,8 @@ function configurarHorarios() {
       }
     }
     const horariosAtivos = checkboxes().filter((cb) => cb.checked).map((cb) => Number(cb.value));
-    const horaInicioPrimeiroDia = campoHoraInicioPrimeiroDia.value || "";
-    const horaFimUltimoDia = campoHoraFimUltimoDia.value || "";
+    const horaInicioPrimeiroDia = seletorHoraInicio.obterValor();
+    const horaFimUltimoDia = seletorHoraFim.obterValor();
     if (somenteEsseDia && horaInicioPrimeiroDia && horaFimUltimoDia && horaInicioPrimeiroDia >= horaFimUltimoDia) {
       mostrarToast('No mesmo dia, o horário de início precisa ser antes do horário de término.');
       return;

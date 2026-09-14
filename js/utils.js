@@ -322,6 +322,121 @@ export function vincularOlhoSenha(botao, input) {
   });
 }
 
+/* ---------- Seletor de hora personalizado reutilizável ----------
+   container: elemento .seletor-hora (com [data-coluna-horas], [data-coluna-minutos], [data-limpar], [data-confirmar])
+   input: campo de texto (readonly) onde o valor "HH:MM" é exibido
+   opts: { valorInicial: "HH:MM" ou "", aoSelecionar(valorOuVazio) }
+   Retorna { definirValor(hhmm), obterValor() } */
+export function criarSeletorHora(container, input, opts = {}) {
+  const colHoras = container.querySelector("[data-coluna-horas]");
+  const colMinutos = container.querySelector("[data-coluna-minutos]");
+  const btnLimpar = container.querySelector("[data-limpar]");
+  const btnConfirmar = container.querySelector("[data-confirmar]");
+  const aoSelecionar = opts.aoSelecionar || (() => {});
+  const MINUTOS_OPCOES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+  let horaSel = null;
+  let minutoSel = null;
+
+  function centralizarNaColuna(coluna, item) {
+    if (!item) return;
+    coluna.scrollTop = item.offsetTop - coluna.clientHeight / 2 + item.offsetHeight / 2;
+  }
+
+  function aplicarValorInicial(hhmm) {
+    if (hhmm) {
+      const [h, m] = hhmm.split(":").map(Number);
+      horaSel = h;
+      minutoSel = MINUTOS_OPCOES.includes(m)
+        ? m
+        : MINUTOS_OPCOES.reduce((maisProximo, v) => (Math.abs(v - m) < Math.abs(maisProximo - m) ? v : maisProximo), 0);
+    } else {
+      horaSel = null;
+      minutoSel = null;
+    }
+  }
+  aplicarValorInicial(opts.valorInicial || "");
+
+  function textoValor() {
+    if (horaSel === null || minutoSel === null) return "";
+    return `${String(horaSel).padStart(2, "0")}:${String(minutoSel).padStart(2, "0")}`;
+  }
+
+  function render() {
+    colHoras.innerHTML = "";
+    for (let h = 0; h < 24; h++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "seletor-hora__item";
+      btn.textContent = String(h).padStart(2, "0");
+      if (h === horaSel) btn.classList.add("selecionado");
+      btn.addEventListener("click", () => { horaSel = h; render(); });
+      colHoras.appendChild(btn);
+    }
+    colMinutos.innerHTML = "";
+    MINUTOS_OPCOES.forEach((m) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "seletor-hora__item";
+      btn.textContent = String(m).padStart(2, "0");
+      if (m === minutoSel) btn.classList.add("selecionado");
+      btn.addEventListener("click", () => { minutoSel = m; render(); });
+      colMinutos.appendChild(btn);
+    });
+    if (btnConfirmar) btnConfirmar.disabled = horaSel === null || minutoSel === null;
+  }
+
+  input.addEventListener("click", () => {
+    document.querySelectorAll(".seletor-hora.aberto").forEach((c) => {
+      if (c !== container) c.classList.remove("aberto");
+    });
+    container.classList.toggle("aberto");
+    if (container.classList.contains("aberto")) {
+      // centraliza o item selecionado dentro da própria coluna, sem rolar a página
+      // (scrollIntoView rolaria a janela inteira, não só a coluna)
+      requestAnimationFrame(() => {
+        centralizarNaColuna(colHoras, colHoras.querySelector(".selecionado"));
+        centralizarNaColuna(colMinutos, colMinutos.querySelector(".selecionado"));
+      });
+    }
+  });
+  document.addEventListener("click", (e) => {
+    if (!container.contains(e.target) && e.target !== input) {
+      container.classList.remove("aberto");
+    }
+  });
+
+  btnLimpar?.addEventListener("click", () => {
+    horaSel = null;
+    minutoSel = null;
+    input.value = "";
+    render();
+    container.classList.remove("aberto");
+    aoSelecionar("");
+  });
+  btnConfirmar?.addEventListener("click", () => {
+    if (horaSel === null || minutoSel === null) return;
+    const valor = textoValor();
+    input.value = valor;
+    container.classList.remove("aberto");
+    aoSelecionar(valor);
+  });
+
+  input.value = textoValor();
+  render();
+
+  return {
+    definirValor(hhmm) {
+      aplicarValorInicial(hhmm || "");
+      input.value = textoValor();
+      render();
+    },
+    obterValor() {
+      return textoValor();
+    }
+  };
+}
+
 /* ---------- Calendário personalizado reutilizável ----------
    container: elemento .calendario (com [data-mes-ano], [data-dias], [data-nav-anterior], [data-nav-proximo])
    input: campo de texto (readonly) onde a data formatada é exibida

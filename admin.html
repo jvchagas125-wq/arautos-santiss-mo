@@ -136,12 +136,36 @@
             </div>
             <div class="campo">
               <label for="campoHoraInicioPrimeiroDia">Horário de início no primeiro dia</label>
-              <input type="time" id="campoHoraInicioPrimeiroDia" />
+              <div style="position:relative;">
+                <input type="text" id="campoHoraInicioPrimeiroDia" class="campo-clicavel" placeholder="Deixe em branco para não limitar" readonly autocomplete="off" />
+                <div class="seletor-hora" id="seletorHoraInicioPrimeiroDia">
+                  <div class="seletor-hora__colunas">
+                    <div class="seletor-hora__coluna" data-coluna-horas></div>
+                    <div class="seletor-hora__coluna" data-coluna-minutos></div>
+                  </div>
+                  <div class="seletor-hora__acoes">
+                    <button type="button" class="btn btn-contorno" data-limpar>Limpar</button>
+                    <button type="button" class="btn btn-dourado" data-confirmar>OK</button>
+                  </div>
+                </div>
+              </div>
               <small class="campo-ajuda">Opcional — deixe em branco para começar na primeira hora marcada abaixo. Ex.: se a adoração começa dia 19/09 às 09:00, os horários do site só aparecerão a partir das 09:00 nesse dia.</small>
             </div>
             <div class="campo">
               <label for="campoHoraFimUltimoDia">Horário de término no último dia</label>
-              <input type="time" id="campoHoraFimUltimoDia" />
+              <div style="position:relative;">
+                <input type="text" id="campoHoraFimUltimoDia" class="campo-clicavel" placeholder="Deixe em branco para não limitar" readonly autocomplete="off" />
+                <div class="seletor-hora" id="seletorHoraFimUltimoDia">
+                  <div class="seletor-hora__colunas">
+                    <div class="seletor-hora__coluna" data-coluna-horas></div>
+                    <div class="seletor-hora__coluna" data-coluna-minutos></div>
+                  </div>
+                  <div class="seletor-hora__acoes">
+                    <button type="button" class="btn btn-contorno" data-limpar>Limpar</button>
+                    <button type="button" class="btn btn-dourado" data-confirmar>OK</button>
+                  </div>
+                </div>
+              </div>
               <small class="campo-ajuda">Opcional — deixe em branco para terminar na última hora marcada abaixo. Ex.: se a adoração termina dia 26/09 às 08:30, os horários do site só aparecerão até antes das 08:30 nesse dia.</small>
             </div>
             <div class="painel__titulo" style="margin-top:6px;"><span class="emoji">🕐</span> Horários disponíveis por dia (00h às 23h)</div>
