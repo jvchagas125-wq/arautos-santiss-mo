@@ -1,6 +1,6 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
-  isoParaData, dataParaIso, horariosDisponiveisNoDia,
+  isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia,
   MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -8,7 +8,7 @@ import {
   obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
   ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
-  marcarAgendamentoExtra, ouvirMissasNaGrade, definirMissaNaGrade,
+  marcarAgendamentoExtra,
   obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso
 } from "./dados.js";
@@ -639,6 +639,10 @@ const CORES_EXPORT = {
   bloqueado: "FF1A1A1A"   // hora fora do período configurado (antes/depois do limite do dia)
 };
 
+// Contorno fino preto usado para marcar a divisão entre colunas (dias) e linhas (horas) na grade.
+const BORDA_GRADE = { style: "thin", color: { argb: "FF000000" } };
+const CONTORNO_GRADE = { top: BORDA_GRADE, left: BORDA_GRADE, bottom: BORDA_GRADE, right: BORDA_GRADE };
+
 function corDoGrupoPorHora(hora) {
   if ((hora >= 0 && hora <= 6) || (hora >= 21 && hora <= 23)) return CORES_EXPORT.nicodemos;
   if (hora >= 7 && hora <= 11) return CORES_EXPORT.arautos;
@@ -714,8 +718,9 @@ function adicionarAbaListaCompleta(wb, lista) {
 }
 
 // Abas seguintes: uma grade por semana (estilo da planilha da coordenação), com cores por grupo,
-// "extra", "Missa" e horários bloqueados/fora do período configurado.
-function adicionarAbasDeSemana(wb, dias, porDataHora, missasGrade, diasHorariosAtual, indiceSemana) {
+// "extra", Missa (calculada automaticamente a partir dos limites de início/término) e horários
+// bloqueados/fora do período configurado.
+function adicionarAbasDeSemana(wb, dias, porDataHora, diasHorariosAtual, indiceSemana) {
   const ws = wb.addWorksheet(`Semana ${indiceSemana + 1}`, {
     views: [{ state: "frozen", xSplit: 1, ySplit: 2 }]
   });
@@ -733,6 +738,7 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, missasGrade, diasHorariosA
   ws.getRow(1).height = 26;
 
   const headerRow = ws.getRow(2);
+  headerRow.getCell(1).border = CONTORNO_GRADE;
   dias.forEach((iso, i) => {
     const nomeDia = DIAS_SEMANA_COMPLETO[isoParaData(iso).getDay()].toLowerCase();
     const cell = headerRow.getCell(2 + i);
@@ -740,8 +746,12 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, missasGrade, diasHorariosA
     cell.font = { bold: true, color: { argb: CORES_EXPORT.cabecalhoTexto } };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.cabecalhoBg } };
     cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    cell.border = CONTORNO_GRADE;
   });
   headerRow.height = 24;
+
+  const horasAtivasPorDia = new Map(dias.map((iso) => [iso, new Set(horariosDisponiveisNoDia(diasHorariosAtual, iso))]));
+  const horasDeMissaPorDia = new Map(dias.map((iso) => [iso, horasDeMissaNoDia(diasHorariosAtual, iso)]));
 
   for (let hora = 0; hora < 24; hora++) {
     const row = ws.getRow(3 + hora);
@@ -749,14 +759,16 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, missasGrade, diasHorariosA
     celHora.value = `${String(hora).padStart(2, "0")}h`;
     celHora.font = { bold: true };
     celHora.alignment = { vertical: "middle", horizontal: "center" };
+    celHora.border = CONTORNO_GRADE;
 
     dias.forEach((iso, i) => {
       const cell = row.getCell(2 + i);
-      const horasAtivasDoDia = new Set(horariosDisponiveisNoDia(diasHorariosAtual, iso));
+      const horasAtivasDoDia = horasAtivasPorDia.get(iso);
+      const horasDeMissa = horasDeMissaPorDia.get(iso);
       const chave = `${iso}_${hora}`;
       const pessoas = porDataHora.get(chave) || [];
 
-      if (missasGrade.has(chave)) {
+      if (horasDeMissa.has(hora)) {
         cell.value = "MISSA";
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.missa } };
         cell.font = { bold: true, color: { argb: "FF6B5900" } };
@@ -771,6 +783,7 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, missasGrade, diasHorariosA
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.aberto } };
       }
       cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      cell.border = CONTORNO_GRADE;
     });
     row.height = 26;
   }
@@ -839,13 +852,7 @@ function configurarAcompanhamento() {
   let agendamentoParaCancelar = null;
   let diasHorariosAtual = { dataInicio: "", dataFim: "" };
   let mesAtualAgendados = null;
-  let missasGradeAtual = new Set(); // chaves "AAAA-MM-DD_hora", usadas no modal do dia e na exportação
-  let isoModalDiaAberto = null; // iso do dia com o modal de detalhes aberto no momento (p/ re-renderizar após marcar extra/missa)
-
-  ouvirMissasNaGrade((lista) => {
-    missasGradeAtual = new Set(lista.map((m) => `${m.data}_${m.hora}`));
-    if (isoModalDiaAberto) abrirModalDiaAgendados(isoModalDiaAberto);
-  });
+  let isoModalDiaAberto = null; // iso do dia com o modal de detalhes aberto no momento (p/ re-renderizar após marcar extra)
 
   abas.forEach((aba) => {
     aba.addEventListener("click", () => {
@@ -961,46 +968,21 @@ function configurarAcompanhamento() {
       porHora.get(a.hora).push(a);
     });
 
-    // mostra todos os horários ativos do dia (não só os que já têm gente agendada), pra dar pra
-    // marcar "Missa" também num horário livre
+    // mostra todos os horários ativos do dia (não só os que já têm gente agendada)
     const horasDoDia = horariosDisponiveisNoDia(diasHorariosAtual, iso);
 
     horasDoDia.forEach((hora) => {
       const pessoas = porHora.get(hora) || [];
-      const chaveMissa = `${iso}_${hora}`;
-      const ehMissa = missasGradeAtual.has(chaveMissa);
 
       const grupo = document.createElement("div");
       grupo.className = "grupo-horario-dia";
 
       const titulo = document.createElement("div");
       titulo.className = "grupo-horario-dia__titulo";
-      titulo.innerHTML = `${formatarHora(hora)} ${pessoas.length ? `<span class="contagem-contatos">${pessoas.length}</span>` : ""} ${ehMissa ? '<span class="badge-missa">Missa</span>' : ""}`;
-
-      const chipMissa = document.createElement("button");
-      chipMissa.type = "button";
-      chipMissa.className = "chip-missa" + (ehMissa ? " ativo" : "");
-      chipMissa.textContent = ehMissa ? "Desmarcar Missa" : "Marcar como Missa";
-      chipMissa.addEventListener("click", async () => {
-        chipMissa.disabled = true;
-        try {
-          await definirMissaNaGrade(iso, hora, !ehMissa);
-          abrirModalDiaAgendados(iso);
-        } catch (err) {
-          console.error(err);
-          mostrarToast("Não foi possível atualizar. Tente novamente.");
-          chipMissa.disabled = false;
-        }
-      });
-      titulo.appendChild(chipMissa);
+      titulo.innerHTML = `${formatarHora(hora)} ${pessoas.length ? `<span class="contagem-contatos">${pessoas.length}</span>` : ""}`;
       grupo.appendChild(titulo);
 
-      if (ehMissa) {
-        const aviso = document.createElement("p");
-        aviso.className = "horario-vazio-msg";
-        aviso.textContent = "Sem adoração — horário de Missa.";
-        grupo.appendChild(aviso);
-      } else if (pessoas.length === 0) {
+      if (pessoas.length === 0) {
         const aviso = document.createElement("p");
         aviso.className = "horario-vazio-msg";
         aviso.textContent = "Horário livre — ninguém agendado.";
@@ -1106,7 +1088,7 @@ function configurarAcompanhamento() {
 
     const blocosDeSemana = gerarBlocosDeSemana(diasHorariosAtual.dataInicio, diasHorariosAtual.dataFim);
     blocosDeSemana.forEach((dias, indiceSemana) => {
-      adicionarAbasDeSemana(wb, dias, porDataHora, missasGradeAtual, diasHorariosAtual, indiceSemana);
+      adicionarAbasDeSemana(wb, dias, porDataHora, diasHorariosAtual, indiceSemana);
     });
 
     const buffer = await wb.xlsx.writeBuffer();

@@ -175,18 +175,6 @@
 .btn-extra-item.ativo{ background: rgba(124,77,196,.2); color: #6b3fa0; }
 .btn-extra-item svg{ width:16px; height:16px; }
 
-/* ---------- marcar "Missa" num horário (sem adoração) ---------- */
-.chip-missa{
-  margin-left:auto; font-family:'EB Garamond'; font-size:.76rem; font-weight:600;
-  padding:5px 11px; border-radius:999px; border:1.5px solid rgba(157,122,31,.35);
-  background:#fffefb; color: var(--texto-suave); white-space:nowrap; flex-shrink:0;
-}
-.chip-missa:hover{ border-color: var(--dourado); color: var(--vermelho-escuro); }
-.chip-missa.ativo{ background: #fff4b8; border-color:#e0c440; color:#6b5900; }
-.badge-missa{
-  font-family:'JetBrains Mono','Cinzel'; font-size:.7rem; font-weight:400; color:#6b5900;
-  background:#fff4b8; border-radius:999px; padding:2px 9px;
-}
 .horario-vazio-msg{ margin:0; font-size:.82rem; color: var(--texto-suave); font-style:italic; }
 
 /* ---------- contatos ---------- */
