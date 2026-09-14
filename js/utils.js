@@ -401,7 +401,14 @@ export function criarSeletorHora(container, input, opts = {}) {
     }
   });
   document.addEventListener("click", (e) => {
-    if (!container.contains(e.target) && e.target !== input) {
+    // usa composedPath() em vez de container.contains(e.target): ao clicar numa hora/minuto,
+    // o próprio clique dispara render() (que recria os botões), então quando esse listener no
+    // document roda (na fase de propagação), o botão clicado já foi removido do DOM e
+    // "contains" daria falso positivo de "clique fora", fechando o seletor sem querer.
+    // composedPath() reflete a árvore no momento do clique, antes dessa recriação.
+    const caminho = typeof e.composedPath === "function" ? e.composedPath() : [];
+    const cliqueDentro = caminho.includes(container) || container.contains(e.target);
+    if (!cliqueDentro && e.target !== input) {
       container.classList.remove("aberto");
     }
   });
