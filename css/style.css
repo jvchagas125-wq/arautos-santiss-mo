@@ -647,6 +647,16 @@ img{ max-width: 100%; display:block; }
 .modal__acoes .btn{ flex:1; }
 .modal--fechar{
   position:absolute; top:12px; right:14px; background:none; border:none; font-size:1.3rem; color: var(--texto-suave);
+  z-index:2;
+}
+.modal--largo{
+  max-height: calc(100vh - 40px);
+  display:flex; flex-direction:column;
+}
+.modal--largo h3{ flex-shrink:0; }
+.modal__conteudo-scroll{
+  overflow-y:auto; flex:1 1 auto; min-height:0;
+  padding-right:6px; margin-right:-6px;
 }
 
 /* ============ TOAST ============ */
