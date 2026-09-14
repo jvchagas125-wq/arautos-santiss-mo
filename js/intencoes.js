@@ -1,7 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast,
-  formatarDataBR, dataParaIso, criarCalendario,
+  formatarDataBR, dataParaIso, hojeIso, criarCalendario,
   horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO
 } from "./utils.js";
 import { obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao } from "./dados.js";
@@ -31,6 +31,7 @@ let pararEscutas = []; // unsubscribes das listas do dia atualmente exibido
 let ultimaAssinatura = null; // evita recriar o DOM (e perder o que a pessoa está digitando) sem necessidade
 
 const calendario = criarCalendario(calendarioEl, dataInput, {
+  minIso: hojeIso(), // impede selecionar dias que já passaram
   aoSelecionar: (iso) => {
     diaSelecionado = iso;
     renderizarDiaSeNecessario();
