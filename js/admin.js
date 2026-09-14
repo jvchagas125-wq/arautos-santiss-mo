@@ -1,6 +1,6 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
-  isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia,
+  isoParaData, dataParaIso, horariosDisponiveisNoDia,
   MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -635,7 +635,6 @@ const CORES_EXPORT = {
   madalena: "FFF4D9A0",   // 12h-20h
   extra: "FFCBB6E8",      // agendamento marcado como "extra" no painel
   aberto: "FFE06666",     // horário livre, sem ninguém agendado
-  missa: "FFFFF2A8",      // horário marcado como Missa no painel
   bloqueado: "FF1A1A1A"   // hora fora do período configurado (antes/depois do limite do dia)
 };
 
@@ -718,8 +717,7 @@ function adicionarAbaListaCompleta(wb, lista) {
 }
 
 // Abas seguintes: uma grade por semana (estilo da planilha da coordenação), com cores por grupo,
-// "extra", Missa (calculada automaticamente a partir dos limites de início/término) e horários
-// bloqueados/fora do período configurado.
+// "extra" e horários bloqueados/fora do período configurado.
 function adicionarAbasDeSemana(wb, dias, porDataHora, diasHorariosAtual, indiceSemana) {
   const ws = wb.addWorksheet(`Semana ${indiceSemana + 1}`, {
     views: [{ state: "frozen", xSplit: 1, ySplit: 2 }]
@@ -751,7 +749,6 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, diasHorariosAtual, indiceS
   headerRow.height = 24;
 
   const horasAtivasPorDia = new Map(dias.map((iso) => [iso, new Set(horariosDisponiveisNoDia(diasHorariosAtual, iso))]));
-  const horasDeMissaPorDia = new Map(dias.map((iso) => [iso, horasDeMissaNoDia(diasHorariosAtual, iso)]));
 
   for (let hora = 0; hora < 24; hora++) {
     const row = ws.getRow(3 + hora);
@@ -764,15 +761,10 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, diasHorariosAtual, indiceS
     dias.forEach((iso, i) => {
       const cell = row.getCell(2 + i);
       const horasAtivasDoDia = horasAtivasPorDia.get(iso);
-      const horasDeMissa = horasDeMissaPorDia.get(iso);
       const chave = `${iso}_${hora}`;
       const pessoas = porDataHora.get(chave) || [];
 
-      if (horasDeMissa.has(hora)) {
-        cell.value = "MISSA";
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.missa } };
-        cell.font = { bold: true, color: { argb: "FF6B5900" } };
-      } else if (!horasAtivasDoDia.has(hora)) {
+      if (!horasAtivasDoDia.has(hora)) {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.bloqueado } };
       } else if (pessoas.length > 0) {
         const algumExtra = pessoas.some((p) => p.extra);
@@ -794,7 +786,6 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, diasHorariosAtual, indiceS
     [CORES_EXPORT.nicodemos, "Grupo São Nicodemos — Homens (00h às 06h e 21h às 23h) *", "FF3A2A1A"],
     [CORES_EXPORT.madalena, "Grupo Santa Maria Madalena — para todos (12h às 20h)", "FF3A2A1A"],
     [CORES_EXPORT.extra, "Extra — qualquer grupo", "FF3A2A1A"],
-    [CORES_EXPORT.missa, "Missa (sem adoração no horário)", "FF6B5900"],
     [CORES_EXPORT.aberto, "Horário em aberto!!!", "FFFFFFFF"],
     [CORES_EXPORT.bloqueado, "Fora do período de adoração", "FFFFFFFF"]
   ];

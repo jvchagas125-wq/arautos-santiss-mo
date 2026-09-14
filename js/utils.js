@@ -110,33 +110,6 @@ export function horariosDisponiveisNoDia(diasHorarios, iso) {
   return horas;
 }
 
-/* ---------- Horário automático da Missa de abertura/encerramento: quando o primeiro dia do
-   período tem hora de início configurada, a Missa é a hora imediatamente anterior a ela (ex.:
-   adoração começa às 09:00 -> Missa às 08:00); quando o último dia tem hora de término
-   configurada, a Missa é a hora imediatamente seguinte ao término (ex.: termina às 18:30 ->
-   Missa às 19:00). É automático — não precisa marcar manualmente. ---------- */
-export function horasDeMissaNoDia(diasHorarios, iso) {
-  const horas = new Set();
-  if (!diasHorarios) return horas;
-
-  const ehPrimeiroDia = iso === diasHorarios.dataInicio;
-  const ehUltimoDia = iso === diasHorarios.dataFim;
-  if (!ehPrimeiroDia && !ehUltimoDia) return horas;
-
-  const disponiveis = horariosDisponiveisNoDia(diasHorarios, iso);
-  if (disponiveis.length === 0) return horas;
-
-  if (ehPrimeiroDia && diasHorarios.horaInicioPrimeiroDia) {
-    const primeiraHora = Math.min(...disponiveis);
-    horas.add((primeiraHora - 1 + 24) % 24);
-  }
-  if (ehUltimoDia && diasHorarios.horaFimUltimoDia) {
-    const ultimaHora = Math.max(...disponiveis);
-    horas.add((ultimaHora + 1) % 24);
-  }
-  return horas;
-}
-
 /* ---------- Frase do dia: rotação cíclica de até 30 frases ----------
    Todo mundo vê a mesma frase no mesmo dia (calculado pela data local do aparelho).
    Ao chegar na 30ª, volta para a 1ª. Frases vazias são puladas automaticamente. */
