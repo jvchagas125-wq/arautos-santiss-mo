@@ -177,6 +177,12 @@ export async function cancelarAgendamento(agendamentoId, data, hora, motivo) {
   });
 }
 
+// Marca/desmarca um agendamento como "extra" (pessoa cobrindo um horário fora do seu grupo
+// habitual). Usado só no painel admin, para colorir a planilha exportada.
+export async function marcarAgendamentoExtra(agendamentoId, extra) {
+  await updateDoc(doc(db, "agendamentos", agendamentoId), { extra: !!extra });
+}
+
 export function ouvirAgendamentosDoUsuario(telefoneDigits, callback) {
   const q = query(
     collection(db, "agendamentos"),
@@ -220,6 +226,29 @@ export function ouvirTodosAgendamentos(status, callback) {
     lista.sort((a, b) => (b.data + String(b.hora).padStart(2,"0")).localeCompare(a.data + String(a.hora).padStart(2,"0")));
     callback(lista);
   });
+}
+
+/* ---------------- Missas marcadas na grade (painel admin, usado na planilha exportada) ----------------
+   Marca um horário específico (data + hora) como "Missa" — sem adoração naquele horário.
+   Guardado numa coleção separada de "agendamentos" porque não é um agendamento de pessoa,
+   é uma marcação do próprio horário. Id do documento = "AAAA-MM-DD_H" (ex: "2026-09-19_7"). */
+function idMissaGrade(data, hora) {
+  return `${data}_${hora}`;
+}
+
+export function ouvirMissasNaGrade(callback) {
+  return onSnapshot(collection(db, "missasGrade"), (snap) => {
+    callback(snap.docs.map((d) => d.data()));
+  });
+}
+
+export async function definirMissaNaGrade(data, hora, ativa) {
+  const ref = doc(db, "missasGrade", idMissaGrade(data, hora));
+  if (ativa) {
+    await setDoc(ref, { data, hora });
+  } else {
+    await deleteDoc(ref);
+  }
 }
 
 /* ---------------- Intenções da missa ---------------- */

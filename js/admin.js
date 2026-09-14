@@ -1,12 +1,14 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
-  isoParaData, dataParaIso, MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto } from "./utils.js";
+  isoParaData, dataParaIso, horariosDisponiveisNoDia,
+  MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterFrases, salvarFrases,
   obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
   ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
+  marcarAgendamentoExtra, ouvirMissasNaGrade, definirMissaNaGrade,
   obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso
 } from "./dados.js";
@@ -622,6 +624,176 @@ function configurarAvisos() {
   });
 }
 
+/* ---------------- Exportação da planilha (grade semanal, estilo do modelo da coordenação) ---------------- */
+const CORES_EXPORT = {
+  tituloBg: "FF7A0C1E",
+  tituloTexto: "FFFFFDF8",
+  cabecalhoBg: "FFCDA434",
+  cabecalhoTexto: "FF4A0711",
+  nicodemos: "FFBDD7EE",  // 00h-06h e 21h-23h
+  arautos: "FFC6E0B4",    // 07h-11h
+  madalena: "FFF4D9A0",   // 12h-20h
+  extra: "FFCBB6E8",      // agendamento marcado como "extra" no painel
+  aberto: "FFE06666",     // horário livre, sem ninguém agendado
+  missa: "FFFFF2A8",      // horário marcado como Missa no painel
+  bloqueado: "FF1A1A1A"   // hora fora do período configurado (antes/depois do limite do dia)
+};
+
+function corDoGrupoPorHora(hora) {
+  if ((hora >= 0 && hora <= 6) || (hora >= 21 && hora <= 23)) return CORES_EXPORT.nicodemos;
+  if (hora >= 7 && hora <= 11) return CORES_EXPORT.arautos;
+  return CORES_EXPORT.madalena; // 12h-20h
+}
+
+// Divide o período todo (De -> Até) em blocos de até 7 dias corridos, um bloco = uma aba da planilha.
+function gerarBlocosDeSemana(dataInicio, dataFim) {
+  const blocos = [];
+  let cursor = dataInicio;
+  while (cursor <= dataFim) {
+    const dias = [];
+    let d = isoParaData(cursor);
+    while (dias.length < 7 && dataParaIso(d) <= dataFim) {
+      dias.push(dataParaIso(d));
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    }
+    blocos.push(dias);
+    const ultimo = isoParaData(dias[dias.length - 1]);
+    const proximo = new Date(ultimo.getFullYear(), ultimo.getMonth(), ultimo.getDate() + 1);
+    cursor = dataParaIso(proximo);
+  }
+  return blocos;
+}
+
+// Aba 1: lista simples e filtrável (formato antigo), útil pra buscar/ordenar.
+function adicionarAbaListaCompleta(wb, lista) {
+  const ws = wb.addWorksheet("Lista completa", { views: [{ state: "frozen", ySplit: 1 }] });
+  ws.columns = [
+    { header: "Nome", key: "nome", width: 30 },
+    { header: "Telefone", key: "telefone", width: 18 },
+    { header: "Data", key: "data", width: 14 },
+    { header: "Dia da semana", key: "diaSemana", width: 16 },
+    { header: "Horário", key: "horario", width: 18 },
+    { header: "Extra", key: "extra", width: 10 }
+  ];
+
+  const headerRow = ws.getRow(1);
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFDF8" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF7A0C1E" } };
+    cell.alignment = { vertical: "middle", horizontal: "left" };
+  });
+  headerRow.height = 20;
+
+  const ordenados = [...lista].sort((a, b) =>
+    (a.data + String(a.hora).padStart(2, "0")).localeCompare(b.data + String(b.hora).padStart(2, "0"))
+  );
+  ordenados.forEach((a) => {
+    const diaSemana = formatarDataComDiaSemana(a.data).split(" - ")[1] || "";
+    const row = ws.addRow({
+      nome: a.nome || "",
+      telefone: a.telefone || "",
+      data: formatarDataBR(a.data),
+      diaSemana,
+      horario: formatarHora(a.hora),
+      extra: a.extra ? "Sim" : ""
+    });
+    row.eachCell((cell) => { cell.alignment = { vertical: "middle" }; });
+  });
+
+  ws.autoFilter = { from: "A1", to: "F1" };
+}
+
+// Abas seguintes: uma grade por semana (estilo da planilha da coordenação), com cores por grupo,
+// "extra", "Missa" e horários bloqueados/fora do período configurado.
+function adicionarAbasDeSemana(wb, dias, porDataHora, missasGrade, diasHorariosAtual, indiceSemana) {
+  const ws = wb.addWorksheet(`Semana ${indiceSemana + 1}`, {
+    views: [{ state: "frozen", xSplit: 1, ySplit: 2 }]
+  });
+
+  const totalColunas = 1 + dias.length;
+  ws.getColumn(1).width = 7;
+  for (let c = 2; c <= totalColunas; c++) ws.getColumn(c).width = 22;
+
+  ws.mergeCells(1, 1, 1, totalColunas);
+  const tituloCell = ws.getCell(1, 1);
+  tituloCell.value = `SEMANA ${indiceSemana + 1} — ADORAÇÃO EUCARÍSTICA (${formatarDataBR(dias[0])} a ${formatarDataBR(dias[dias.length - 1])})`;
+  tituloCell.font = { bold: true, size: 13, color: { argb: CORES_EXPORT.tituloTexto } };
+  tituloCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.tituloBg } };
+  tituloCell.alignment = { vertical: "middle", horizontal: "center" };
+  ws.getRow(1).height = 26;
+
+  const headerRow = ws.getRow(2);
+  dias.forEach((iso, i) => {
+    const nomeDia = DIAS_SEMANA_COMPLETO[isoParaData(iso).getDay()].toLowerCase();
+    const cell = headerRow.getCell(2 + i);
+    cell.value = `${nomeDia} ${formatarDataBR(iso).slice(0, 5)}`;
+    cell.font = { bold: true, color: { argb: CORES_EXPORT.cabecalhoTexto } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.cabecalhoBg } };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  });
+  headerRow.height = 24;
+
+  for (let hora = 0; hora < 24; hora++) {
+    const row = ws.getRow(3 + hora);
+    const celHora = row.getCell(1);
+    celHora.value = `${String(hora).padStart(2, "0")}h`;
+    celHora.font = { bold: true };
+    celHora.alignment = { vertical: "middle", horizontal: "center" };
+
+    dias.forEach((iso, i) => {
+      const cell = row.getCell(2 + i);
+      const horasAtivasDoDia = new Set(horariosDisponiveisNoDia(diasHorariosAtual, iso));
+      const chave = `${iso}_${hora}`;
+      const pessoas = porDataHora.get(chave) || [];
+
+      if (missasGrade.has(chave)) {
+        cell.value = "MISSA";
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.missa } };
+        cell.font = { bold: true, color: { argb: "FF6B5900" } };
+      } else if (!horasAtivasDoDia.has(hora)) {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.bloqueado } };
+      } else if (pessoas.length > 0) {
+        const algumExtra = pessoas.some((p) => p.extra);
+        cell.value = pessoas.map((p) => p.nome || "—").join(" / ");
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: algumExtra ? CORES_EXPORT.extra : corDoGrupoPorHora(hora) } };
+        cell.font = { color: { argb: "FF3A2A1A" } };
+      } else {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.aberto } };
+      }
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    });
+    row.height = 26;
+  }
+
+  const linhaLegendaInicio = 3 + 24 + 1;
+  const legenda = [
+    [CORES_EXPORT.arautos, "Arautos (07h às 11h)", "FF3A2A1A"],
+    [CORES_EXPORT.nicodemos, "Grupo São Nicodemos — Homens (00h às 06h e 21h às 23h) *", "FF3A2A1A"],
+    [CORES_EXPORT.madalena, "Grupo Santa Maria Madalena — para todos (12h às 20h)", "FF3A2A1A"],
+    [CORES_EXPORT.extra, "Extra — qualquer grupo", "FF3A2A1A"],
+    [CORES_EXPORT.missa, "Missa (sem adoração no horário)", "FF6B5900"],
+    [CORES_EXPORT.aberto, "Horário em aberto!!!", "FFFFFFFF"],
+    [CORES_EXPORT.bloqueado, "Fora do período de adoração", "FFFFFFFF"]
+  ];
+  legenda.forEach(([cor, texto, corTexto], i) => {
+    const linha = linhaLegendaInicio + i;
+    ws.mergeCells(linha, 2, linha, totalColunas);
+    const cell = ws.getCell(linha, 2);
+    cell.value = texto;
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: cor } };
+    cell.font = { bold: true, color: { argb: corTexto } };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+    ws.getRow(linha).height = 20;
+  });
+
+  const linhaObs = linhaLegendaInicio + legenda.length + 1;
+  ws.mergeCells(linhaObs, 1, linhaObs, totalColunas);
+  const obsCell = ws.getCell(linhaObs, 1);
+  obsCell.value = "* As esposas dos integrantes do Grupo São Nicodemos podem acompanhá-los.";
+  obsCell.font = { italic: true };
+  obsCell.alignment = { vertical: "middle", horizontal: "center" };
+}
+
 /* ---------------- Acompanhamento ---------------- */
 function configurarAcompanhamento() {
   const abas = document.querySelectorAll(".admin-aba");
@@ -657,6 +829,13 @@ function configurarAcompanhamento() {
   let agendamentoParaCancelar = null;
   let diasHorariosAtual = { dataInicio: "", dataFim: "" };
   let mesAtualAgendados = null;
+  let missasGradeAtual = new Set(); // chaves "AAAA-MM-DD_hora", usadas no modal do dia e na exportação
+  let isoModalDiaAberto = null; // iso do dia com o modal de detalhes aberto no momento (p/ re-renderizar após marcar extra/missa)
+
+  ouvirMissasNaGrade((lista) => {
+    missasGradeAtual = new Set(lista.map((m) => `${m.data}_${m.hora}`));
+    if (isoModalDiaAberto) abrirModalDiaAgendados(isoModalDiaAberto);
+  });
 
   abas.forEach((aba) => {
     aba.addEventListener("click", () => {
@@ -761,6 +940,7 @@ function configurarAcompanhamento() {
 
   /* ---- modal de detalhes do dia ---- */
   function abrirModalDiaAgendados(iso) {
+    isoModalDiaAberto = iso;
     const doDia = agendamentosDoDia(iso).sort((a, b) => a.hora - b.hora);
     diaAgendadosTitulo.textContent = formatarDataComDiaSemana(iso);
     diaAgendadosConteudo.innerHTML = "";
@@ -771,110 +951,153 @@ function configurarAcompanhamento() {
       porHora.get(a.hora).push(a);
     });
 
-    [...porHora.keys()].sort((a, b) => a - b).forEach((hora) => {
-      const pessoas = porHora.get(hora);
+    // mostra todos os horários ativos do dia (não só os que já têm gente agendada), pra dar pra
+    // marcar "Missa" também num horário livre
+    const horasDoDia = horariosDisponiveisNoDia(diasHorariosAtual, iso);
+
+    horasDoDia.forEach((hora) => {
+      const pessoas = porHora.get(hora) || [];
+      const chaveMissa = `${iso}_${hora}`;
+      const ehMissa = missasGradeAtual.has(chaveMissa);
+
       const grupo = document.createElement("div");
       grupo.className = "grupo-horario-dia";
 
       const titulo = document.createElement("div");
       titulo.className = "grupo-horario-dia__titulo";
-      titulo.innerHTML = `${formatarHora(hora)} <span class="contagem-contatos">${pessoas.length}</span>`;
+      titulo.innerHTML = `${formatarHora(hora)} ${pessoas.length ? `<span class="contagem-contatos">${pessoas.length}</span>` : ""} ${ehMissa ? '<span class="badge-missa">Missa</span>' : ""}`;
+
+      const chipMissa = document.createElement("button");
+      chipMissa.type = "button";
+      chipMissa.className = "chip-missa" + (ehMissa ? " ativo" : "");
+      chipMissa.textContent = ehMissa ? "Desmarcar Missa" : "Marcar como Missa";
+      chipMissa.addEventListener("click", async () => {
+        chipMissa.disabled = true;
+        try {
+          await definirMissaNaGrade(iso, hora, !ehMissa);
+          abrirModalDiaAgendados(iso);
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível atualizar. Tente novamente.");
+          chipMissa.disabled = false;
+        }
+      });
+      titulo.appendChild(chipMissa);
       grupo.appendChild(titulo);
 
-      const listaEl = document.createElement("div");
-      listaEl.className = "lista-pessoas-ocupado";
+      if (ehMissa) {
+        const aviso = document.createElement("p");
+        aviso.className = "horario-vazio-msg";
+        aviso.textContent = "Sem adoração — horário de Missa.";
+        grupo.appendChild(aviso);
+      } else if (pessoas.length === 0) {
+        const aviso = document.createElement("p");
+        aviso.className = "horario-vazio-msg";
+        aviso.textContent = "Horário livre — ninguém agendado.";
+        grupo.appendChild(aviso);
+      } else {
+        const listaEl = document.createElement("div");
+        listaEl.className = "lista-pessoas-ocupado";
 
-      pessoas.forEach((a) => {
-        const item = document.createElement("div");
-        item.className = "pessoa-ocupado-item";
+        pessoas.forEach((a) => {
+          const item = document.createElement("div");
+          item.className = "pessoa-ocupado-item";
 
-        const info = document.createElement("div");
-        const nome = document.createElement("div");
-        nome.className = "pessoa-ocupado-item__nome";
-        nome.textContent = a.nome || "—";
-        const tel = document.createElement("div");
-        tel.className = "pessoa-ocupado-item__tel";
-        tel.textContent = a.telefone || "—";
-        info.appendChild(nome);
-        info.appendChild(tel);
+          const info = document.createElement("div");
+          const nome = document.createElement("div");
+          nome.className = "pessoa-ocupado-item__nome";
+          nome.textContent = a.nome || "—";
+          const tel = document.createElement("div");
+          tel.className = "pessoa-ocupado-item__tel";
+          tel.textContent = a.telefone || "—";
+          info.appendChild(nome);
+          info.appendChild(tel);
 
-        const acoes = document.createElement("div");
-        acoes.className = "pessoa-ocupado-item__acoes";
+          const acoes = document.createElement("div");
+          acoes.className = "pessoa-ocupado-item__acoes";
 
-        const linkWhats = document.createElement("a");
-        linkWhats.className = "link-whatsapp";
-        linkWhats.href = `https://wa.me/55${a.telefoneDigits || ""}`;
-        linkWhats.target = "_blank";
-        linkWhats.rel = "noopener";
-        linkWhats.title = "Chamar no WhatsApp";
-        linkWhats.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>`;
+          const linkWhats = document.createElement("a");
+          linkWhats.className = "link-whatsapp";
+          linkWhats.href = `https://wa.me/55${a.telefoneDigits || ""}`;
+          linkWhats.target = "_blank";
+          linkWhats.rel = "noopener";
+          linkWhats.title = "Chamar no WhatsApp";
+          linkWhats.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>`;
 
-        const btnCancelar = document.createElement("button");
-        btnCancelar.type = "button";
-        btnCancelar.className = "btn-cancelar-item";
-        btnCancelar.title = "Cancelar agendamento";
-        btnCancelar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>`;
-        btnCancelar.addEventListener("click", () => {
-          agendamentoParaCancelar = a;
-          nomeCancelarAgendEl.textContent = a.nome || "esta pessoa";
-          abrirModal(modalCancelarAgend);
+          const btnExtra = document.createElement("button");
+          btnExtra.type = "button";
+          btnExtra.className = "btn-extra-item" + (a.extra ? " ativo" : "");
+          btnExtra.title = a.extra ? "Desmarcar como extra" : "Marcar como extra (fora do grupo habitual)";
+          btnExtra.innerHTML = `<svg viewBox="0 0 24 24" fill="${a.extra ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5l2.9 6.2 6.6.8-4.9 4.7 1.2 6.7L12 17.8l-5.8 3.1 1.2-6.7-4.9-4.7 6.6-.8Z"/></svg>`;
+          btnExtra.addEventListener("click", async () => {
+            btnExtra.disabled = true;
+            try {
+              await marcarAgendamentoExtra(a.id, !a.extra);
+              abrirModalDiaAgendados(iso);
+            } catch (err) {
+              console.error(err);
+              mostrarToast("Não foi possível atualizar. Tente novamente.");
+              btnExtra.disabled = false;
+            }
+          });
+
+          const btnCancelar = document.createElement("button");
+          btnCancelar.type = "button";
+          btnCancelar.className = "btn-cancelar-item";
+          btnCancelar.title = "Cancelar agendamento";
+          btnCancelar.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>`;
+          btnCancelar.addEventListener("click", () => {
+            agendamentoParaCancelar = a;
+            nomeCancelarAgendEl.textContent = a.nome || "esta pessoa";
+            abrirModal(modalCancelarAgend);
+          });
+
+          acoes.appendChild(linkWhats);
+          acoes.appendChild(btnExtra);
+          acoes.appendChild(btnCancelar);
+          item.appendChild(info);
+          item.appendChild(acoes);
+          listaEl.appendChild(item);
         });
 
-        acoes.appendChild(linkWhats);
-        acoes.appendChild(btnCancelar);
-        item.appendChild(info);
-        item.appendChild(acoes);
-        listaEl.appendChild(item);
-      });
+        grupo.appendChild(listaEl);
+      }
 
-      grupo.appendChild(listaEl);
       diaAgendadosConteudo.appendChild(grupo);
     });
 
     abrirModal(modalDiaAgendados);
   }
 
-  document.getElementById("fecharModalDiaAgendados").addEventListener("click", () => fecharModal(modalDiaAgendados));
+  document.getElementById("fecharModalDiaAgendados").addEventListener("click", () => {
+    fecharModal(modalDiaAgendados);
+    isoModalDiaAberto = null;
+  });
 
   /* ---- exportar planilha (Excel) ---- */
   async function exportarAgendadosParaExcel(lista) {
+    if (!diasHorariosAtual.dataInicio || !diasHorariosAtual.dataFim) {
+      mostrarToast("Configure o período da adoração antes de exportar.");
+      return;
+    }
+
     const wb = new ExcelJS.Workbook();
     wb.creator = "Arautos do Evangelho";
     wb.created = new Date();
-    const ws = wb.addWorksheet("Agendamentos", { views: [{ state: "frozen", ySplit: 1 }] });
 
-    ws.columns = [
-      { header: "Nome", key: "nome", width: 30 },
-      { header: "Telefone", key: "telefone", width: 18 },
-      { header: "Data", key: "data", width: 14 },
-      { header: "Dia da semana", key: "diaSemana", width: 16 },
-      { header: "Horário", key: "horario", width: 18 },
-    ];
+    adicionarAbaListaCompleta(wb, lista);
 
-    const headerRow = ws.getRow(1);
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: "FFFFFDF8" } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF7A0C1E" } };
-      cell.alignment = { vertical: "middle", horizontal: "left" };
-    });
-    headerRow.height = 20;
-
-    const ordenados = [...lista].sort((a, b) =>
-      (a.data + String(a.hora).padStart(2, "0")).localeCompare(b.data + String(b.hora).padStart(2, "0"))
-    );
-    ordenados.forEach((a) => {
-      const diaSemana = formatarDataComDiaSemana(a.data).split(" - ")[1] || "";
-      const row = ws.addRow({
-        nome: a.nome || "",
-        telefone: a.telefone || "",
-        data: formatarDataBR(a.data),
-        diaSemana,
-        horario: formatarHora(a.hora),
-      });
-      row.eachCell((cell) => { cell.alignment = { vertical: "middle" }; });
+    const porDataHora = new Map();
+    lista.forEach((a) => {
+      const chave = `${a.data}_${a.hora}`;
+      if (!porDataHora.has(chave)) porDataHora.set(chave, []);
+      porDataHora.get(chave).push(a);
     });
 
-    ws.autoFilter = { from: "A1", to: "E1" };
+    const blocosDeSemana = gerarBlocosDeSemana(diasHorariosAtual.dataInicio, diasHorariosAtual.dataFim);
+    blocosDeSemana.forEach((dias, indiceSemana) => {
+      adicionarAbasDeSemana(wb, dias, porDataHora, missasGradeAtual, diasHorariosAtual, indiceSemana);
+    });
 
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -883,7 +1106,7 @@ function configurarAcompanhamento() {
     a.href = url;
     const hoje = new Date();
     const carimbo = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
-    a.download = `agendamentos-arautos-${carimbo}.xlsx`;
+    a.download = `grade-adoracao-arautos-${carimbo}.xlsx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -968,6 +1191,7 @@ function configurarAcompanhamento() {
       mostrarToast("Agendamento cancelado.");
       fecharModal(modalCancelarAgend);
       fecharModal(modalDiaAgendados);
+      isoModalDiaAberto = null;
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível cancelar agora. Tente novamente.");
