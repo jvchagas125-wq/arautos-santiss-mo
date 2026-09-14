@@ -370,6 +370,15 @@ img{ max-width: 100%; display:block; }
    (o painel de horários também recebe posição/contexto de empilhamento pela animação de entrada) */
 #painelData{ position:relative; z-index: 2; }
 
+/* .painel tem "animation" (para o efeito de entrada), o que cria um novo contexto de
+   empilhamento — sem isso, o calendário (mesmo com z-index alto) ficaria escondido atrás
+   de um .painel seguinte quando ele já tiver conteúdo abaixo (ex: outra missa, a grade de
+   horários). Qualquer .painel que contenha um .calendario precisa disso. */
+.painel:has(.calendario){
+  position: relative;
+  z-index: 1;
+}
+
 .calendario{
   position:absolute; z-index: 120; margin-top:8px;
   width: min(320px, 88vw);
@@ -469,6 +478,8 @@ img{ max-width: 100%; display:block; }
 .intencoes-aviso-fecha{
   margin:0 0 20px; font-size:.82rem; color: var(--texto-suave); font-style:italic;
 }
+#listaMissasDoDia > .painel:first-child,
+#avisoSemMissaNoDia{ margin-top:20px; }
 .categoria-intencao{ margin-bottom:26px; }
 .categoria-intencao:last-child{ margin-bottom:0; }
 .categoria-intencao__titulo{

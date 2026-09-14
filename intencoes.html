@@ -60,50 +60,36 @@
     <h1 class="titulo-pagina">Intenções da Missa</h1>
     <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
+    <div class="painel" id="painelDataIntencoes">
+      <div class="painel__titulo"><span class="emoji">📅</span> Selecione o dia da missa</div>
+      <div class="campo" style="position:relative; margin-bottom:0;">
+        <input type="text" id="dataIntencoesInput" class="campo-clicavel" placeholder="Toque para escolher uma data" readonly autocomplete="off" />
+        <div class="calendario" id="calendarioIntencoes">
+          <div class="calendario__cabecalho">
+            <button type="button" class="calendario__nav" data-nav-anterior aria-label="Mês anterior">‹</button>
+            <strong data-mes-ano>—</strong>
+            <button type="button" class="calendario__nav" data-nav-proximo aria-label="Próximo mês">›</button>
+          </div>
+          <div class="calendario__semana">
+            <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+          </div>
+          <div class="calendario__dias" data-dias></div>
+        </div>
+      </div>
+    </div>
+
     <div class="spinner" id="intencoesCarregando" style="margin:30px auto;"></div>
 
-    <!-- Lista aberta para preenchimento -->
-    <div class="painel oculto" id="painelIntencoesAberta">
-      <div class="painel__titulo"><span class="emoji">🙏</span> <span id="intencoesTitulo">—</span></div>
-      <p class="intencoes-aviso-fecha" id="intencoesAvisoFecha"></p>
+    <!-- Uma "missa-card" por horário de missa do dia selecionado, geradas dinamicamente -->
+    <div id="listaMissasDoDia"></div>
 
-      <div class="categoria-intencao" data-categoria="gracas">
-        <h3 class="categoria-intencao__titulo">Agradecem graças</h3>
-        <div class="categoria-intencao__lista" id="listaGracas"></div>
-        <form class="categoria-intencao__form" data-categoria="gracas">
-          <textarea rows="2" placeholder="Escreva aqui sua intenção de agradecimento..." required></textarea>
-          <button type="submit" class="btn btn-contorno btn-pequeno">Adicionar</button>
-        </form>
-      </div>
-
-      <div class="categoria-intencao" data-categoria="alma">
-        <h3 class="categoria-intencao__titulo">Por alma</h3>
-        <div class="categoria-intencao__lista" id="listaAlma"></div>
-        <form class="categoria-intencao__form" data-categoria="alma">
-          <textarea rows="2" placeholder="Escreva aqui o nome de quem deseja lembrar..." required></textarea>
-          <button type="submit" class="btn btn-contorno btn-pequeno">Adicionar</button>
-        </form>
-      </div>
-
-      <div class="categoria-intencao" data-categoria="aniversarios">
-        <h3 class="categoria-intencao__titulo">Aniversários</h3>
-        <div class="categoria-intencao__lista" id="listaAniversarios"></div>
-        <form class="categoria-intencao__form" data-categoria="aniversarios">
-          <textarea rows="2" placeholder="Escreva aqui o nome de quem está de aniversário..." required></textarea>
-          <button type="submit" class="btn btn-contorno btn-pequeno">Adicionar</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Lista fechada no momento -->
-    <div class="painel oculto" id="painelIntencoesFechada">
-      <div class="painel__titulo"><span class="emoji">🔒</span> Intenções fechadas no momento</div>
-      <p id="textoFechado" style="margin:0; line-height:1.7; color:var(--texto-suave);">—</p>
-    </div>
+    <p class="mensagem-vazia oculto" id="avisoSemMissaNoDia">
+      Não há nenhuma missa configurada para este dia. Selecione outra data no calendário.
+    </p>
 
     <div class="aviso-info">
       <span class="aviso-info__icone">ℹ️</span>
-      <p><strong>Como funciona:</strong> a lista de intenções muda automaticamente a cada missa. Ela fica aberta para todos preencherem até algumas horas antes da missa começar; depois disso ela fecha, e assim que a missa termina a lista da próxima missa já abre.</p>
+      <p><strong>Como funciona:</strong> escolha no calendário o dia da missa que deseja. Cada horário de missa daquele dia tem sua própria lista de intenções, aberta para preenchimento até algumas horas antes do horário da missa; depois disso ela fecha.</p>
     </div>
 
     <p class="rodape-simples">Arautos do Evangelho — Adoração Eucarística</p>

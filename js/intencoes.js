@@ -1,7 +1,8 @@
 import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast,
-  formatarDataBR, dataParaIso, calcularListaIntencoesAtual
+  formatarDataBR, dataParaIso, hojeIso, criarCalendario,
+  horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO
 } from "./utils.js";
 import { obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao } from "./dados.js";
 
@@ -14,102 +15,77 @@ obterConfiguracoesGerais().then((config) => {
 });
 
 const elCarregando = document.getElementById("intencoesCarregando");
-const painelAberta = document.getElementById("painelIntencoesAberta");
-const painelFechada = document.getElementById("painelIntencoesFechada");
-const intencoesTitulo = document.getElementById("intencoesTitulo");
-const intencoesAvisoFecha = document.getElementById("intencoesAvisoFecha");
-const textoFechado = document.getElementById("textoFechado");
-
-const LISTAS_EL = {
-  gracas: document.getElementById("listaGracas"),
-  alma: document.getElementById("listaAlma"),
-  aniversarios: document.getElementById("listaAniversarios")
-};
+const dataInput = document.getElementById("dataIntencoesInput");
+const calendarioEl = document.getElementById("calendarioIntencoes");
+const listaMissasDoDia = document.getElementById("listaMissasDoDia");
+const avisoSemMissa = document.getElementById("avisoSemMissaNoDia");
 
 function formatarHoraSimples(hora) {
   return `${String(hora).padStart(2, "0")}:00`;
 }
 
 let configAtual = null;
-let chaveListaAtual = null; // "dataMissa-horaMissa" da lista atualmente exibida
-let pararEscutaLista = null;
-let intervaloChecagem = null;
+let diaSelecionado = hojeIso();
+let pararEscutas = []; // unsubscribes das listas do dia atualmente exibido
+let ultimaAssinatura = null; // evita recriar o DOM (e perder o que a pessoa está digitando) sem necessidade
 
-function renderizarEntradas(entradas) {
-  Object.values(LISTAS_EL).forEach((el) => { el.innerHTML = ""; });
-  const porCategoria = { gracas: [], alma: [], aniversarios: [] };
-  entradas.forEach((it) => {
-    if (porCategoria[it.categoria]) porCategoria[it.categoria].push(it);
-  });
-  Object.entries(porCategoria).forEach(([categoria, itens]) => {
-    const el = LISTAS_EL[categoria];
-    if (itens.length === 0) {
-      const vazio = document.createElement("p");
-      vazio.className = "categoria-intencao__vazio";
-      vazio.textContent = "Nenhuma intenção adicionada ainda.";
-      el.appendChild(vazio);
-      return;
-    }
-    itens.forEach((it) => {
-      const item = document.createElement("div");
-      item.className = "intencao-item";
-      item.textContent = it.texto;
-      el.appendChild(item);
-    });
-  });
-}
-
-function atualizarTela() {
-  if (!configAtual) return;
-  const status = calcularListaIntencoesAtual(configAtual, new Date());
-  elCarregando.classList.add("oculto");
-
-  if (!status.dataMissa) {
-    painelAberta.classList.add("oculto");
-    painelFechada.classList.remove("oculto");
-    textoFechado.textContent = "Nenhum horário de missa está configurado no momento.";
-    return;
+const calendario = criarCalendario(calendarioEl, dataInput, {
+  valorInicial: diaSelecionado,
+  aoSelecionar: (iso) => {
+    diaSelecionado = iso;
+    renderizarDiaSeNecessario();
   }
-
-  if (!status.aberta) {
-    painelAberta.classList.add("oculto");
-    painelFechada.classList.remove("oculto");
-    textoFechado.textContent =
-      `As intenções estão fechadas para preenchimento agora. A lista abre automaticamente às ` +
-      `${formatarHoraSimples(status.proximaMissa.getHours())} de ${formatarDataBR(dataParaIso(status.proximaMissa))}.`;
-    if (pararEscutaLista) { pararEscutaLista(); pararEscutaLista = null; }
-    chaveListaAtual = null;
-    return;
-  }
-
-  painelFechada.classList.add("oculto");
-  painelAberta.classList.remove("oculto");
-  intencoesTitulo.textContent = `Intenções para a missa de ${formatarDataBR(status.dataMissa)} às ${formatarHoraSimples(status.horaMissa)}`;
-  intencoesAvisoFecha.textContent = `Preenchimento aberto até ${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.`;
-
-  const novaChave = `${status.dataMissa}|${status.horaMissa}`;
-  if (novaChave !== chaveListaAtual) {
-    chaveListaAtual = novaChave;
-    if (pararEscutaLista) pararEscutaLista();
-    pararEscutaLista = ouvirIntencoesDaLista(status.dataMissa, status.horaMissa, renderizarEntradas);
-  }
-}
-
-ouvirConfigIntencoes((config) => {
-  configAtual = config;
-  atualizarTela();
 });
 
-// reavalia periodicamente para trocar de lista automaticamente sem precisar recarregar a página
-intervaloChecagem = setInterval(atualizarTela, 30000);
+function pararTodasEscutas() {
+  pararEscutas.forEach((parar) => parar());
+  pararEscutas = [];
+}
 
-document.querySelectorAll(".categoria-intencao__form").forEach((form) => {
+function textoStatusFechado(status) {
+  if (status.jaAconteceu) return "Esta missa já aconteceu — a lista de intenções está encerrada.";
+  return `As intenções para esta missa já fecharam. O preenchimento encerrou às ` +
+    `${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.`;
+}
+
+function renderizarEntradasNaLista(listaEl, entradas) {
+  listaEl.innerHTML = "";
+  if (entradas.length === 0) {
+    const vazio = document.createElement("p");
+    vazio.className = "categoria-intencao__vazio";
+    vazio.textContent = "Nenhuma intenção adicionada ainda.";
+    listaEl.appendChild(vazio);
+    return;
+  }
+  entradas.forEach((it) => {
+    const item = document.createElement("div");
+    item.className = "intencao-item";
+    item.textContent = it.texto;
+    listaEl.appendChild(item);
+  });
+}
+
+const PLACEHOLDERS = {
+  gracas: "Escreva aqui sua intenção de agradecimento...",
+  alma: "Escreva aqui o nome de quem deseja lembrar...",
+  aniversarios: "Escreva aqui o nome de quem está de aniversário..."
+};
+
+function criarBlocoCategoria(categoria, rotulo, iso, hora) {
+  const bloco = document.createElement("div");
+  bloco.className = "categoria-intencao";
+  bloco.innerHTML = `
+    <h3 class="categoria-intencao__titulo">${rotulo}</h3>
+    <div class="categoria-intencao__lista"></div>
+    <form class="categoria-intencao__form">
+      <textarea rows="2" placeholder="${PLACEHOLDERS[categoria] || ""}" required></textarea>
+      <button type="submit" class="btn btn-contorno btn-pequeno">Adicionar</button>
+    </form>
+  `;
+  const listaEl = bloco.querySelector(".categoria-intencao__lista");
+  const form = bloco.querySelector("form");
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!chaveListaAtual) return;
-    const [dataMissa, horaMissaStr] = chaveListaAtual.split("|");
-    const horaMissa = Number(horaMissaStr);
-    const categoria = form.dataset.categoria;
     const textarea = form.querySelector("textarea");
     const texto = textarea.value.trim();
     if (!texto) return;
@@ -117,7 +93,7 @@ document.querySelectorAll(".categoria-intencao__form").forEach((form) => {
     btn.disabled = true;
     btn.textContent = "Enviando...";
     try {
-      await criarIntencao({ dataMissa, horaMissa, categoria, texto });
+      await criarIntencao({ dataMissa: iso, horaMissa: hora, categoria, texto });
       textarea.value = "";
       mostrarToast("Intenção adicionada!");
     } catch (err) {
@@ -128,4 +104,78 @@ document.querySelectorAll(".categoria-intencao__form").forEach((form) => {
       btn.textContent = "Adicionar";
     }
   });
+  return { bloco, listaEl };
+}
+
+function criarCardMissaAberta(iso, hora, status) {
+  const card = document.createElement("div");
+  card.className = "painel";
+  card.innerHTML = `
+    <div class="painel__titulo"><span class="emoji">🙏</span> Missa das ${formatarHoraSimples(hora)}</div>
+    <p class="intencoes-aviso-fecha">Preenchimento aberto até ` +
+    `${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.</p>
+  `;
+
+  const listasPorCategoria = {};
+  CATEGORIAS_INTENCAO.forEach(({ chave, rotulo }) => {
+    const { bloco, listaEl } = criarBlocoCategoria(chave, rotulo, iso, hora);
+    listasPorCategoria[chave] = listaEl;
+    card.appendChild(bloco);
+  });
+
+  const parar = ouvirIntencoesDaLista(iso, hora, (entradas) => {
+    const porCategoria = { gracas: [], alma: [], aniversarios: [] };
+    entradas.forEach((it) => { if (porCategoria[it.categoria]) porCategoria[it.categoria].push(it); });
+    Object.entries(porCategoria).forEach(([categoria, itens]) => {
+      renderizarEntradasNaLista(listasPorCategoria[categoria], itens);
+    });
+  });
+  pararEscutas.push(parar);
+
+  return card;
+}
+
+function criarCardMissaFechada(hora, status) {
+  const card = document.createElement("div");
+  card.className = "painel";
+  card.innerHTML = `
+    <div class="painel__titulo"><span class="emoji">🔒</span> Missa das ${formatarHoraSimples(hora)}</div>
+    <p style="margin:0; line-height:1.7; color:var(--texto-suave);">${textoStatusFechado(status)}</p>
+  `;
+  return card;
+}
+
+// Só recria o conteúdo quando o dia selecionado ou o status (aberta/fechada) de alguma missa
+// realmente muda — assim a pessoa não perde o que já estava digitando a cada checagem periódica.
+function renderizarDiaSeNecessario() {
+  if (!configAtual) return;
+  elCarregando.classList.add("oculto");
+
+  const horas = horariosDoDia(configAtual, diaSelecionado);
+  const agora = new Date();
+  const assinatura = diaSelecionado + "|" + horas
+    .map((h) => `${h}:${statusMissaEspecifica(diaSelecionado, h, configAtual.horasAntes, agora).aberta ? "A" : "F"}`)
+    .join(",");
+  if (assinatura === ultimaAssinatura) return;
+  ultimaAssinatura = assinatura;
+
+  pararTodasEscutas();
+  listaMissasDoDia.innerHTML = "";
+  avisoSemMissa.classList.toggle("oculto", horas.length > 0);
+
+  horas.forEach((hora) => {
+    const status = statusMissaEspecifica(diaSelecionado, hora, configAtual.horasAntes, agora);
+    const card = status.aberta
+      ? criarCardMissaAberta(diaSelecionado, hora, status)
+      : criarCardMissaFechada(hora, status);
+    listaMissasDoDia.appendChild(card);
+  });
+}
+
+ouvirConfigIntencoes((config) => {
+  configAtual = config;
+  renderizarDiaSeNecessario();
 });
+
+// reavalia periodicamente para fechar/abrir listas automaticamente sem precisar recarregar a página
+setInterval(renderizarDiaSeNecessario, 30000);

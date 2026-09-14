@@ -112,42 +112,29 @@ export const CATEGORIAS_INTENCAO = [
   { chave: "aniversarios", rotulo: "Aniversários" }
 ];
 
-/* ---------- Intenções da missa: qual lista está aberta agora ----------
+/* ---------- Intenções da missa: horários de missa de um dia específico ----------
    config: { horariosPorDia: [ [domingo], [segunda], [terça], [quarta], [quinta], [sexta], [sábado] ], horasAntes: 3 }
    (índice de horariosPorDia = Date.getDay(): 0=domingo ... 6=sábado; um dia sem horários fica com array vazio)
-   Retorna a próxima(s) missa(s) a partir de "agora", em ordem, como objetos Date. Dias sem horário configurado
-   são simplesmente pulados, então a lista "pula" para o próximo dia que realmente tem missa marcada. */
-export function proximasMissas(config, agora = new Date(), quantidade = 6) {
+   Retorna as horas de missa (números, em ordem) configuradas para o dia da semana de "iso". */
+export function horariosDoDia(config, iso) {
   const horariosPorDia = Array.isArray(config.horariosPorDia) ? config.horariosPorDia : [];
-  const resultado = [];
-  let cursor = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-  let dias = 0;
-  while (resultado.length < quantidade && dias < 60) {
-    const horas = [...(horariosPorDia[cursor.getDay()] || [])].sort((a, b) => a - b);
-    horas.forEach((h) => {
-      const dt = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), h, 0, 0, 0);
-      if (dt > agora) resultado.push(dt);
-    });
-    cursor.setDate(cursor.getDate() + 1);
-    dias++;
-  }
-  return resultado.sort((a, b) => a - b).slice(0, quantidade);
+  const diaSemana = isoParaData(iso).getDay();
+  return [...(horariosPorDia[diaSemana] || [])].sort((a, b) => a - b);
 }
 
-// Decide se a lista de intenções da próxima missa está aberta para preenchimento,
-// ou bloqueada (dentro da janela de "horasAntes" antes da missa).
-export function calcularListaIntencoesAtual(config, agora = new Date()) {
-  const horasAntes = Number(config.horasAntes) > 0 ? Number(config.horasAntes) : 3;
-  const [proximaMissa] = proximasMissas(config, agora, 1);
-  if (!proximaMissa) return { aberta: false, dataMissa: null, horaMissa: null, proximaMissa: null, fechamento: null };
-  const fechamento = new Date(proximaMissa.getTime() - horasAntes * 3600000);
-  const aberta = agora < fechamento;
+// Decide o status da lista de intenções de UMA missa específica (data + hora): se ainda está
+// aberta para preenchimento, se já fechou (dentro da janela de "horasAntes" antes da missa) ou
+// se a missa já aconteceu.
+export function statusMissaEspecifica(iso, hora, horasAntes, agora = new Date()) {
+  const d = isoParaData(iso);
+  const missa = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hora, 0, 0, 0);
+  const horas = Number(horasAntes) > 0 ? Number(horasAntes) : 3;
+  const fechamento = new Date(missa.getTime() - horas * 3600000);
   return {
-    aberta,
-    dataMissa: dataParaIso(proximaMissa),
-    horaMissa: proximaMissa.getHours(),
-    proximaMissa,
-    fechamento
+    missa,
+    fechamento,
+    jaAconteceu: agora >= missa,
+    aberta: agora < fechamento
   };
 }
 
