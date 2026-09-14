@@ -178,6 +178,8 @@ function configurarHorarios() {
   const campoFim = document.getElementById("campoDataFim");
   const grupoDataFim = document.getElementById("grupoDataFim");
   const campoSomenteEsseDia = document.getElementById("campoSomenteEsseDia");
+  const campoHoraInicioPrimeiroDia = document.getElementById("campoHoraInicioPrimeiroDia");
+  const campoHoraFimUltimoDia = document.getElementById("campoHoraFimUltimoDia");
   const grade = document.getElementById("gradeHorariosAdmin");
 
   const calFim = criarCalendario(document.getElementById("calendarioFim"), campoFim, {});
@@ -215,6 +217,8 @@ function configurarHorarios() {
     });
     campoSomenteEsseDia.checked = !!dh.somenteEsseDia;
     aplicarEstadoSomenteEsseDia(campoSomenteEsseDia.checked);
+    campoHoraInicioPrimeiroDia.value = dh.horaInicioPrimeiroDia || "";
+    campoHoraFimUltimoDia.value = dh.horaFimUltimoDia || "";
   });
 
   document.getElementById("btnMarcarTodos").addEventListener("click", () => {
@@ -244,11 +248,17 @@ function configurarHorarios() {
       }
     }
     const horariosAtivos = checkboxes().filter((cb) => cb.checked).map((cb) => Number(cb.value));
+    const horaInicioPrimeiroDia = campoHoraInicioPrimeiroDia.value || "";
+    const horaFimUltimoDia = campoHoraFimUltimoDia.value || "";
+    if (somenteEsseDia && horaInicioPrimeiroDia && horaFimUltimoDia && horaInicioPrimeiroDia >= horaFimUltimoDia) {
+      mostrarToast('No mesmo dia, o horário de início precisa ser antes do horário de término.');
+      return;
+    }
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
-      await salvarDiasHorarios({ dataInicio, dataFim, horariosAtivos, somenteEsseDia });
+      await salvarDiasHorarios({ dataInicio, dataFim, horariosAtivos, somenteEsseDia, horaInicioPrimeiroDia, horaFimUltimoDia });
       mostrarToast("Dias e horários atualizados!");
     } catch (err) {
       console.error(err);

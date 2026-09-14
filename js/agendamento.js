@@ -1,6 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
-  isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso, MESES, DIAS_SEMANA_ABREV } from "./utils.js";
+  isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso, horariosDisponiveisNoDia,
+  MESES, DIAS_SEMANA_ABREV } from "./utils.js";
 import { obterConfiguracoesGerais, obterDiasHorarios, ouvirAgendamentosDaData, criarAgendamento } from "./dados.js";
 
 inicializarNavegacao("agendamento");
@@ -137,7 +138,7 @@ function textoReservado(qtd) {
 }
 
 function renderizarHorarios() {
-  const horariosAtivos = [...(diasHorarios.horariosAtivos || [])].sort((a, b) => a - b);
+  const horariosAtivos = horariosDisponiveisNoDia(diasHorarios, dataSelecionada);
   gradeHorarios.innerHTML = "";
 
   if (horariosAtivos.length === 0) {

@@ -62,7 +62,9 @@ const PADRAO_DIAS_HORARIOS = {
   dataInicio: "",
   dataFim: "",
   horariosAtivos: Array.from({ length: 24 }, (_, i) => i), // 0..23 (todas as horas ativas por padrão)
-  somenteEsseDia: false // quando true, a adoração vale só para a data em "dataInicio" (dataFim = dataInicio)
+  somenteEsseDia: false, // quando true, a adoração vale só para a data em "dataInicio" (dataFim = dataInicio)
+  horaInicioPrimeiroDia: "", // "HH:MM" opcional — restringe os horários do 1º dia (dataInicio) a partir desse horário
+  horaFimUltimoDia: "" // "HH:MM" opcional — restringe os horários do último dia (dataFim) até (antes de) esse horário
 };
 
 export async function obterDiasHorarios() {

@@ -85,6 +85,31 @@ export function hojeIso() {
   return dataParaIso(new Date());
 }
 
+/* ---------- Agendamento: horários disponíveis em um dia específico, já aplicando os limites
+   opcionais de horário de início (no primeiro dia do período) e horário de término (no último
+   dia do período). Um horário "de 08h" é considerado como começando às 08:00 — por isso um
+   limite de término "08:30" ainda inclui o horário das 08h (ele começa antes das 08:30), e um
+   limite de início "09:00" exclui o horário das 08h e inclui o das 09h em diante. ---------- */
+export function horariosDisponiveisNoDia(diasHorarios, iso) {
+  let horas = [...(diasHorarios?.horariosAtivos || [])].sort((a, b) => a - b);
+  if (!diasHorarios) return horas;
+
+  const ehPrimeiroDia = iso === diasHorarios.dataInicio;
+  const ehUltimoDia = iso === diasHorarios.dataFim;
+
+  if (ehPrimeiroDia && diasHorarios.horaInicioPrimeiroDia) {
+    const [h, m] = diasHorarios.horaInicioPrimeiroDia.split(":").map(Number);
+    const limiteMin = h * 60 + (m || 0);
+    horas = horas.filter((hora) => hora * 60 >= limiteMin);
+  }
+  if (ehUltimoDia && diasHorarios.horaFimUltimoDia) {
+    const [h, m] = diasHorarios.horaFimUltimoDia.split(":").map(Number);
+    const limiteMin = h * 60 + (m || 0);
+    horas = horas.filter((hora) => hora * 60 < limiteMin);
+  }
+  return horas;
+}
+
 /* ---------- Frase do dia: rotação cíclica de até 30 frases ----------
    Todo mundo vê a mesma frase no mesmo dia (calculado pela data local do aparelho).
    Ao chegar na 30ª, volta para a 1ª. Frases vazias são puladas automaticamente. */

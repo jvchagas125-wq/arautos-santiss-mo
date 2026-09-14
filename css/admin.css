@@ -107,6 +107,7 @@
 .campo-checkbox-simples span{ font-size:.92rem; color: var(--texto); line-height:1.5; }
 .campo-checkbox-simples small{ display:block; color: var(--texto-suave); font-size:.78rem; margin-top:2px; }
 #grupoDataFim.campo-desativado{ opacity:.45; pointer-events:none; }
+.campo-ajuda{ display:block; color: var(--texto-suave); font-size:.78rem; line-height:1.5; margin-top:6px; text-transform:none; }
 
 /* ---------- abas acompanhamento ---------- */
 .admin-abas{ display:flex; gap:10px; margin-bottom:18px; }
