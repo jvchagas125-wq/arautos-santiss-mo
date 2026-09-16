@@ -9,6 +9,7 @@
    Se o site já estiver rodando como app instalado (modo standalone), o botão nunca aparece.
 ------------------------------------------------------------------------------------------------*/
 import { mostrarToast } from "./utils.js";
+import "./sw-registro.js";
 
 let promptDiferido = null;
 let botaoInstalar = null;
@@ -97,14 +98,5 @@ if (!rodandoComoAppInstalado()) {
     } else if (ehIOS()) {
       alternarInstrucoesIOS();
     }
-  });
-}
-
-// Necessário pro Chrome/Android considerar o site instalável.
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch((err) => {
-      console.error("Falha ao registrar service worker:", err);
-    });
   });
 }

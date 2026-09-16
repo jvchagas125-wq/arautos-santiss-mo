@@ -14,7 +14,6 @@ obterConfiguracoesGerais().then((config) => {
   aplicarFundo(config.fundoUrl);
 });
 
-const elCarregando = document.getElementById("intencoesCarregando");
 const dataInput = document.getElementById("dataIntencoesInput");
 const calendarioEl = document.getElementById("calendarioIntencoes");
 const listaMissasDoDia = document.getElementById("listaMissasDoDia");
@@ -150,7 +149,6 @@ function criarCardMissaFechada(hora, status) {
 // realmente muda — assim a pessoa não perde o que já estava digitando a cada checagem periódica.
 function renderizarDiaSeNecessario() {
   if (!configAtual) return;
-  elCarregando.classList.add("oculto");
 
   if (!diaSelecionado) {
     pararTodasEscutas();

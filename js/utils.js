@@ -139,22 +139,22 @@ export function horasDeMissaNoDia(diasHorarios, iso) {
 
 /* ---------- Frase do dia: rotação cíclica de até 30 frases ----------
    Todo mundo vê a mesma frase no mesmo dia (calculado pela data local do aparelho).
-   Ao chegar na 30ª, volta para a 1ª. Frases vazias são puladas automaticamente. */
-const EPOCA_FRASES = new Date(2024, 0, 1); // ponto fixo para contar o ciclo de 30 dias
-export function indiceFraseDoDia(agora = new Date()) {
+   Frases vazias são ignoradas primeiro — a rotação avança um índice por dia dentro da
+   lista já filtrada (só as preenchidas), então com N frases cadastradas ela sempre
+   percorre as N em sequência e, ao passar da última, volta para a 1ª. */
+const EPOCA_FRASES = new Date(2024, 0, 1); // ponto fixo para contar o ciclo dos dias
+export function indiceFraseDoDia(agora = new Date(), total = 30) {
   const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
   const dias = Math.floor((hoje - EPOCA_FRASES) / 86400000);
-  return ((dias % 30) + 30) % 30;
+  const n = total > 0 ? total : 30;
+  return ((dias % n) + n) % n;
 }
 export function escolherFraseDoDia(lista, agora = new Date()) {
   const l = Array.isArray(lista) ? lista : [];
-  if (l.length === 0) return null;
-  const inicio = indiceFraseDoDia(agora) % l.length;
-  for (let i = 0; i < l.length; i++) {
-    const item = l[(inicio + i) % l.length];
-    if (item && item.frase && item.frase.trim()) return item;
-  }
-  return null;
+  const preenchidas = l.filter((item) => item && item.frase && item.frase.trim());
+  if (preenchidas.length === 0) return null;
+  const indice = indiceFraseDoDia(agora, preenchidas.length);
+  return preenchidas[indice];
 }
 
 /* ---------- Intenções da missa: categorias fixas ---------- */

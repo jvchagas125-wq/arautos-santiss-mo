@@ -10,12 +10,10 @@ obterConfiguracoesGerais().then((config) => {
   aplicarFundo(config.fundoUrl);
 });
 
-const elCarregando = document.getElementById("avisosCarregando");
 const elVazio = document.getElementById("avisosVazio");
 const lista = document.getElementById("listaAvisosPublico");
 
 ouvirAvisos((avisos) => {
-  elCarregando.classList.add("oculto");
   lista.innerHTML = "";
   elVazio.classList.toggle("oculto", avisos.length > 0);
 
