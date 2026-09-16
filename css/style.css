@@ -278,9 +278,6 @@ img{ max-width: 100%; display:block; }
 .card-frase blockquote{
   margin:0 0 12px; font-style:italic; font-size:1.12rem; line-height:1.55;
   font-family: 'EB Garamond', serif;
-  /* distribui as linhas de forma mais equilibrada, evitando deixar só
-     uma ou duas palavras soltas sozinhas na última linha */
-  text-wrap: balance;
 }
 .card-frase cite{ font-family:'Cinzel'; font-size:.85rem; color: var(--dourado-claro); font-style:normal; }
 
@@ -288,9 +285,12 @@ img{ max-width: 100%; display:block; }
   font-family:'Cinzel'; font-size:1.15rem; font-weight:500;
   margin-bottom:26px; text-shadow: 0 2px 10px rgba(0,0,0,.5);
   animation: subir .9s .25s ease both;
-  /* mesma quebra de linha equilibrada do card-frase, pra não deixar
-     "hoje?" sozinho numa linha */
-  text-wrap: balance;
+  /* fica sempre numa linha só — o JS (main.js) reduz o tamanho da fonte
+     o quanto for preciso pra caber na largura da tela; isso aqui é só
+     a rede de segurança caso o JS não rode a tempo */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ============ BOTÕES ============ */

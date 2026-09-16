@@ -39,3 +39,25 @@ comLimiteDeTempo(obterFrases()).then((dados) => {
   console.error("Erro ao carregar frases:", err);
   mostrarFrase(FRASE_PADRAO.frase, FRASE_PADRAO.autor);
 });
+
+// Reduz a fonte da pergunta "Já visitou..." só o quanto for necessário pra
+// caber numa linha só no celular, sem cortar o texto (mesma técnica usada
+// nos títulos dos avisos).
+const TAMANHO_MINIMO_PERGUNTA_PX = 12;
+const elPerguntaDia = document.querySelector(".pergunta-dia");
+function ajustarPerguntaDiaParaCaber() {
+  if (!elPerguntaDia) return;
+  elPerguntaDia.style.fontSize = "";
+  if (elPerguntaDia.scrollWidth > elPerguntaDia.clientWidth) {
+    const tamanhoAtual = parseFloat(getComputedStyle(elPerguntaDia).fontSize);
+    const escala = elPerguntaDia.clientWidth / elPerguntaDia.scrollWidth;
+    const novoTamanho = Math.max(TAMANHO_MINIMO_PERGUNTA_PX, tamanhoAtual * escala * 0.97);
+    elPerguntaDia.style.fontSize = `${novoTamanho.toFixed(2)}px`;
+  }
+}
+requestAnimationFrame(ajustarPerguntaDiaParaCaber);
+let atrasoRedimensionarPergunta = null;
+window.addEventListener("resize", () => {
+  clearTimeout(atrasoRedimensionarPergunta);
+  atrasoRedimensionarPergunta = setTimeout(ajustarPerguntaDiaParaCaber, 150);
+});
