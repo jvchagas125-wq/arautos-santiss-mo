@@ -1,5 +1,5 @@
 import { exigirCadastro } from "./auth.js";
-import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia } from "./utils.js";
+import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia, comLimiteDeTempo } from "./utils.js";
 import { obterConfiguracoesGerais, obterFrases } from "./dados.js";
 
 inicializarNavegacao("index");
@@ -32,7 +32,7 @@ function mostrarFrase(frase, autor) {
   elFraseAutor.classList.remove("oculto");
 }
 
-obterFrases().then((dados) => {
+comLimiteDeTempo(obterFrases()).then((dados) => {
   const escolhida = escolherFraseDoDia(dados.lista) || FRASE_PADRAO;
   mostrarFrase(escolhida.frase, escolhida.autor);
 }).catch((err) => {

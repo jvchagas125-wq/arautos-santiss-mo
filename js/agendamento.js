@@ -1,7 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso, horariosDisponiveisNoDia,
-  MESES, DIAS_SEMANA_ABREV } from "./utils.js";
+  MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
 import { obterConfiguracoesGerais, obterDiasHorarios, ouvirAgendamentosDaData, criarAgendamento } from "./dados.js";
 
 inicializarNavegacao("agendamento");
@@ -40,11 +40,11 @@ async function iniciar() {
   try {
     usuario = await exigirCadastro();
 
-    const config = await obterConfiguracoesGerais();
+    const config = await comLimiteDeTempo(obterConfiguracoesGerais());
     aplicarLogo(config.logoUrl);
     aplicarFundo(config.fundoUrl);
 
-    diasHorarios = await obterDiasHorarios();
+    diasHorarios = await comLimiteDeTempo(obterDiasHorarios());
 
     if (!diasHorarios.dataInicio || !diasHorarios.dataFim) {
       avisoSemPeriodo.classList.remove("oculto");

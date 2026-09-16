@@ -3,7 +3,8 @@
 import { cadastrarOuAtualizarUsuario, obterUsuario } from "./dados.js";
 import {
   capitalizarNome, vincularMascaraTelefone, telefoneValido, telefoneParaDigits,
-  obterUsuarioSessao, salvarUsuarioSessao, limparUsuarioSessao, abrirModal, fecharModal, mostrarToast
+  obterUsuarioSessao, salvarUsuarioSessao, limparUsuarioSessao, abrirModal, fecharModal, mostrarToast,
+  comLimiteDeTempo
 } from "./utils.js";
 
 const CHAVE_ULTIMO_TELEFONE = "arautos_ultimo_telefone";
@@ -37,9 +38,10 @@ export function exigirCadastro() {
   return new Promise(async (resolve) => {
     const usuarioExistente = obterUsuarioSessao();
     if (usuarioExistente && usuarioExistente.nome && usuarioExistente.telefone) {
-      // confirma no banco que o cadastro ainda existe (o padre pode ter removido pelo painel admin)
+      // confirma no banco que o cadastro ainda existe (pode ter sido removido pelo painel admin)
+      // — com limite de tempo, pra nunca travar a página inteira esperando essa checagem
       try {
-        const aindaCadastrado = await obterUsuario(usuarioExistente.telefoneDigits);
+        const aindaCadastrado = await comLimiteDeTempo(obterUsuario(usuarioExistente.telefoneDigits), 6000);
         if (aindaCadastrado && aindaCadastrado.nome) {
           resolve(usuarioExistente);
           return;

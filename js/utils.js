@@ -1,5 +1,15 @@
 // Funções utilitárias compartilhadas por todas as páginas
 
+// Corre uma promise contra um limite de tempo — se ela não responder a tempo (rede travada,
+// instável etc.), rejeita com um erro em vez de deixar a tela esperando pra sempre. Usado nas
+// chamadas automáticas ao Firestore (nunca nas que dependem da pessoa preencher algo).
+export function comLimiteDeTempo(promise, ms = 10000) {
+  return Promise.race([
+    promise,
+    new Promise((_, rejeitar) => setTimeout(() => rejeitar(new Error("Tempo esgotado esperando resposta do servidor.")), ms))
+  ]);
+}
+
 export const MESES = [
   "janeiro","fevereiro","março","abril","maio","junho",
   "julho","agosto","setembro","outubro","novembro","dezembro"

@@ -1,7 +1,7 @@
 // Inicialização do Firebase (SDK modular via CDN) — usado por todas as páginas
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  getFirestore,
   doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc,
   collection, query, where, getDocs, onSnapshot, orderBy,
   runTransaction, serverTimestamp
@@ -10,21 +10,12 @@ import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 
-// Cache local persistente (IndexedDB): guarda os dados já vistos no aparelho, então ao reabrir
-// o site/app as telas já aparecem preenchidas na hora (com o último dado conhecido) enquanto o
-// Firestore sincroniza em segundo plano — sem precisar mostrar uma tela de "carregando".
-// Se o navegador não suportar (ex: modo privado, várias abas em versões antigas), cai para o
-// modo padrão sem cache local, sem quebrar o site.
-let db;
-try {
-  db = initializeFirestore(app, {
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-  });
-} catch (err) {
-  console.warn("Cache local do Firestore indisponível, usando modo padrão:", err);
-  db = getFirestore(app);
-}
-export { db };
+// IMPORTANTE: já testamos usar cache local persistente (IndexedDB) aqui pra deixar as telas mais
+// rápidas, mas em alguns celulares/recarregamentos de página isso travava a conexão com o
+// Firestore (o app ficava esperando pra sempre, sem erro nenhum, sem carregar nada). Como os
+// dados PRECISAM estar sempre em tempo real, voltamos para o modo padrão do Firestore — mais
+// simples e confiável. A velocidade agora vem só do cache dos arquivos do site (js/sw.js).
+export const db = getFirestore(app);
 
 export {
   doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc,

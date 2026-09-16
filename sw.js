@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v2";
+const CACHE_NAME = "arautos-shell-v3";
 
 const ARQUIVOS_APP_SHELL = [
   "./",
@@ -65,20 +65,21 @@ self.addEventListener("fetch", (evento) => {
   // só cuida dos arquivos do próprio site — Firestore, fontes do Google etc. seguem direto pra rede
   if (url.origin !== self.location.origin) return;
 
-  // stale-while-revalidate: responde na hora com o que já tem em cache (se tiver) e, ao mesmo
-  // tempo, busca uma versão nova na rede pra já deixar pronta pra próxima vez.
+  // network-first: tenta buscar a versão mais nova na rede primeiro (pra nunca mostrar uma tela
+  // desatualizada) e só usa o cache se a rede falhar de verdade (sem internet). Um limite de
+  // tempo evita ficar esperando pra sempre numa conexão travada — nesse caso também cai pro cache.
   evento.respondWith(
-    caches.match(requisicao).then((respostaCache) => {
-      const buscaRede = fetch(requisicao)
-        .then((respostaRede) => {
-          if (respostaRede && respostaRede.ok) {
-            const copia = respostaRede.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(requisicao, copia));
-          }
-          return respostaRede;
-        })
-        .catch(() => respostaCache);
-      return respostaCache || buscaRede;
-    })
+    Promise.race([
+      fetch(requisicao),
+      new Promise((_, rejeitar) => setTimeout(() => rejeitar(new Error("tempo esgotado")), 4000))
+    ])
+      .then((respostaRede) => {
+        if (respostaRede && respostaRede.ok) {
+          const copia = respostaRede.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(requisicao, copia));
+        }
+        return respostaRede;
+      })
+      .catch(() => caches.match(requisicao))
   );
 });
