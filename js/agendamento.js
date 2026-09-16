@@ -25,26 +25,42 @@ const gradeHorarios = document.getElementById("gradeHorarios");
 const semHorarios = document.getElementById("semHorarios");
 const btnConfirmarAgendamento = document.getElementById("btnConfirmarAgendamento");
 const avisoSemPeriodo = document.getElementById("avisoSemPeriodo");
+const erroCarregarPeriodo = document.getElementById("erroCarregarPeriodo");
 const modalConfirmacao = document.getElementById("modalConfirmacao");
 
+// O campo de data começa desabilitado (veja o atributo "disabled" no HTML) — só é liberado
+// quando os dados realmente terminam de carregar. Isso evita o bug de, no celular, tocar no
+// campo rápido demais (antes da configuração chegar) e ver o calendário abrir vazio, sem os
+// dias nem o mês/ano preenchidos.
 async function iniciar() {
-  usuario = await exigirCadastro();
+  avisoSemPeriodo.classList.add("oculto");
+  erroCarregarPeriodo.classList.add("oculto");
+  dataInput.disabled = true;
 
-  const config = await obterConfiguracoesGerais();
-  aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl);
+  try {
+    usuario = await exigirCadastro();
 
-  diasHorarios = await obterDiasHorarios();
+    const config = await obterConfiguracoesGerais();
+    aplicarLogo(config.logoUrl);
+    aplicarFundo(config.fundoUrl);
 
-  if (!diasHorarios.dataInicio || !diasHorarios.dataFim) {
-    avisoSemPeriodo.classList.remove("oculto");
-    dataInput.disabled = true;
-    return;
+    diasHorarios = await obterDiasHorarios();
+
+    if (!diasHorarios.dataInicio || !diasHorarios.dataFim) {
+      avisoSemPeriodo.classList.remove("oculto");
+      return;
+    }
+
+    mesAtual = new Date(isoParaData(diasHorarios.dataInicio).getFullYear(), isoParaData(diasHorarios.dataInicio).getMonth(), 1);
+    renderizarCalendario();
+    dataInput.disabled = false;
+  } catch (err) {
+    console.error("Erro ao carregar dados de agendamento:", err);
+    erroCarregarPeriodo.classList.remove("oculto");
   }
-
-  mesAtual = new Date(isoParaData(diasHorarios.dataInicio).getFullYear(), isoParaData(diasHorarios.dataInicio).getMonth(), 1);
-  renderizarCalendario();
 }
+
+erroCarregarPeriodo.addEventListener("click", () => iniciar());
 
 function dataDentroDoPeriodo(iso) {
   return iso >= diasHorarios.dataInicio && iso <= diasHorarios.dataFim;

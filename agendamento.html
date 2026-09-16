@@ -66,7 +66,7 @@
     <div class="painel" id="painelData">
       <div class="painel__titulo"><span class="emoji">📅</span> Selecione a data</div>
       <div class="campo" style="position:relative; margin-bottom:0;">
-        <input type="text" id="dataInput" class="campo-clicavel" placeholder="Toque para escolher uma data" readonly autocomplete="off" />
+        <input type="text" id="dataInput" class="campo-clicavel" placeholder="Toque para escolher uma data" readonly autocomplete="off" disabled />
         <div class="calendario" id="calendario">
           <div class="calendario__cabecalho">
             <button type="button" class="calendario__nav" id="mesAnterior" aria-label="Mês anterior">‹</button>
@@ -81,6 +81,7 @@
         </div>
       </div>
       <p id="avisoSemPeriodo" class="mensagem-vazia oculto">Nenhum período de adoração está configurado no momento. Procure a coordenação da igreja.</p>
+      <p id="erroCarregarPeriodo" class="mensagem-vazia oculto" style="cursor:pointer; text-decoration:underline;">Não foi possível carregar as datas. Toque aqui para tentar novamente.</p>
     </div>
 
     <div class="painel" id="painelHorarios" style="display:none;">
