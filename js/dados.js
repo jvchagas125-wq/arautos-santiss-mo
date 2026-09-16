@@ -332,8 +332,10 @@ export async function criarAviso({ titulo, texto, imagemUrl }) {
   return ref.id;
 }
 
-export async function atualizarAviso(id, { titulo, texto, imagemUrl }) {
-  await updateDoc(doc(db, "avisos", id), { titulo, texto, imagemUrl: imagemUrl || "" });
+export async function atualizarAviso(id, { titulo, texto }) {
+  // não mexe em imagemUrl — o painel não tem mais campo pra isso; um aviso
+  // antigo que já tinha imagem continua com ela, só título/texto mudam.
+  await updateDoc(doc(db, "avisos", id), { titulo, texto });
 }
 
 export async function excluirAviso(id) {

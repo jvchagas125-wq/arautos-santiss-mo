@@ -486,7 +486,6 @@ function configurarAvisos() {
   const formNovo = document.getElementById("formNovoAviso");
   const campoTitulo = document.getElementById("campoAvisoTitulo");
   const campoTexto = document.getElementById("campoAvisoTexto");
-  const campoImagem = document.getElementById("campoAvisoImagem");
   const listaAvisosAdmin = document.getElementById("listaAvisosAdmin");
   const avisoSemAvisos = document.getElementById("avisoSemAvisos");
 
@@ -502,8 +501,7 @@ function configurarAvisos() {
     try {
       await criarAviso({
         titulo: campoTitulo.value.trim(),
-        texto: campoTexto.value.trim(),
-        imagemUrl: campoImagem.value.trim()
+        texto: campoTexto.value.trim()
       });
       formNovo.reset();
       mostrarToast("Aviso publicado!");
@@ -544,10 +542,6 @@ function configurarAvisos() {
               <label>Texto</label>
               <textarea rows="3" class="campo-edit-texto" required>${aviso.texto}</textarea>
             </div>
-            <div class="campo">
-              <label>URL da imagem (opcional)</label>
-              <input type="url" class="campo-edit-imagem" value="${(aviso.imagemUrl || "").replace(/"/g,"&quot;")}" />
-            </div>
             <div class="cartao-aviso-admin__acoes">
               <button type="button" class="btn btn-contorno btn-pequeno btn-cancelar-edicao-aviso">Cancelar</button>
               <button type="submit" class="btn btn-dourado btn-pequeno">Salvar</button>
@@ -584,8 +578,7 @@ function configurarAvisos() {
         try {
           await atualizarAviso(aviso.id, {
             titulo: formEdicao.querySelector(".campo-edit-titulo").value.trim(),
-            texto: formEdicao.querySelector(".campo-edit-texto").value.trim(),
-            imagemUrl: formEdicao.querySelector(".campo-edit-imagem").value.trim()
+            texto: formEdicao.querySelector(".campo-edit-texto").value.trim()
           });
           mostrarToast("Aviso atualizado!");
         } catch (err) {
