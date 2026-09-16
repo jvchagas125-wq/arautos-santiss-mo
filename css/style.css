@@ -25,7 +25,13 @@
   --transicao: .35s cubic-bezier(.4,0,.2,1);
 }
 
-*{ box-sizing: border-box; }
+*{
+  box-sizing: border-box;
+  /* remove o retângulo azul/cinza que o navegador do celular mostra ao tocar em
+     botões, links, inputs etc. (efeito padrão do Chrome/Android e do Safari/iOS) */
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+}
 
 html{ scroll-behavior: smooth; }
 
@@ -36,6 +42,7 @@ body{
   color: var(--texto);
   background: var(--creme);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 h1,h2,h3,h4{
