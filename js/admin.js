@@ -441,7 +441,7 @@ function configurarIntencoes() {
       docPdf.setFont("times", "bold");
       docPdf.setFontSize(12);
       docPdf.setTextColor(122, 12, 30);
-      docPdf.text(`${rotuloCategoria} (${doGrupo.length})`, margem, y);
+      docPdf.text(rotuloCategoria, margem, y);
       y += 20;
 
       docPdf.setFont("times", "normal");

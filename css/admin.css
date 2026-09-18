@@ -220,6 +220,15 @@
 }
 
 /* ---------- Intenções da missa (admin) ---------- */
+/* No celular os dois painéis ficam empilhados (normal); a partir de 900px (computador),
+   ficam lado a lado pra aproveitar o espaço vazio à direita. */
+.intencoes-colunas{ display:flex; flex-direction:column; gap:20px; }
+.intencoes-colunas > .painel{ margin-top:0; }
+@media (min-width: 900px){
+  .intencoes-colunas{ flex-direction:row; align-items:flex-start; }
+  .intencoes-colunas > .painel{ flex:1 1 0; min-width:0; }
+}
+
 .campo-legenda{
   font-family:'Cinzel'; font-size:.78rem; color: var(--texto-suave); text-transform:uppercase;
   letter-spacing:.04em; margin:0 0 6px;

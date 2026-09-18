@@ -184,30 +184,32 @@
         <h1 class="titulo-pagina">Intenções da Missa</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-        <div class="painel">
-          <div class="painel__titulo"><span class="emoji">⛪</span> Horários das missas</div>
-          <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
-            Toque em cada dia para marcar os horários de missa daquele dia. Um dia sem nenhum horário marcado
-            fica sem lista de intenções — o site público pula direto para o próximo dia que tiver missa.
-          </p>
-          <form id="formHorariosMissas">
-            <div id="gradesPorDia"></div>
-            <div class="campo" style="margin-top:16px; max-width:220px;">
-              <label for="campoHorasAntes">Fechar a lista quantas horas antes da missa</label>
-              <input type="number" id="campoHorasAntes" min="1" max="12" step="1" required />
+        <div class="intencoes-colunas">
+          <div class="painel">
+            <div class="painel__titulo"><span class="emoji">⛪</span> Horários das missas</div>
+            <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
+              Toque em cada dia para marcar os horários de missa daquele dia. Um dia sem nenhum horário marcado
+              fica sem lista de intenções — o site público pula direto para o próximo dia que tiver missa.
+            </p>
+            <form id="formHorariosMissas">
+              <div id="gradesPorDia"></div>
+              <div class="campo" style="margin-top:16px; max-width:220px;">
+                <label for="campoHorasAntes">Fechar a lista quantas horas antes da missa</label>
+                <input type="number" id="campoHorasAntes" min="1" max="12" step="1" required />
+              </div>
+              <button type="submit" class="btn btn-dourado" style="margin-top:10px;">Salvar horários das missas</button>
+            </form>
+            <div class="aviso-info" style="margin-top:20px;">
+              <span class="aviso-info__icone">ℹ️</span>
+              <p><strong>Como funciona:</strong> a lista de intenções da próxima missa fica aberta até a quantidade de horas configurada acima antes do horário da missa. Depois disso ela fecha, e assim que a missa acontece a lista da missa seguinte já abre automaticamente no site público.</p>
             </div>
-            <button type="submit" class="btn btn-dourado" style="margin-top:10px;">Salvar horários das missas</button>
-          </form>
-          <div class="aviso-info" style="margin-top:20px;">
-            <span class="aviso-info__icone">ℹ️</span>
-            <p><strong>Como funciona:</strong> a lista de intenções da próxima missa fica aberta até a quantidade de horas configurada acima antes do horário da missa. Depois disso ela fecha, e assim que a missa acontece a lista da missa seguinte já abre automaticamente no site público.</p>
           </div>
-        </div>
 
-        <div class="painel">
-          <div class="painel__titulo"><span class="emoji">📋</span> Listas preenchidas</div>
-          <p class="mensagem-vazia oculto" id="avisoSemIntencoes">Nenhuma intenção foi enviada ainda.</p>
-          <div id="listaQuadrosIntencoes"></div>
+          <div class="painel">
+            <div class="painel__titulo"><span class="emoji">📋</span> Listas preenchidas</div>
+            <p class="mensagem-vazia oculto" id="avisoSemIntencoes">Nenhuma intenção foi enviada ainda.</p>
+            <div id="listaQuadrosIntencoes"></div>
+          </div>
         </div>
       </section>
 
