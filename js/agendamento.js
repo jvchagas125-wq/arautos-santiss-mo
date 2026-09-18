@@ -93,8 +93,22 @@ function dataDentroDoPeriodo(iso) {
    quantidade; tocar num dia mostra quem reservou em cada horário. No celular abre num modal
    (botão "Ver calendário de agendamentos"); no computador o CSS transforma esse mesmo modal
    numa segunda coluna sempre visível (ver style.css). ---------- */
+// mapa "data iso" -> array de agendamentos ativos naquele dia, recalculado UMA VEZ a cada
+// atualização em vez de varrer a lista inteira de novo pra cada um dos ~30 dias do mês (isso
+// era o que deixava o calendário lento/travando no celular quando a lista de agendamentos
+// crescia: 30 varreduras completas a cada agendamento novo de qualquer pessoa, em qualquer dia).
+let mapAgendamentosPorDia = new Map();
+
+function reconstruirMapaAgendamentosPorDia() {
+  mapAgendamentosPorDia = new Map();
+  todosAgendamentosAtivos.forEach((a) => {
+    if (!mapAgendamentosPorDia.has(a.data)) mapAgendamentosPorDia.set(a.data, []);
+    mapAgendamentosPorDia.get(a.data).push(a);
+  });
+}
+
 function agendamentosDoDiaCalendario(iso) {
-  return todosAgendamentosAtivos.filter((a) => a.data === iso);
+  return mapAgendamentosPorDia.get(iso) || [];
 }
 
 function iniciarCalendarioAgendamentos() {
@@ -113,6 +127,7 @@ function iniciarCalendarioAgendamentos() {
   if (pararEscutaTodosAgendamentos) pararEscutaTodosAgendamentos();
   pararEscutaTodosAgendamentos = ouvirTodosAgendamentos("agendado", (lista) => {
     todosAgendamentosAtivos = lista;
+    reconstruirMapaAgendamentosPorDia();
     renderizarCalendarioGrande();
     // se o modal de detalhes de um dia estiver aberto, atualiza a lista dele também
     if (isoDiaCalendarioAberto) abrirModalDiaCalendario(isoDiaCalendarioAberto);
@@ -129,20 +144,22 @@ function renderizarCalendarioGrande() {
 
   const nomeMes = MESES[mesAtualCalendario.getMonth()];
   calGrandeMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesAtualCalendario.getFullYear()}`;
-  calGrandeDias.innerHTML = "";
 
   const primeiroDiaSemana = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), 1).getDay();
   const totalDias = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() + 1, 0).getDate();
 
+  // monta tudo fora do DOM (um DocumentFragment) e só então troca de uma vez com replaceChildren
+  // — um único reflow, em vez de innerHTML="" seguido de várias inserções uma a uma
+  const fragmento = document.createDocumentFragment();
+
   for (let i = 0; i < primeiroDiaSemana; i++) {
     const vazio = document.createElement("span");
     vazio.className = "calendario__vazio";
-    calGrandeDias.appendChild(vazio);
+    fragmento.appendChild(vazio);
   }
 
   for (let dia = 1; dia <= totalDias; dia++) {
-    const d = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), dia);
-    const iso = dataParaIso(d);
+    const iso = dataParaIso(new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), dia));
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "calendario__dia";
@@ -153,16 +170,18 @@ function renderizarCalendarioGrande() {
       const qtd = agendamentosDoDiaCalendario(iso).length;
       if (qtd > 0) {
         btn.classList.add("tem-agendamentos");
+        btn.dataset.iso = iso;
         btn.title = `${qtd} ${qtd === 1 ? "agendamento" : "agendamentos"} — toque para ver detalhes`;
         const badge = document.createElement("span");
         badge.className = "calendario__dia-badge";
         badge.textContent = String(qtd);
         btn.appendChild(badge);
-        btn.addEventListener("click", () => abrirModalDiaCalendario(iso));
       }
     }
-    calGrandeDias.appendChild(btn);
+    fragmento.appendChild(btn);
   }
+
+  calGrandeDias.replaceChildren(fragmento);
 
   const mesInicioPeriodo = isoParaData(diasHorarios.dataInicio);
   const mesFimPeriodo = isoParaData(diasHorarios.dataFim);
@@ -182,6 +201,14 @@ calGrandeMesProximo.addEventListener("click", () => {
   mesAtualCalendario = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() + 1, 1);
   renderizarCalendarioGrande();
 });
+
+// um único listener "delegado" no container dos dias, em vez de um listener novo em cada botão
+// a cada re-renderização — evita recriar dezenas de closures toda vez que alguém agenda algo
+calGrandeDias.addEventListener("click", (e) => {
+  const btn = e.target.closest(".calendario__dia.tem-agendamentos");
+  if (btn && btn.dataset.iso) abrirModalDiaCalendario(btn.dataset.iso);
+});
+
 document.getElementById("btnVerCalendarioAgendamentos").addEventListener("click", () => abrirModal(modalCalendarioAgendamentos));
 document.getElementById("fecharModalCalendarioAgendamentos").addEventListener("click", () => fecharModal(modalCalendarioAgendamentos));
 
