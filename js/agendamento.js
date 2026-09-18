@@ -188,8 +188,9 @@ document.getElementById("fecharModalCalendarioAgendamentos").addEventListener("c
 /* ---- modal de detalhes do dia (quem reservou em cada horário) ---- */
 let isoDiaCalendarioAberto = null;
 
-// monta o "cartão" de uma pessoa (nome, telefone e link do WhatsApp) — usado tanto aqui quanto
-// no modal de detalhes de horário da grade de "Horários disponíveis" (abrirModalDetalhesOcupado)
+// monta o "cartão" de uma pessoa (nome e telefone, sem o botão de WhatsApp — não faz sentido
+// deixar isso público pra qualquer visitante chamar quem agendou) — usado tanto aqui quanto no
+// modal de detalhes de horário da grade de "Horários disponíveis" (abrirModalDetalhesOcupado)
 function criarItemPessoaOcupado(o) {
   const item = document.createElement("div");
   item.className = "pessoa-ocupado-item";
@@ -204,16 +205,7 @@ function criarItemPessoaOcupado(o) {
   info.appendChild(nome);
   info.appendChild(tel);
 
-  const link = document.createElement("a");
-  link.className = "link-whatsapp";
-  link.href = `https://wa.me/55${o.telefoneDigits || ""}`;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.title = "Chamar no WhatsApp";
-  link.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>`;
-
   item.appendChild(info);
-  item.appendChild(link);
   return item;
 }
 
