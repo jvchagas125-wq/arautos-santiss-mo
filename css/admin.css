@@ -237,6 +237,12 @@
 .quadro-intencao__titulo{
   flex:1; font-family:'Cinzel'; font-size:.85rem; color: var(--vermelho-escuro); line-height:1.4;
 }
+.quadro-intencao__pdf{
+  flex-shrink:0; width:34px; height:34px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center;
+  background: rgba(205,164,52,.15); color: var(--dourado-escuro); transition: background .2s ease, transform .2s ease;
+}
+.quadro-intencao__pdf:hover{ background: rgba(205,164,52,.28); transform: scale(1.06); }
+.quadro-intencao__pdf svg{ width:16px; height:16px; }
 .quadro-intencao__lixeira{
   flex-shrink:0; width:34px; height:34px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center;
   background: rgba(122,12,30,.08); color: var(--vermelho); transition: background .2s ease, transform .2s ease;

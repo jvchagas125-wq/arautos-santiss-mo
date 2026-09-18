@@ -390,6 +390,93 @@ function configurarIntencoes() {
     return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2,"0")}:00`;
   }
 
+  // Gera um PDF com as intenções de uma lista específica, organizadas por categoria
+  // (mesma ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa.
+  function gerarPdfIntencoes(rotulo, itens) {
+    const { jsPDF } = window.jspdf;
+    const docPdf = new jsPDF({ unit: "pt", format: "a4" });
+    const larguraPagina = docPdf.internal.pageSize.getWidth();
+    const alturaPagina = docPdf.internal.pageSize.getHeight();
+    const margem = 50;
+    const larguraUtil = larguraPagina - margem * 2;
+    let y = margem;
+
+    function quebrarPaginaSeNecessario(alturaNecessaria) {
+      if (y + alturaNecessaria > alturaPagina - margem) {
+        docPdf.addPage();
+        y = margem;
+      }
+    }
+
+    docPdf.setFont("times", "bold");
+    docPdf.setFontSize(16);
+    docPdf.setTextColor(122, 12, 30);
+    docPdf.text("Arautos do Evangelho", larguraPagina / 2, y, { align: "center" });
+    y += 20;
+
+    docPdf.setFont("times", "normal");
+    docPdf.setFontSize(11);
+    docPdf.setTextColor(90, 70, 54);
+    docPdf.text("Adoração Eucarística — Intenções da Missa", larguraPagina / 2, y, { align: "center" });
+    y += 24;
+
+    docPdf.setDrawColor(205, 164, 52);
+    docPdf.setLineWidth(1);
+    docPdf.line(margem, y, larguraPagina - margem, y);
+    y += 26;
+
+    docPdf.setFont("times", "bold");
+    docPdf.setFontSize(13);
+    docPdf.setTextColor(40, 24, 16);
+    docPdf.text(rotulo, margem, y);
+    y += 26;
+
+    let totalItens = 0;
+    CATEGORIAS_INTENCAO.forEach(({ chave, rotulo: rotuloCategoria }) => {
+      const doGrupo = itens.filter((it) => it.categoria === chave);
+      if (doGrupo.length === 0) return;
+      totalItens += doGrupo.length;
+
+      quebrarPaginaSeNecessario(28);
+      docPdf.setFont("times", "bold");
+      docPdf.setFontSize(12);
+      docPdf.setTextColor(122, 12, 30);
+      docPdf.text(`${rotuloCategoria} (${doGrupo.length})`, margem, y);
+      y += 20;
+
+      docPdf.setFont("times", "normal");
+      docPdf.setFontSize(11);
+      docPdf.setTextColor(40, 24, 16);
+
+      doGrupo.forEach((it, indice) => {
+        const linhas = docPdf.splitTextToSize(`${indice + 1}. ${it.texto}`, larguraUtil - 12);
+        quebrarPaginaSeNecessario(linhas.length * 15 + 6);
+        docPdf.text(linhas, margem + 12, y);
+        y += linhas.length * 15 + 6;
+      });
+      y += 12;
+    });
+
+    if (totalItens === 0) {
+      docPdf.setFont("times", "italic");
+      docPdf.setFontSize(11);
+      docPdf.setTextColor(90, 70, 54);
+      docPdf.text("Nenhuma intenção foi adicionada a esta lista.", margem, y);
+    }
+
+    const carimbo = new Date().toLocaleString("pt-BR");
+    docPdf.setFontSize(8);
+    docPdf.setTextColor(140, 120, 100);
+    docPdf.text(`Gerado em ${carimbo}`, margem, alturaPagina - 24);
+
+    const nomeArquivo = `intencoes-${rotulo}`
+      .toLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "") // remove acentos
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    docPdf.save(`${nomeArquivo}.pdf`);
+  }
+
   function renderizarQuadros(entradas) {
     const grupos = new Map(); // "data|hora" -> [entradas]
     entradas.forEach((it) => {
@@ -416,6 +503,9 @@ function configurarIntencoes() {
       cabecalho.innerHTML = `
         <svg class="quadro-intencao__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         <span class="quadro-intencao__titulo">${rotulo} — ${itens.length} ${itens.length === 1 ? "intenção" : "intenções"}</span>
+        <button type="button" class="quadro-intencao__pdf" title="Extrair PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+        </button>
         <button type="button" class="quadro-intencao__lixeira" title="Apagar lista">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
         </button>
@@ -444,6 +534,19 @@ function configurarIntencoes() {
       cabecalho.addEventListener("click", () => {
         quadro.classList.toggle("aberto");
         corpo.classList.toggle("oculto");
+      });
+      cabecalho.querySelector(".quadro-intencao__pdf").addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (typeof window.jspdf === "undefined") {
+          mostrarToast("Não foi possível carregar o gerador de PDF. Verifique sua conexão.");
+          return;
+        }
+        try {
+          gerarPdfIntencoes(rotulo, itens);
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível gerar o PDF. Tente novamente.");
+        }
       });
       cabecalho.querySelector(".quadro-intencao__lixeira").addEventListener("click", (e) => {
         e.stopPropagation();
