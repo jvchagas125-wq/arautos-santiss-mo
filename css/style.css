@@ -517,6 +517,66 @@ img{ max-width: 100%; display:block; }
 .legenda-grupos__lista li strong{ color: var(--vermelho-escuro); }
 .legenda-grupos__obs{ margin:0; font-size:.78rem; line-height:1.5; color: var(--texto-suave); font-style:italic; }
 
+/* ---------- Agendamento: tabela de agendamentos (estilo da planilha da coordenação) ----------
+   No celular fica dentro de um modal, aberto pelo botão "Ver tabela de agendamento". A partir de
+   900px (computador) o CSS "desmonta" esse modal — vira uma segunda coluna sempre visível ao
+   lado dos horários, atualizando em tempo real conforme as pessoas agendam (ver media query mais
+   abaixo, junto com ".agendamento-colunas"). */
+.agendamento-colunas{ display:flex; flex-direction:column; width:100%; }
+.agendamento-colunas__principal{ display:flex; flex-direction:column; width:100%; }
+.btn-ver-tabela-mobile{ display:flex; align-items:center; justify-content:center; gap:8px; }
+
+.modal--tabela-agendamentos{ max-width: min(94vw, 720px); text-align:left; }
+.tabela-agendamentos__titulo{ justify-content:center; }
+.tabela-agendamentos__nav{
+  display:flex; align-items:center; justify-content:center; gap:16px; margin:2px 0 14px;
+  font-family:'Cinzel'; font-size:.82rem; color: var(--vermelho-escuro); text-align:center;
+}
+.tabela-agendamentos__scroll{ overflow-x:auto; }
+.tabela-agendamentos{
+  border-collapse:collapse; width:100%; min-width:620px; font-size:.7rem;
+}
+.tabela-agendamentos th, .tabela-agendamentos td{
+  border:1px solid rgba(0,0,0,.22); padding:4px 6px; text-align:center; vertical-align:middle;
+}
+.tabela-agendamentos thead th{
+  background: var(--dourado); color: var(--vermelho-escuro); font-family:'Cinzel'; font-weight:700;
+  white-space:nowrap; position:sticky; top:0; z-index:1;
+}
+.tabela-agendamentos td.tabela-agendamentos__hora{
+  font-weight:700; background:rgba(0,0,0,.045); color: var(--texto); white-space:nowrap;
+}
+.tabela-agendamentos td.grupo-nicodemos{ background:#bdd7ee; color:#1c2f42; }
+.tabela-agendamentos td.grupo-arautos{ background:#c6e0b4; color:#233b1c; }
+.tabela-agendamentos td.grupo-madalena{ background:#f4d9a0; color:#4a3410; }
+.tabela-agendamentos td.status-extra{ background:#cbb6e8; color:#2f1d47; }
+.tabela-agendamentos td.status-aberto{ background:#e06666; color:#fff; }
+.tabela-agendamentos td.status-missa{ background:#ffd700; color:#6b5900; font-weight:700; }
+.tabela-agendamentos td.status-bloqueado{ background:#1a1a1a; }
+.tabela-agendamentos__legenda{
+  display:flex; flex-wrap:wrap; gap:7px; margin-top:14px; font-size:.72rem; color: var(--texto-suave);
+}
+.tabela-agendamentos__legenda span{
+  display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid rgba(157,122,31,.28);
+}
+.tabela-agendamentos__legenda i{ width:12px; height:12px; border-radius:3px; display:inline-block; flex-shrink:0; }
+
+@media (min-width: 900px){
+  .conteudo:has(#painelData){ max-width: 1160px; }
+  .agendamento-colunas{ flex-direction:row; align-items:flex-start; gap:26px; }
+  .agendamento-colunas__principal{ flex:0 0 380px; width:380px; }
+  #modalTabelaAgendamentos{
+    position:static; inset:auto; background:none; backdrop-filter:none;
+    opacity:1; pointer-events:auto; padding:0; z-index:auto; display:block;
+    flex:1 1 0; min-width:0;
+  }
+  #modalTabelaAgendamentos .modal{
+    max-width:none; width:100%; transform:none; box-shadow:0 14px 36px rgba(74,7,17,.12); max-height:none;
+  }
+  #modalTabelaAgendamentos .modal--fechar{ display:none; }
+  .btn-ver-tabela-mobile{ display:none; }
+}
+
 /* ---------- Avisos ---------- */
 .cartao-aviso{
   width:100%; border:1.5px solid rgba(157,122,31,.3); border-radius:14px; overflow:hidden;

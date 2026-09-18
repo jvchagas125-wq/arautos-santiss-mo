@@ -147,6 +147,36 @@ export function horasDeMissaNoDia(diasHorarios, iso) {
   return horas;
 }
 
+/* ---------- Divide o período todo (De -> Até) em blocos de 7 dias corridos, um bloco = uma
+   "semana" (usado na planilha exportada em Excel pelo admin e na tabela de agendamentos do
+   site público). Quando sobra um resto pequeno no final (ex.: o período termina num único
+   sábado avulso depois da última semana cheia), esse resto é incorporado à última semana em
+   vez de virar um bloco novo quase vazio. ---------- */
+export function gerarBlocosDeSemana(dataInicio, dataFim) {
+  const todosDias = [];
+  let d = isoParaData(dataInicio);
+  while (dataParaIso(d) <= dataFim) {
+    todosDias.push(dataParaIso(d));
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  }
+  if (todosDias.length === 0) return [];
+
+  const numSemanasCheias = Math.floor(todosDias.length / 7);
+  const resto = todosDias.length % 7;
+  const semanasAntesDaUltima = resto === 0 ? numSemanasCheias : numSemanasCheias - 1;
+
+  const blocos = [];
+  let i = 0;
+  for (let s = 0; s < semanasAntesDaUltima; s++) {
+    blocos.push(todosDias.slice(i, i + 7));
+    i += 7;
+  }
+  if (i < todosDias.length) {
+    blocos.push(todosDias.slice(i));
+  }
+  return blocos;
+}
+
 /* ---------- Frase do dia: rotação cíclica de até 30 frases ----------
    Todo mundo vê a mesma frase no mesmo dia (calculado pela data local do aparelho).
    Frases vazias são ignoradas primeiro — a rotação avança um índice por dia dentro da

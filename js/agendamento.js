@@ -1,8 +1,9 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso, horariosDisponiveisNoDia,
+  horasDeMissaNoDia, gerarBlocosDeSemana, DIAS_SEMANA_COMPLETO,
   MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
-import { obterConfiguracoesGerais, obterDiasHorarios, ouvirAgendamentosDaData, criarAgendamento } from "./dados.js";
+import { obterConfiguracoesGerais, obterDiasHorarios, ouvirAgendamentosDaData, ouvirTodosAgendamentos, criarAgendamento } from "./dados.js";
 
 inicializarNavegacao("agendamento");
 
@@ -13,6 +14,12 @@ let dataSelecionada = null; // string iso
 let horaSelecionada = null; // number
 let pararEscutaHorarios = null;
 let horariosOcupados = []; // [{ hora, nome, telefone, telefoneDigits }]
+
+// ---- Tabela de agendamentos (a "planilha" da coordenação, ao vivo) ----
+let blocosDeSemana = []; // [[iso, iso, ...], ...] — um array de dias por semana
+let indiceSemanaTabela = 0;
+let todosAgendamentosAtivos = []; // todo mundo com status "agendado", de todas as datas
+let pararEscutaTodosAgendamentos = null;
 
 const dataInput = document.getElementById("dataInput");
 const calendario = document.getElementById("calendario");
@@ -28,6 +35,15 @@ const avisoSemPeriodo = document.getElementById("avisoSemPeriodo");
 const erroCarregarPeriodo = document.getElementById("erroCarregarPeriodo");
 const modalConfirmacao = document.getElementById("modalConfirmacao");
 
+const modalTabelaAgendamentos = document.getElementById("modalTabelaAgendamentos");
+const tabelaAgendamentosPeriodo = document.getElementById("tabelaAgendamentosPeriodo");
+const tabelaAgendamentosGrade = document.getElementById("tabelaAgendamentosGrade");
+const tabelaAgendamentosLegenda = document.getElementById("tabelaAgendamentosLegenda");
+const tabelaAgendamentosVazia = document.getElementById("tabelaAgendamentosVazia");
+const tabelaAgendamentosScroll = document.querySelector(".tabela-agendamentos__scroll");
+const btnSemanaAnteriorTabela = document.getElementById("semanaAnteriorTabela");
+const btnSemanaProximaTabela = document.getElementById("semanaProximaTabela");
+
 // O campo de data começa desabilitado (veja o atributo "disabled" no HTML) — só é liberado
 // quando os dados realmente terminam de carregar. Isso evita o bug de, no celular, tocar no
 // campo rápido demais (antes da configuração chegar) e ver o calendário abrir vazio, sem os
@@ -36,6 +52,8 @@ async function iniciar() {
   avisoSemPeriodo.classList.add("oculto");
   erroCarregarPeriodo.classList.add("oculto");
   dataInput.disabled = true;
+
+  if (pararEscutaTodosAgendamentos) { pararEscutaTodosAgendamentos(); pararEscutaTodosAgendamentos = null; }
 
   try {
     usuario = await exigirCadastro();
@@ -48,12 +66,15 @@ async function iniciar() {
 
     if (!diasHorarios.dataInicio || !diasHorarios.dataFim) {
       avisoSemPeriodo.classList.remove("oculto");
+      iniciarTabelaAgendamentos(); // mostra a mensagem de "sem período" também na tabela
       return;
     }
 
     mesAtual = new Date(isoParaData(diasHorarios.dataInicio).getFullYear(), isoParaData(diasHorarios.dataInicio).getMonth(), 1);
     renderizarCalendario();
     dataInput.disabled = false;
+
+    iniciarTabelaAgendamentos();
   } catch (err) {
     console.error("Erro ao carregar dados de agendamento:", err);
     erroCarregarPeriodo.classList.remove("oculto");
@@ -65,6 +86,121 @@ erroCarregarPeriodo.addEventListener("click", () => iniciar());
 function dataDentroDoPeriodo(iso) {
   return iso >= diasHorarios.dataInicio && iso <= diasHorarios.dataFim;
 }
+
+/* ---------- Tabela de agendamentos: mesma grade "estilo planilha" que o padre exporta em
+   Excel no painel admin (mesmos grupos/cores por faixa de horário), só que ao vivo no site
+   público. No celular abre num modal (botão "Ver tabela de agendamento"); no computador o
+   CSS transforma esse mesmo modal numa segunda coluna sempre visível (ver style.css). ---------- */
+function grupoPorHora(hora) {
+  if ((hora >= 0 && hora <= 6) || (hora >= 21 && hora <= 23)) return "nicodemos";
+  if (hora >= 7 && hora <= 11) return "arautos";
+  return "madalena"; // 12h-20h
+}
+
+function iniciarTabelaAgendamentos() {
+  if (!diasHorarios || !diasHorarios.dataInicio || !diasHorarios.dataFim) {
+    blocosDeSemana = [];
+    renderizarTabelaAgendamentos();
+    return;
+  }
+
+  blocosDeSemana = gerarBlocosDeSemana(diasHorarios.dataInicio, diasHorarios.dataFim);
+
+  // abre já na semana que contém hoje (ou a mais próxima, se hoje estiver fora do período)
+  const hoje = hojeIso();
+  let indiceInicial = blocosDeSemana.findIndex((dias) => hoje >= dias[0] && hoje <= dias[dias.length - 1]);
+  if (indiceInicial === -1) indiceInicial = hoje < diasHorarios.dataInicio ? 0 : blocosDeSemana.length - 1;
+  indiceSemanaTabela = Math.max(0, indiceInicial);
+
+  if (pararEscutaTodosAgendamentos) pararEscutaTodosAgendamentos();
+  pararEscutaTodosAgendamentos = ouvirTodosAgendamentos("agendado", (lista) => {
+    todosAgendamentosAtivos = lista;
+    renderizarTabelaAgendamentos();
+  });
+
+  renderizarTabelaAgendamentos();
+}
+
+function renderizarTabelaAgendamentos() {
+  const semPeriodo = blocosDeSemana.length === 0;
+  tabelaAgendamentosVazia.classList.toggle("oculto", !semPeriodo);
+  tabelaAgendamentosScroll.classList.toggle("oculto", semPeriodo);
+  tabelaAgendamentosLegenda.classList.toggle("oculto", semPeriodo);
+  btnSemanaAnteriorTabela.disabled = semPeriodo || indiceSemanaTabela <= 0;
+  btnSemanaProximaTabela.disabled = semPeriodo || indiceSemanaTabela >= blocosDeSemana.length - 1;
+
+  if (semPeriodo) {
+    tabelaAgendamentosPeriodo.textContent = "—";
+    tabelaAgendamentosGrade.innerHTML = "";
+    return;
+  }
+
+  const dias = blocosDeSemana[indiceSemanaTabela];
+  tabelaAgendamentosPeriodo.textContent =
+    `Semana ${indiceSemanaTabela + 1} de ${blocosDeSemana.length} — ${formatarDataBR(dias[0])} a ${formatarDataBR(dias[dias.length - 1])}`;
+
+  // agrupa os agendamentos ativos por "data_hora" pra consulta rápida célula a célula
+  const porDataHora = new Map();
+  todosAgendamentosAtivos.forEach((a) => {
+    const chave = `${a.data}_${a.hora}`;
+    if (!porDataHora.has(chave)) porDataHora.set(chave, []);
+    porDataHora.get(chave).push(a);
+  });
+
+  let html = "<thead><tr><th></th>";
+  dias.forEach((iso) => {
+    const nomeDia = DIAS_SEMANA_COMPLETO[isoParaData(iso).getDay()].toLowerCase();
+    html += `<th>${nomeDia}<br>${formatarDataBR(iso).slice(0, 5)}</th>`;
+  });
+  html += "</tr></thead><tbody>";
+
+  const horasAtivasPorDia = new Map(dias.map((iso) => [iso, new Set(horariosDisponiveisNoDia(diasHorarios, iso))]));
+  const horasDeMissaPorDia = new Map(dias.map((iso) => [iso, horasDeMissaNoDia(diasHorarios, iso)]));
+
+  for (let hora = 0; hora < 24; hora++) {
+    html += `<tr><td class="tabela-agendamentos__hora">${String(hora).padStart(2, "0")}h</td>`;
+    dias.forEach((iso) => {
+      const horasAtivas = horasAtivasPorDia.get(iso);
+      const horasMissa = horasDeMissaPorDia.get(iso);
+      const pessoas = porDataHora.get(`${iso}_${hora}`) || [];
+
+      if (horasMissa.has(hora)) {
+        html += `<td class="status-missa">Missa</td>`;
+      } else if (!horasAtivas.has(hora)) {
+        html += `<td class="status-bloqueado"></td>`;
+      } else if (pessoas.length > 0) {
+        const algumExtra = pessoas.some((p) => p.extra);
+        const classe = algumExtra ? "status-extra" : `grupo-${grupoPorHora(hora)}`;
+        const nomes = pessoas.map((p) => (p.nome || "—").split(" ")[0]).join(" / ");
+        html += `<td class="${classe}" title="${pessoas.map((p) => p.nome || "—").join(", ").replace(/"/g, "&quot;")}">${nomes}</td>`;
+      } else {
+        html += `<td class="status-aberto"></td>`;
+      }
+    });
+    html += "</tr>";
+  }
+  html += "</tbody>";
+  tabelaAgendamentosGrade.innerHTML = html;
+
+  tabelaAgendamentosLegenda.innerHTML = `
+    <span><i style="background:#c6e0b4"></i> Arautos (07h–11h)</span>
+    <span><i style="background:#bdd7ee"></i> São Nicodemos (00h–06h e 21h–23h)</span>
+    <span><i style="background:#f4d9a0"></i> Santa Maria Madalena (12h–20h)</span>
+    <span><i style="background:#cbb6e8"></i> Extra</span>
+    <span><i style="background:#ffd700"></i> Missa</span>
+    <span><i style="background:#e06666"></i> Horário em aberto</span>
+    <span><i style="background:#1a1a1a"></i> Fora do período</span>
+  `;
+}
+
+btnSemanaAnteriorTabela.addEventListener("click", () => {
+  if (indiceSemanaTabela > 0) { indiceSemanaTabela--; renderizarTabelaAgendamentos(); }
+});
+btnSemanaProximaTabela.addEventListener("click", () => {
+  if (indiceSemanaTabela < blocosDeSemana.length - 1) { indiceSemanaTabela++; renderizarTabelaAgendamentos(); }
+});
+document.getElementById("btnVerTabelaAgendamentos").addEventListener("click", () => abrirModal(modalTabelaAgendamentos));
+document.getElementById("fecharModalTabelaAgendamentos").addEventListener("click", () => fecharModal(modalTabelaAgendamentos));
 
 function renderizarCalendario() {
   const nomeMes = MESES[mesAtual.getMonth()];

@@ -1,6 +1,6 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
-  isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia,
+  isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
   MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -743,35 +743,6 @@ function corDoGrupoPorHora(hora) {
   if ((hora >= 0 && hora <= 6) || (hora >= 21 && hora <= 23)) return CORES_EXPORT.nicodemos;
   if (hora >= 7 && hora <= 11) return CORES_EXPORT.arautos;
   return CORES_EXPORT.madalena; // 12h-20h
-}
-
-// Divide o período todo (De -> Até) em blocos de 7 dias corridos, um bloco = uma aba da planilha.
-// Quando sobra um resto pequeno no final (ex.: o período termina num único sábado avulso depois
-// da última semana cheia), esse resto é incorporado à última semana em vez de virar uma aba nova
-// quase vazia — assim uma semana de sábado a sábado (8 dias) sai numa aba só.
-function gerarBlocosDeSemana(dataInicio, dataFim) {
-  const todosDias = [];
-  let d = isoParaData(dataInicio);
-  while (dataParaIso(d) <= dataFim) {
-    todosDias.push(dataParaIso(d));
-    d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
-  }
-  if (todosDias.length === 0) return [];
-
-  const numSemanasCheias = Math.floor(todosDias.length / 7);
-  const resto = todosDias.length % 7;
-  const semanasAntesDaUltima = resto === 0 ? numSemanasCheias : numSemanasCheias - 1;
-
-  const blocos = [];
-  let i = 0;
-  for (let s = 0; s < semanasAntesDaUltima; s++) {
-    blocos.push(todosDias.slice(i, i + 7));
-    i += 7;
-  }
-  if (i < todosDias.length) {
-    blocos.push(todosDias.slice(i));
-  }
-  return blocos;
 }
 
 // Aba 1: lista simples e filtrável (formato antigo), útil pra buscar/ordenar.

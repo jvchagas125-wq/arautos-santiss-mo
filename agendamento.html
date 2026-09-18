@@ -63,51 +63,83 @@
     <h1 class="titulo-pagina">Agende seu Horário</h1>
     <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-    <div class="painel" id="painelData">
-      <div class="painel__titulo"><span class="emoji">📅</span> Selecione a data</div>
-      <div class="campo" style="position:relative; margin-bottom:0;">
-        <input type="text" id="dataInput" class="campo-clicavel" placeholder="Toque para escolher uma data" readonly autocomplete="off" disabled />
-        <div class="calendario" id="calendario">
-          <div class="calendario__cabecalho">
-            <button type="button" class="calendario__nav" id="mesAnterior" aria-label="Mês anterior">‹</button>
-            <strong id="mesAno">—</strong>
-            <button type="button" class="calendario__nav" id="mesProximo" aria-label="Próximo mês">›</button>
+    <div class="agendamento-colunas">
+      <div class="agendamento-colunas__principal">
+        <div class="painel" id="painelData">
+          <div class="painel__titulo"><span class="emoji">📅</span> Selecione a data</div>
+          <div class="campo" style="position:relative; margin-bottom:0;">
+            <input type="text" id="dataInput" class="campo-clicavel" placeholder="Toque para escolher uma data" readonly autocomplete="off" disabled />
+            <div class="calendario" id="calendario">
+              <div class="calendario__cabecalho">
+                <button type="button" class="calendario__nav" id="mesAnterior" aria-label="Mês anterior">‹</button>
+                <strong id="mesAno">—</strong>
+                <button type="button" class="calendario__nav" id="mesProximo" aria-label="Próximo mês">›</button>
+              </div>
+              <div class="calendario__semana">
+                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+              </div>
+              <div class="calendario__dias" id="calendarioDias"></div>
+              <div class="calendario__legenda"><i></i> dias com adoração disponível</div>
+            </div>
           </div>
-          <div class="calendario__semana">
-            <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+          <p id="avisoSemPeriodo" class="mensagem-vazia oculto">Nenhum período de adoração está configurado no momento. Procure a coordenação da igreja.</p>
+          <p id="erroCarregarPeriodo" class="mensagem-vazia oculto" style="cursor:pointer; text-decoration:underline;">Não foi possível carregar as datas. Toque aqui para tentar novamente.</p>
+        </div>
+
+        <div class="painel" id="painelHorarios" style="display:none;">
+          <div class="painel__titulo"><span class="emoji">🕐</span> Horários disponíveis</div>
+          <div class="grade-horarios" id="gradeHorarios"></div>
+          <p class="mensagem-vazia oculto" id="semHorarios">Não há horários livres para esta data.</p>
+
+          <div class="legenda-grupos">
+            <div class="legenda-grupos__titulo">Grupos responsáveis por horário</div>
+            <ul class="legenda-grupos__lista">
+              <li><strong>00:00 às 06:00</strong> — Grupo São Nicodemos (Homens)</li>
+              <li><strong>07:00 às 11:00</strong> — Arautos (01)</li>
+              <li><strong>12:00 às 20:00</strong> — Grupo Santa Maria Madalena (Para todos)</li>
+              <li><strong>21:00 às 23:00</strong> — Grupo São Nicodemos (Homens)</li>
+            </ul>
+            <p class="legenda-grupos__obs">Observação: as esposas dos integrantes do Grupo São Nicodemos podem acompanhá-los.</p>
           </div>
-          <div class="calendario__dias" id="calendarioDias"></div>
-          <div class="calendario__legenda"><i></i> dias com adoração disponível</div>
+        </div>
+
+        <button type="button" class="btn btn-contorno btn-full btn-ver-tabela-mobile" id="btnVerTabelaAgendamentos" style="margin-top:8px;">
+          <span class="emoji">📊</span> Ver tabela de agendamento
+        </button>
+
+        <button class="btn btn-vermelho btn-full" id="btnConfirmarAgendamento" style="margin-top:8px;" disabled>
+          Confirmar agendamento
+        </button>
+
+        <div class="aviso-info">
+          <span class="aviso-info__icone">ℹ️</span>
+          <p><strong>Observação:</strong> você pode agendar mesmo que um dia e horário já tenha alguém inscrito — basta selecioná-lo e tocar em "Confirmar agendamento". Ao passar o mouse, horários livres ficam verde-escuro e horários que já têm alguém agendado ficam vermelho. Caso queira cancelar, é só acessar "Meus agendamentos".</p>
         </div>
       </div>
-      <p id="avisoSemPeriodo" class="mensagem-vazia oculto">Nenhum período de adoração está configurado no momento. Procure a coordenação da igreja.</p>
-      <p id="erroCarregarPeriodo" class="mensagem-vazia oculto" style="cursor:pointer; text-decoration:underline;">Não foi possível carregar as datas. Toque aqui para tentar novamente.</p>
-    </div>
 
-    <div class="painel" id="painelHorarios" style="display:none;">
-      <div class="painel__titulo"><span class="emoji">🕐</span> Horários disponíveis</div>
-      <div class="grade-horarios" id="gradeHorarios"></div>
-      <p class="mensagem-vazia oculto" id="semHorarios">Não há horários livres para esta data.</p>
+      <!-- No celular isto é um modal (aberto pelo botão "Ver tabela de agendamento"); a partir de
+           900px de largura, o CSS "desmonta" o modal e ele passa a aparecer sempre, como uma
+           segunda coluna ao lado dos horários. -->
+      <div class="modal-overlay" id="modalTabelaAgendamentos">
+        <div class="modal modal--largo modal--tabela-agendamentos">
+          <button class="modal--fechar" id="fecharModalTabelaAgendamentos" aria-label="Fechar">&times;</button>
+          <div class="painel__titulo tabela-agendamentos__titulo"><span class="emoji">📊</span> Tabela de agendamentos</div>
 
-      <div class="legenda-grupos">
-        <div class="legenda-grupos__titulo">Grupos responsáveis por horário</div>
-        <ul class="legenda-grupos__lista">
-          <li><strong>00:00 às 06:00</strong> — Grupo São Nicodemos (Homens)</li>
-          <li><strong>07:00 às 11:00</strong> — Arautos (01)</li>
-          <li><strong>12:00 às 20:00</strong> — Grupo Santa Maria Madalena (Para todos)</li>
-          <li><strong>21:00 às 23:00</strong> — Grupo São Nicodemos (Homens)</li>
-        </ul>
-        <p class="legenda-grupos__obs">Observação: as esposas dos integrantes do Grupo São Nicodemos podem acompanhá-los.</p>
+          <div class="tabela-agendamentos__nav">
+            <button type="button" class="calendario__nav" id="semanaAnteriorTabela" aria-label="Semana anterior">‹</button>
+            <strong id="tabelaAgendamentosPeriodo">—</strong>
+            <button type="button" class="calendario__nav" id="semanaProximaTabela" aria-label="Próxima semana">›</button>
+          </div>
+
+          <p class="mensagem-vazia oculto" id="tabelaAgendamentosVazia">Nenhum período de adoração está configurado no momento.</p>
+
+          <div class="tabela-agendamentos__scroll modal__conteudo-scroll">
+            <table class="tabela-agendamentos" id="tabelaAgendamentosGrade"></table>
+          </div>
+
+          <div class="tabela-agendamentos__legenda" id="tabelaAgendamentosLegenda"></div>
+        </div>
       </div>
-    </div>
-
-    <button class="btn btn-vermelho btn-full" id="btnConfirmarAgendamento" style="margin-top:8px;" disabled>
-      Confirmar agendamento
-    </button>
-
-    <div class="aviso-info">
-      <span class="aviso-info__icone">ℹ️</span>
-      <p><strong>Observação:</strong> você pode agendar mesmo que um dia e horário já tenha alguém inscrito — basta selecioná-lo e tocar em "Confirmar agendamento". Ao passar o mouse, horários livres ficam verde-escuro e horários que já têm alguém agendado ficam vermelho. Caso queira cancelar, é só acessar "Meus agendamentos".</p>
     </div>
 
     <p class="rodape-simples">Arautos do Evangelho — Adoração Eucarística</p>
