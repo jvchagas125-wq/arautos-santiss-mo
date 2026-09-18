@@ -183,13 +183,13 @@ function renderizarTabelaAgendamentos() {
   tabelaAgendamentosGrade.innerHTML = html;
 
   tabelaAgendamentosLegenda.innerHTML = `
-    <span><i style="background:#c6e0b4"></i> Arautos (07h–11h)</span>
-    <span><i style="background:#bdd7ee"></i> São Nicodemos (00h–06h e 21h–23h)</span>
-    <span><i style="background:#f4d9a0"></i> Santa Maria Madalena (12h–20h)</span>
-    <span><i style="background:#cbb6e8"></i> Extra</span>
-    <span><i style="background:#ffd700"></i> Missa</span>
-    <span><i style="background:#e06666"></i> Horário em aberto</span>
-    <span><i style="background:#1a1a1a"></i> Fora do período</span>
+    <span><i style="background:#dfecd3"></i> Arautos (07h–11h)</span>
+    <span><i style="background:#d7e7f6"></i> São Nicodemos (00h–06h e 21h–23h)</span>
+    <span><i style="background:#f2e0ba"></i> Santa Maria Madalena (12h–20h)</span>
+    <span><i style="background:#e6d9f2"></i> Extra</span>
+    <span><i style="background:linear-gradient(135deg,#f0d78c,#9c7a1f)"></i> Missa</span>
+    <span><i style="background:rgba(122,12,30,.15)"></i> Horário em aberto</span>
+    <span><i style="background:#4a0711"></i> Fora do período</span>
   `;
 }
 
