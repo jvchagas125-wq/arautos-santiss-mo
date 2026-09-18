@@ -103,8 +103,8 @@
           </div>
         </div>
 
-        <button type="button" class="btn btn-contorno btn-full btn-ver-tabela-mobile" id="btnVerTabelaAgendamentos" style="margin-top:8px;">
-          <span class="emoji">📊</span> Ver tabela de agendamento
+        <button type="button" class="btn btn-contorno btn-full btn-ver-tabela-mobile" id="btnVerCalendarioAgendamentos" style="margin-top:8px;">
+          <span class="emoji">📅</span> Ver calendário de agendamentos
         </button>
 
         <button class="btn btn-vermelho btn-full" id="btnConfirmarAgendamento" style="margin-top:8px;" disabled>
@@ -117,28 +117,42 @@
         </div>
       </div>
 
-      <!-- No celular isto é um modal (aberto pelo botão "Ver tabela de agendamento"); a partir de
+      <!-- No celular isto é um modal (aberto pelo botão "Ver calendário de agendamentos"); a partir de
            900px de largura, o CSS "desmonta" o modal e ele passa a aparecer sempre, como uma
-           segunda coluna ao lado dos horários. -->
-      <div class="modal-overlay" id="modalTabelaAgendamentos">
-        <div class="modal modal--largo modal--tabela-agendamentos">
-          <button class="modal--fechar" id="fecharModalTabelaAgendamentos" aria-label="Fechar">&times;</button>
-          <div class="painel__titulo tabela-agendamentos__titulo"><span class="emoji">📊</span> Tabela de agendamentos</div>
+           segunda coluna ao lado dos horários. Mesmo calendário do "Acompanhamento" do painel
+           administrativo: dias com agendamento ficam em destaque com um selo de quantidade; ao
+           tocar num dia, abre os detalhes de quem reservou em cada horário. -->
+      <div class="modal-overlay" id="modalCalendarioAgendamentos">
+        <div class="modal modal--calendario-agendamentos">
+          <button class="modal--fechar" id="fecharModalCalendarioAgendamentos" aria-label="Fechar">&times;</button>
+          <div class="painel__titulo calendario-agendamentos__titulo"><span class="emoji">📅</span> Calendário de agendamentos</div>
 
-          <div class="tabela-agendamentos__nav">
-            <button type="button" class="calendario__nav" id="semanaAnteriorTabela" aria-label="Semana anterior">‹</button>
-            <strong id="tabelaAgendamentosPeriodo">—</strong>
-            <button type="button" class="calendario__nav" id="semanaProximaTabela" aria-label="Próxima semana">›</button>
+          <div class="calendario-grande" id="calendarioGrandeAgendamentos">
+            <div class="calendario__cabecalho">
+              <button type="button" class="calendario__nav" id="calGrandeMesAnterior" aria-label="Mês anterior">‹</button>
+              <strong id="calGrandeMesAno">—</strong>
+              <button type="button" class="calendario__nav" id="calGrandeMesProximo" aria-label="Próximo mês">›</button>
+            </div>
+            <div class="calendario__semana">
+              <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+            </div>
+            <div class="calendario__dias" id="calGrandeDias"></div>
+            <div class="calendario__legenda-dupla">
+              <span><i class="legenda-dot legenda-dot--disponivel"></i> dia disponível, sem agendamentos</span>
+              <span><i class="legenda-dot legenda-dot--agendado"></i> tem agendamento — toque para ver detalhes</span>
+            </div>
           </div>
-
-          <p class="mensagem-vazia oculto" id="tabelaAgendamentosVazia">Nenhum período de adoração está configurado no momento.</p>
-
-          <div class="tabela-agendamentos__scroll modal__conteudo-scroll">
-            <table class="tabela-agendamentos" id="tabelaAgendamentosGrade"></table>
-          </div>
-
-          <div class="tabela-agendamentos__legenda" id="tabelaAgendamentosLegenda"></div>
+          <p class="mensagem-vazia oculto" id="calGrandeVazia">Nenhum período de adoração está configurado no momento.</p>
         </div>
+      </div>
+    </div>
+
+    <!-- Modal de detalhes de um dia do calendário de agendamentos (mostra quem reservou em cada horário) -->
+    <div class="modal-overlay" id="modalDiaCalendario">
+      <div class="modal modal--largo">
+        <button class="modal--fechar" id="fecharModalDiaCalendario" aria-label="Fechar">&times;</button>
+        <h3 id="diaCalendarioTitulo">—</h3>
+        <div id="diaCalendarioConteudo" class="modal__conteudo-scroll" style="text-align:left;"></div>
       </div>
     </div>
 

@@ -1,8 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
-  isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso, horariosDisponiveisNoDia,
-  horasDeMissaNoDia, gerarBlocosDeSemana, DIAS_SEMANA_COMPLETO,
-  MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
+  isoParaData, dataParaIso, formatarDataBR, formatarHora, formatarDataComDiaSemana, hojeIso,
+  horariosDisponiveisNoDia, MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
 import { obterConfiguracoesGerais, obterDiasHorarios, ouvirAgendamentosDaData, ouvirTodosAgendamentos, criarAgendamento } from "./dados.js";
 
 inicializarNavegacao("agendamento");
@@ -15,9 +14,8 @@ let horaSelecionada = null; // number
 let pararEscutaHorarios = null;
 let horariosOcupados = []; // [{ hora, nome, telefone, telefoneDigits }]
 
-// ---- Tabela de agendamentos (a "planilha" da coordenação, ao vivo) ----
-let blocosDeSemana = []; // [[iso, iso, ...], ...] — um array de dias por semana
-let indiceSemanaTabela = 0;
+// ---- Calendário de agendamentos (igual ao "Acompanhamento" do painel administrativo, ao vivo) ----
+let mesAtualCalendario = null; // Date (dia 1 do mês visível no calendário grande)
 let todosAgendamentosAtivos = []; // todo mundo com status "agendado", de todas as datas
 let pararEscutaTodosAgendamentos = null;
 
@@ -35,14 +33,17 @@ const avisoSemPeriodo = document.getElementById("avisoSemPeriodo");
 const erroCarregarPeriodo = document.getElementById("erroCarregarPeriodo");
 const modalConfirmacao = document.getElementById("modalConfirmacao");
 
-const modalTabelaAgendamentos = document.getElementById("modalTabelaAgendamentos");
-const tabelaAgendamentosPeriodo = document.getElementById("tabelaAgendamentosPeriodo");
-const tabelaAgendamentosGrade = document.getElementById("tabelaAgendamentosGrade");
-const tabelaAgendamentosLegenda = document.getElementById("tabelaAgendamentosLegenda");
-const tabelaAgendamentosVazia = document.getElementById("tabelaAgendamentosVazia");
-const tabelaAgendamentosScroll = document.querySelector(".tabela-agendamentos__scroll");
-const btnSemanaAnteriorTabela = document.getElementById("semanaAnteriorTabela");
-const btnSemanaProximaTabela = document.getElementById("semanaProximaTabela");
+const modalCalendarioAgendamentos = document.getElementById("modalCalendarioAgendamentos");
+const calendarioGrandeAgendamentos = document.getElementById("calendarioGrandeAgendamentos");
+const calGrandeMesAno = document.getElementById("calGrandeMesAno");
+const calGrandeDias = document.getElementById("calGrandeDias");
+const calGrandeMesAnterior = document.getElementById("calGrandeMesAnterior");
+const calGrandeMesProximo = document.getElementById("calGrandeMesProximo");
+const calGrandeVazia = document.getElementById("calGrandeVazia");
+
+const modalDiaCalendario = document.getElementById("modalDiaCalendario");
+const diaCalendarioTitulo = document.getElementById("diaCalendarioTitulo");
+const diaCalendarioConteudo = document.getElementById("diaCalendarioConteudo");
 
 // O campo de data começa desabilitado (veja o atributo "disabled" no HTML) — só é liberado
 // quando os dados realmente terminam de carregar. Isso evita o bug de, no celular, tocar no
@@ -66,7 +67,7 @@ async function iniciar() {
 
     if (!diasHorarios.dataInicio || !diasHorarios.dataFim) {
       avisoSemPeriodo.classList.remove("oculto");
-      iniciarTabelaAgendamentos(); // mostra a mensagem de "sem período" também na tabela
+      iniciarCalendarioAgendamentos(); // mostra a mensagem de "sem período" também no calendário
       return;
     }
 
@@ -74,7 +75,7 @@ async function iniciar() {
     renderizarCalendario();
     dataInput.disabled = false;
 
-    iniciarTabelaAgendamentos();
+    iniciarCalendarioAgendamentos();
   } catch (err) {
     console.error("Erro ao carregar dados de agendamento:", err);
     erroCarregarPeriodo.classList.remove("oculto");
@@ -87,120 +88,183 @@ function dataDentroDoPeriodo(iso) {
   return iso >= diasHorarios.dataInicio && iso <= diasHorarios.dataFim;
 }
 
-/* ---------- Tabela de agendamentos: mesma grade "estilo planilha" que o padre exporta em
-   Excel no painel admin (mesmos grupos/cores por faixa de horário), só que ao vivo no site
-   público. No celular abre num modal (botão "Ver tabela de agendamento"); no computador o
-   CSS transforma esse mesmo modal numa segunda coluna sempre visível (ver style.css). ---------- */
-function grupoPorHora(hora) {
-  if ((hora >= 0 && hora <= 6) || (hora >= 21 && hora <= 23)) return "nicodemos";
-  if (hora >= 7 && hora <= 11) return "arautos";
-  return "madalena"; // 12h-20h
+/* ---------- Calendário de agendamentos: igual ao "Acompanhamento" do painel administrativo,
+   só que ao vivo no site público. Dias com agendamento ficam em destaque com um selo de
+   quantidade; tocar num dia mostra quem reservou em cada horário. No celular abre num modal
+   (botão "Ver calendário de agendamentos"); no computador o CSS transforma esse mesmo modal
+   numa segunda coluna sempre visível (ver style.css). ---------- */
+function agendamentosDoDiaCalendario(iso) {
+  return todosAgendamentosAtivos.filter((a) => a.data === iso);
 }
 
-function iniciarTabelaAgendamentos() {
+function iniciarCalendarioAgendamentos() {
   if (!diasHorarios || !diasHorarios.dataInicio || !diasHorarios.dataFim) {
-    blocosDeSemana = [];
-    renderizarTabelaAgendamentos();
+    mesAtualCalendario = null;
+    renderizarCalendarioGrande();
     return;
   }
 
-  blocosDeSemana = gerarBlocosDeSemana(diasHorarios.dataInicio, diasHorarios.dataFim);
-
-  // abre já na semana que contém hoje (ou a mais próxima, se hoje estiver fora do período)
-  const hoje = hojeIso();
-  let indiceInicial = blocosDeSemana.findIndex((dias) => hoje >= dias[0] && hoje <= dias[dias.length - 1]);
-  if (indiceInicial === -1) indiceInicial = hoje < diasHorarios.dataInicio ? 0 : blocosDeSemana.length - 1;
-  indiceSemanaTabela = Math.max(0, indiceInicial);
+  mesAtualCalendario = new Date(
+    isoParaData(diasHorarios.dataInicio).getFullYear(),
+    isoParaData(diasHorarios.dataInicio).getMonth(),
+    1
+  );
 
   if (pararEscutaTodosAgendamentos) pararEscutaTodosAgendamentos();
   pararEscutaTodosAgendamentos = ouvirTodosAgendamentos("agendado", (lista) => {
     todosAgendamentosAtivos = lista;
-    renderizarTabelaAgendamentos();
+    renderizarCalendarioGrande();
+    // se o modal de detalhes de um dia estiver aberto, atualiza a lista dele também
+    if (isoDiaCalendarioAberto) abrirModalDiaCalendario(isoDiaCalendarioAberto);
   });
 
-  renderizarTabelaAgendamentos();
+  renderizarCalendarioGrande();
 }
 
-function renderizarTabelaAgendamentos() {
-  const semPeriodo = blocosDeSemana.length === 0;
-  tabelaAgendamentosVazia.classList.toggle("oculto", !semPeriodo);
-  tabelaAgendamentosScroll.classList.toggle("oculto", semPeriodo);
-  tabelaAgendamentosLegenda.classList.toggle("oculto", semPeriodo);
-  btnSemanaAnteriorTabela.disabled = semPeriodo || indiceSemanaTabela <= 0;
-  btnSemanaProximaTabela.disabled = semPeriodo || indiceSemanaTabela >= blocosDeSemana.length - 1;
+function renderizarCalendarioGrande() {
+  const semPeriodo = !mesAtualCalendario;
+  calGrandeVazia.classList.toggle("oculto", !semPeriodo);
+  calendarioGrandeAgendamentos.classList.toggle("oculto", semPeriodo);
+  if (semPeriodo) return;
 
-  if (semPeriodo) {
-    tabelaAgendamentosPeriodo.textContent = "—";
-    tabelaAgendamentosGrade.innerHTML = "";
-    return;
+  const nomeMes = MESES[mesAtualCalendario.getMonth()];
+  calGrandeMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesAtualCalendario.getFullYear()}`;
+  calGrandeDias.innerHTML = "";
+
+  const primeiroDiaSemana = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), 1).getDay();
+  const totalDias = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() + 1, 0).getDate();
+
+  for (let i = 0; i < primeiroDiaSemana; i++) {
+    const vazio = document.createElement("span");
+    vazio.className = "calendario__vazio";
+    calGrandeDias.appendChild(vazio);
   }
 
-  const dias = blocosDeSemana[indiceSemanaTabela];
-  tabelaAgendamentosPeriodo.textContent =
-    `Semana ${indiceSemanaTabela + 1} de ${blocosDeSemana.length} — ${formatarDataBR(dias[0])} a ${formatarDataBR(dias[dias.length - 1])}`;
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const d = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), dia);
+    const iso = dataParaIso(d);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "calendario__dia";
+    btn.textContent = dia;
 
-  // agrupa os agendamentos ativos por "data_hora" pra consulta rápida célula a célula
-  const porDataHora = new Map();
-  todosAgendamentosAtivos.forEach((a) => {
-    const chave = `${a.data}_${a.hora}`;
-    if (!porDataHora.has(chave)) porDataHora.set(chave, []);
-    porDataHora.get(chave).push(a);
-  });
-
-  let html = "<thead><tr><th></th>";
-  dias.forEach((iso) => {
-    const nomeDia = DIAS_SEMANA_COMPLETO[isoParaData(iso).getDay()].toLowerCase();
-    html += `<th>${nomeDia}<br>${formatarDataBR(iso).slice(0, 5)}</th>`;
-  });
-  html += "</tr></thead><tbody>";
-
-  const horasAtivasPorDia = new Map(dias.map((iso) => [iso, new Set(horariosDisponiveisNoDia(diasHorarios, iso))]));
-  const horasDeMissaPorDia = new Map(dias.map((iso) => [iso, horasDeMissaNoDia(diasHorarios, iso)]));
-
-  for (let hora = 0; hora < 24; hora++) {
-    html += `<tr><td class="tabela-agendamentos__hora">${String(hora).padStart(2, "0")}h</td>`;
-    dias.forEach((iso) => {
-      const horasAtivas = horasAtivasPorDia.get(iso);
-      const horasMissa = horasDeMissaPorDia.get(iso);
-      const pessoas = porDataHora.get(`${iso}_${hora}`) || [];
-
-      if (horasMissa.has(hora)) {
-        html += `<td class="status-missa">Missa</td>`;
-      } else if (!horasAtivas.has(hora)) {
-        html += `<td class="status-bloqueado"></td>`;
-      } else if (pessoas.length > 0) {
-        const algumExtra = pessoas.some((p) => p.extra);
-        const classe = algumExtra ? "status-extra" : `grupo-${grupoPorHora(hora)}`;
-        const nomes = pessoas.map((p) => (p.nome || "—").split(" ")[0]).join(" / ");
-        html += `<td class="${classe}" title="${pessoas.map((p) => p.nome || "—").join(", ").replace(/"/g, "&quot;")}">${nomes}</td>`;
-      } else {
-        html += `<td class="status-aberto"></td>`;
+    if (dataDentroDoPeriodo(iso)) {
+      btn.classList.add("disponivel");
+      const qtd = agendamentosDoDiaCalendario(iso).length;
+      if (qtd > 0) {
+        btn.classList.add("tem-agendamentos");
+        btn.title = `${qtd} ${qtd === 1 ? "agendamento" : "agendamentos"} — toque para ver detalhes`;
+        const badge = document.createElement("span");
+        badge.className = "calendario__dia-badge";
+        badge.textContent = String(qtd);
+        btn.appendChild(badge);
+        btn.addEventListener("click", () => abrirModalDiaCalendario(iso));
       }
-    });
-    html += "</tr>";
+    }
+    calGrandeDias.appendChild(btn);
   }
-  html += "</tbody>";
-  tabelaAgendamentosGrade.innerHTML = html;
 
-  tabelaAgendamentosLegenda.innerHTML = `
-    <span><i style="background:#dfecd3"></i> Arautos (07h–11h)</span>
-    <span><i style="background:#d7e7f6"></i> São Nicodemos (00h–06h e 21h–23h)</span>
-    <span><i style="background:#f2e0ba"></i> Santa Maria Madalena (12h–20h)</span>
-    <span><i style="background:#e6d9f2"></i> Extra</span>
-    <span><i style="background:linear-gradient(135deg,#f0d78c,#9c7a1f)"></i> Missa</span>
-    <span><i style="background:rgba(122,12,30,.15)"></i> Horário em aberto</span>
-    <span><i style="background:#4a0711"></i> Fora do período</span>
-  `;
+  const mesInicioPeriodo = isoParaData(diasHorarios.dataInicio);
+  const mesFimPeriodo = isoParaData(diasHorarios.dataFim);
+  const anteriorHabilitado = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), 0) >=
+    new Date(mesInicioPeriodo.getFullYear(), mesInicioPeriodo.getMonth(), 1);
+  const proximoHabilitado = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() + 1, 1) <=
+    new Date(mesFimPeriodo.getFullYear(), mesFimPeriodo.getMonth(), 1);
+  calGrandeMesAnterior.disabled = !anteriorHabilitado;
+  calGrandeMesProximo.disabled = !proximoHabilitado;
 }
 
-btnSemanaAnteriorTabela.addEventListener("click", () => {
-  if (indiceSemanaTabela > 0) { indiceSemanaTabela--; renderizarTabelaAgendamentos(); }
+calGrandeMesAnterior.addEventListener("click", () => {
+  mesAtualCalendario = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() - 1, 1);
+  renderizarCalendarioGrande();
 });
-btnSemanaProximaTabela.addEventListener("click", () => {
-  if (indiceSemanaTabela < blocosDeSemana.length - 1) { indiceSemanaTabela++; renderizarTabelaAgendamentos(); }
+calGrandeMesProximo.addEventListener("click", () => {
+  mesAtualCalendario = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() + 1, 1);
+  renderizarCalendarioGrande();
 });
-document.getElementById("btnVerTabelaAgendamentos").addEventListener("click", () => abrirModal(modalTabelaAgendamentos));
-document.getElementById("fecharModalTabelaAgendamentos").addEventListener("click", () => fecharModal(modalTabelaAgendamentos));
+document.getElementById("btnVerCalendarioAgendamentos").addEventListener("click", () => abrirModal(modalCalendarioAgendamentos));
+document.getElementById("fecharModalCalendarioAgendamentos").addEventListener("click", () => fecharModal(modalCalendarioAgendamentos));
+
+/* ---- modal de detalhes do dia (quem reservou em cada horário) ---- */
+let isoDiaCalendarioAberto = null;
+
+// monta o "cartão" de uma pessoa (nome, telefone e link do WhatsApp) — usado tanto aqui quanto
+// no modal de detalhes de horário da grade de "Horários disponíveis" (abrirModalDetalhesOcupado)
+function criarItemPessoaOcupado(o) {
+  const item = document.createElement("div");
+  item.className = "pessoa-ocupado-item";
+
+  const info = document.createElement("div");
+  const nome = document.createElement("div");
+  nome.className = "pessoa-ocupado-item__nome";
+  nome.textContent = o.nome || "—";
+  const tel = document.createElement("div");
+  tel.className = "pessoa-ocupado-item__tel";
+  tel.textContent = o.telefone || "—";
+  info.appendChild(nome);
+  info.appendChild(tel);
+
+  const link = document.createElement("a");
+  link.className = "link-whatsapp";
+  link.href = `https://wa.me/55${o.telefoneDigits || ""}`;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.title = "Chamar no WhatsApp";
+  link.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>`;
+
+  item.appendChild(info);
+  item.appendChild(link);
+  return item;
+}
+
+function abrirModalDiaCalendario(iso) {
+  isoDiaCalendarioAberto = iso;
+  const doDia = agendamentosDoDiaCalendario(iso).sort((a, b) => a.hora - b.hora);
+  diaCalendarioTitulo.textContent = formatarDataComDiaSemana(iso);
+  diaCalendarioConteudo.innerHTML = "";
+
+  const porHora = new Map();
+  doDia.forEach((a) => {
+    if (!porHora.has(a.hora)) porHora.set(a.hora, []);
+    porHora.get(a.hora).push(a);
+  });
+
+  // mostra todos os horários ativos do dia (não só os que já têm gente agendada)
+  const horasDoDia = horariosDisponiveisNoDia(diasHorarios, iso);
+
+  horasDoDia.forEach((hora) => {
+    const pessoas = porHora.get(hora) || [];
+
+    const grupo = document.createElement("div");
+    grupo.className = "grupo-horario-dia";
+
+    const titulo = document.createElement("div");
+    titulo.className = "grupo-horario-dia__titulo";
+    titulo.innerHTML = `${formatarHora(hora)} ${pessoas.length ? `<span class="contagem-contatos">${pessoas.length}</span>` : ""}`;
+    grupo.appendChild(titulo);
+
+    if (pessoas.length === 0) {
+      const aviso = document.createElement("p");
+      aviso.className = "horario-vazio-msg";
+      aviso.textContent = "Horário livre — ninguém agendado.";
+      grupo.appendChild(aviso);
+    } else {
+      const listaEl = document.createElement("div");
+      listaEl.className = "lista-pessoas-ocupado";
+      pessoas.forEach((a) => listaEl.appendChild(criarItemPessoaOcupado(a)));
+      grupo.appendChild(listaEl);
+    }
+
+    diaCalendarioConteudo.appendChild(grupo);
+  });
+
+  abrirModal(modalDiaCalendario);
+}
+
+document.getElementById("fecharModalDiaCalendario").addEventListener("click", () => {
+  fecharModal(modalDiaCalendario);
+  isoDiaCalendarioAberto = null;
+});
 
 function renderizarCalendario() {
   const nomeMes = MESES[mesAtual.getMonth()];
@@ -340,34 +404,7 @@ const detalhesOcupadoLista = document.getElementById("detalhesOcupadoLista");
 function abrirModalDetalhesOcupado(hora, ocupacoes) {
   detalhesOcupadoHora.textContent = `${formatarDataBR(dataSelecionada)} — ${textoHora(hora)}`;
   detalhesOcupadoLista.innerHTML = "";
-
-  ocupacoes.forEach((o) => {
-    const item = document.createElement("div");
-    item.className = "pessoa-ocupado-item";
-
-    const info = document.createElement("div");
-    const nome = document.createElement("div");
-    nome.className = "pessoa-ocupado-item__nome";
-    nome.textContent = o.nome || "—";
-    const tel = document.createElement("div");
-    tel.className = "pessoa-ocupado-item__tel";
-    tel.textContent = o.telefone || "—";
-    info.appendChild(nome);
-    info.appendChild(tel);
-
-    const link = document.createElement("a");
-    link.className = "link-whatsapp";
-    link.href = `https://wa.me/55${o.telefoneDigits || ""}`;
-    link.target = "_blank";
-    link.rel = "noopener";
-    link.title = "Chamar no WhatsApp";
-    link.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>`;
-
-    item.appendChild(info);
-    item.appendChild(link);
-    detalhesOcupadoLista.appendChild(item);
-  });
-
+  ocupacoes.forEach((o) => detalhesOcupadoLista.appendChild(criarItemPessoaOcupado(o)));
   abrirModal(modalDetalhesOcupado);
 }
 

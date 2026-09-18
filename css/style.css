@@ -517,84 +517,69 @@ img{ max-width: 100%; display:block; }
 .legenda-grupos__lista li strong{ color: var(--vermelho-escuro); }
 .legenda-grupos__obs{ margin:0; font-size:.78rem; line-height:1.5; color: var(--texto-suave); font-style:italic; }
 
-/* ---------- Agendamento: tabela de agendamentos (estilo da planilha da coordenação, com
-   acabamento elegante combinando com o resto do site) ----------
-   No celular fica dentro de um modal, aberto pelo botão "Ver tabela de agendamento". A partir de
-   900px (computador) o CSS "desmonta" esse modal — vira uma segunda coluna sempre visível ao
-   lado dos horários, atualizando em tempo real conforme as pessoas agendam (ver media query mais
-   abaixo, junto com ".agendamento-colunas"). */
+/* ---------- Agendamento: calendário de agendamentos (igual ao "Acompanhamento" do painel
+   administrativo) ----------
+   No celular fica dentro de um modal, aberto pelo botão "Ver calendário de agendamentos". A
+   partir de 900px (computador) o CSS "desmonta" esse modal — vira uma segunda coluna sempre
+   visível ao lado dos horários, atualizando em tempo real conforme as pessoas agendam (ver media
+   query mais abaixo, junto com ".agendamento-colunas"). Dias com agendamento ficam em destaque
+   com um selo de quantidade; tocar num dia abre os detalhes de quem reservou em cada horário. */
 .agendamento-colunas{ display:flex; flex-direction:column; width:100%; }
 .agendamento-colunas__principal{ display:flex; flex-direction:column; width:100%; }
 .btn-ver-tabela-mobile{ display:flex; align-items:center; justify-content:center; gap:8px; }
 
-.modal--tabela-agendamentos{ max-width: min(94vw, 760px); text-align:left; }
-.tabela-agendamentos__titulo{ justify-content:center; }
-.tabela-agendamentos__nav{
-  display:flex; align-items:center; justify-content:center; gap:18px; margin:2px 0 16px;
-  font-family:'Cinzel'; font-size:.82rem; color: var(--vermelho-escuro); text-align:center;
+.modal--calendario-agendamentos{ max-width: min(94vw, 480px); text-align:center; }
+.calendario-agendamentos__titulo{ justify-content:center; }
+
+.calendario-grande{
+  width:100%; max-width:460px; margin:0 auto; background: var(--branco);
+  border: 1.5px solid var(--dourado); border-radius:14px;
+  box-shadow: 0 14px 36px rgba(74,7,17,.12); padding: 20px; text-align:left;
 }
-.tabela-agendamentos__scroll{
-  overflow-x:auto; overflow-y:hidden; border-radius:12px;
-  border: 1px solid rgba(157,122,31,.32);
-  box-shadow: 0 10px 26px rgba(74,7,17,.1);
+.calendario-grande .calendario__dia.tem-agendamentos{
+  position:relative; cursor:pointer; font-weight:700;
+  background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro));
+  color:#fff; transition: transform .2s ease, box-shadow .2s ease;
 }
-.tabela-agendamentos{
-  border-collapse:separate; border-spacing:0; width:100%; min-width:640px; font-size:.76rem;
-  font-family:'EB Garamond', serif; background: var(--branco);
+.calendario-grande .calendario__dia.tem-agendamentos:hover{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--vermelho-glow); }
+.calendario__dia-badge{
+  position:absolute; top:-5px; right:-5px; min-width:16px; height:16px; padding:0 3px;
+  border-radius:999px; background: var(--dourado); color: var(--vermelho-escuro);
+  font-family:'Cinzel'; font-size:.6rem; font-weight:700; line-height:16px; text-align:center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
 }
-.tabela-agendamentos th, .tabela-agendamentos td{
-  border-right:1px solid rgba(157,122,31,.22); border-bottom:1px solid rgba(157,122,31,.22);
-  padding:7px 8px; text-align:center; vertical-align:middle;
+.calendario__legenda-dupla{ margin-top:14px; display:flex; flex-direction:column; gap:6px; font-size:.72rem; color:var(--texto-suave); }
+.calendario__legenda-dupla span{ display:flex; align-items:center; gap:7px; }
+.legenda-dot{ width:10px; height:10px; border-radius:3px; display:inline-block; flex-shrink:0; }
+.legenda-dot--disponivel{ background: rgba(205,164,52,.35); }
+.legenda-dot--agendado{ background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro)); }
+
+/* modal de detalhes do dia (lista de quem reservou, por horário) */
+.grupo-horario-dia{ margin-bottom:18px; }
+.grupo-horario-dia:last-child{ margin-bottom:0; }
+.grupo-horario-dia__titulo{
+  font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); font-size:.92rem;
+  margin-bottom:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
 }
-.tabela-agendamentos thead th{
-  background: linear-gradient(180deg, var(--dourado-claro), var(--dourado) 85%);
-  color: var(--vermelho-escuro); font-family:'Cinzel'; font-weight:700; font-size:.72rem;
-  letter-spacing:.02em; white-space:nowrap; position:sticky; top:0; z-index:2;
-  box-shadow: 0 1.5px 0 rgba(74,7,17,.25);
+.horario-vazio-msg{ margin:0; font-size:.82rem; color: var(--texto-suave); font-style:italic; }
+.contagem-contatos{
+  font-family:'Cinzel'; font-size:.7rem; font-weight:400; color: var(--texto-suave);
+  background: rgba(122,12,30,.07); border-radius:999px; padding:2px 9px; margin-left:2px;
 }
-.tabela-agendamentos thead th:first-child{
-  position:sticky; left:0; top:0; z-index:3;
-}
-.tabela-agendamentos tbody tr:hover td.status-aberto{ background: rgba(122,12,30,.1); }
-.tabela-agendamentos td.tabela-agendamentos__hora{
-  font-family:'Cinzel'; font-weight:600; font-size:.7rem; background: var(--creme);
-  color: var(--vermelho-escuro); white-space:nowrap; position:sticky; left:0; z-index:1;
-  box-shadow: 1.5px 0 0 rgba(74,7,17,.15);
-}
-.tabela-agendamentos td.grupo-nicodemos{ background:#d7e7f6; color:#1c3a57; font-style:italic; }
-.tabela-agendamentos td.grupo-arautos{ background:#dfecd3; color:#2c4522; font-style:italic; }
-.tabela-agendamentos td.grupo-madalena{ background:#f2e0ba; color:#5a4118; font-style:italic; }
-.tabela-agendamentos td.status-extra{ background:#e6d9f2; color:#3d2a58; font-style:italic; }
-.tabela-agendamentos td.status-aberto{ background: rgba(122,12,30,.045); }
-.tabela-agendamentos td.status-missa{
-  background: linear-gradient(135deg, var(--dourado-claro), var(--dourado) 55%, var(--dourado-escuro));
-  color: var(--vermelho-escuro); font-family:'Cinzel'; font-weight:700; font-size:.66rem; letter-spacing:.04em;
-}
-.tabela-agendamentos td.status-bloqueado{ background: var(--vermelho-escuro); }
-.tabela-agendamentos tbody tr:last-child td{ border-bottom:none; }
-.tabela-agendamentos th:last-child, .tabela-agendamentos td:last-child{ border-right:none; }
-.tabela-agendamentos__legenda{
-  display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; font-family:'Cinzel'; font-size:.68rem; color: var(--texto-suave);
-}
-.tabela-agendamentos__legenda span{
-  display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:999px;
-  border:1px solid rgba(157,122,31,.28); background: var(--branco);
-}
-.tabela-agendamentos__legenda i{ width:11px; height:11px; border-radius:50%; display:inline-block; flex-shrink:0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
 
 @media (min-width: 900px){
-  .conteudo:has(#painelData){ max-width: 1200px; }
+  .conteudo:has(#painelData){ max-width: 960px; }
   .agendamento-colunas{ flex-direction:row; align-items:flex-start; gap:26px; }
   .agendamento-colunas__principal{ flex:0 0 380px; width:380px; }
-  #modalTabelaAgendamentos{
+  #modalCalendarioAgendamentos{
     position:static; inset:auto; background:none; backdrop-filter:none;
     opacity:1; pointer-events:auto; padding:0; z-index:auto; display:block;
     flex:1 1 0; min-width:0;
   }
-  #modalTabelaAgendamentos .modal{
+  #modalCalendarioAgendamentos .modal{
     max-width:none; width:100%; transform:none; box-shadow:0 14px 36px rgba(74,7,17,.12); max-height:none;
   }
-  #modalTabelaAgendamentos .modal--fechar{ display:none; }
+  #modalCalendarioAgendamentos .modal--fechar{ display:none; }
   .btn-ver-tabela-mobile{ display:none; }
 }
 
