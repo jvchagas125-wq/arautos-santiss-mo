@@ -157,8 +157,24 @@ export function ouvirAgendamentosDaData(data, callback) {
 }
 
 // Cria o agendamento. Mais de uma pessoa pode agendar o mesmo dia e horário
-// (não há mais exclusividade por horário — cada agendamento é independente).
+// (não há mais exclusividade por horário — cada agendamento é independente), mas a MESMA
+// pessoa não pode agendar duas vezes o mesmo dia e horário — checagem feita aqui (e não só
+// na tela) pra cobrir também o caso de duas abas/cliques quase simultâneos.
 export async function criarAgendamento({ nome, telefoneDigits, telefone, data, hora }) {
+  const qDuplicado = query(
+    collection(db, "agendamentos"),
+    where("data", "==", data),
+    where("hora", "==", hora),
+    where("telefoneDigits", "==", telefoneDigits),
+    where("status", "==", "agendado")
+  );
+  const snapDuplicado = await getDocs(qDuplicado);
+  if (!snapDuplicado.empty) {
+    const erro = new Error("Você já reservou este dia e horário.");
+    erro.codigo = "AGENDAMENTO_DUPLICADO";
+    throw erro;
+  }
+
   const refAgendamento = doc(collection(db, "agendamentos"));
   await setDoc(refAgendamento, {
     nome, telefoneDigits, telefone, data, hora,

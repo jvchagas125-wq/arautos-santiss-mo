@@ -375,6 +375,16 @@ document.getElementById("fecharModalDetalhesOcupado").addEventListener("click", 
 
 btnConfirmarAgendamento.addEventListener("click", () => {
   if (!dataSelecionada || horaSelecionada === null) return;
+
+  // a mesma pessoa não pode agendar duas vezes o mesmo dia e horário
+  const jaReservouEsseHorario = horariosOcupados.some(
+    (o) => o.hora === horaSelecionada && o.telefoneDigits === usuario.telefoneDigits
+  );
+  if (jaReservouEsseHorario) {
+    mostrarToast("Você já reservou esse dia e horário.");
+    return;
+  }
+
   document.getElementById("modalData").textContent = formatarDataBR(dataSelecionada);
   document.getElementById("modalHora").textContent = formatarHora(horaSelecionada);
   abrirModal(modalConfirmacao);
@@ -398,7 +408,11 @@ document.getElementById("btnConfirmarModal").addEventListener("click", async (e)
   } catch (err) {
     console.error(err);
     fecharModal(modalConfirmacao);
-    mostrarToast("Não foi possível agendar. Verifique sua conexão e tente novamente.");
+    mostrarToast(
+      err && err.codigo === "AGENDAMENTO_DUPLICADO"
+        ? "Você já reservou esse dia e horário."
+        : "Não foi possível agendar. Verifique sua conexão e tente novamente."
+    );
   } finally {
     btn.disabled = false;
     btn.textContent = "Confirmar";
