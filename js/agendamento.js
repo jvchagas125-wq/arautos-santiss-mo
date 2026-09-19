@@ -215,8 +215,8 @@ document.getElementById("fecharModalCalendarioAgendamentos").addEventListener("c
 /* ---- modal de detalhes do dia (quem reservou em cada horário) ---- */
 let isoDiaCalendarioAberto = null;
 
-// monta o "cartão" de uma pessoa (nome e telefone, sem o botão de WhatsApp — não faz sentido
-// deixar isso público pra qualquer visitante chamar quem agendou) — usado tanto aqui quanto no
+// monta o "cartão" de uma pessoa (só o nome — o telefone é dado sensível e fica visível
+// apenas no painel administrativo, nunca no site público) — usado tanto aqui quanto no
 // modal de detalhes de horário da grade de "Horários disponíveis" (abrirModalDetalhesOcupado)
 function criarItemPessoaOcupado(o) {
   const item = document.createElement("div");
@@ -226,11 +226,7 @@ function criarItemPessoaOcupado(o) {
   const nome = document.createElement("div");
   nome.className = "pessoa-ocupado-item__nome";
   nome.textContent = o.nome || "—";
-  const tel = document.createElement("div");
-  tel.className = "pessoa-ocupado-item__tel";
-  tel.textContent = o.telefone || "—";
   info.appendChild(nome);
-  info.appendChild(tel);
 
   item.appendChild(info);
   return item;
