@@ -2,9 +2,13 @@ import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast,
   formatarDataBR, dataParaIso, hojeIso, criarCalendario,
-  horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO
+  horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO,
+  formatarDataComDiaSemana
 } from "./utils.js";
-import { obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao } from "./dados.js";
+import {
+  obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao,
+  ouvirTodasIntencoes
+} from "./dados.js";
 
 inicializarNavegacao("intencoes");
 exigirCadastro(); // apenas identificação padrão do site — as intenções em si são anônimas
@@ -188,3 +192,74 @@ ouvirConfigIntencoes((config) => {
 
 // reavalia periodicamente para fechar/abrir listas automaticamente sem precisar recarregar a página
 setInterval(renderizarDiaSeNecessario, 30000);
+
+/* ---------------- Intenções já enviadas (público, somente leitura) ----------------
+   Mesma ideia das "Listas preenchidas" do painel administrativo, mas sem os botões de
+   extrair PDF e de apagar — aqui é só para a comunidade acompanhar o que já foi enviado. */
+const listaIntencoesEnviadasPublico = document.getElementById("listaIntencoesEnviadasPublico");
+const avisoSemIntencoesEnviadas = document.getElementById("avisoSemIntencoesEnviadas");
+
+function tituloListaPublica(dataMissa, horaMissa) {
+  return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2, "0")}:00`;
+}
+
+function renderizarListasEnviadasPublico(entradas) {
+  const grupos = new Map(); // "data|hora" -> [entradas]
+  entradas.forEach((it) => {
+    const chave = `${it.dataMissa}|${it.horaMissa}`;
+    if (!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave).push(it);
+  });
+
+  const chavesOrdenadas = [...grupos.keys()].sort((a, b) => b.localeCompare(a));
+  listaIntencoesEnviadasPublico.innerHTML = "";
+  avisoSemIntencoesEnviadas.classList.toggle("oculto", chavesOrdenadas.length > 0);
+
+  chavesOrdenadas.forEach((chave) => {
+    const [dataMissa, horaMissaStr] = chave.split("|");
+    const horaMissa = Number(horaMissaStr);
+    const itens = grupos.get(chave);
+    const rotulo = tituloListaPublica(dataMissa, horaMissa);
+
+    const item = document.createElement("div");
+    item.className = "lista-enviada-item";
+
+    const cabecalho = document.createElement("div");
+    cabecalho.className = "lista-enviada-item__cabecalho";
+    cabecalho.innerHTML = `
+      <svg class="lista-enviada-item__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      <span class="lista-enviada-item__titulo">${rotulo} — ${itens.length} ${itens.length === 1 ? "intenção" : "intenções"}</span>
+    `;
+
+    const corpo = document.createElement("div");
+    corpo.className = "lista-enviada-item__corpo oculto";
+    CATEGORIAS_INTENCAO.forEach(({ chave: chaveCategoria, rotulo: rotuloCategoria }) => {
+      const doGrupo = itens.filter((it) => it.categoria === chaveCategoria);
+      if (doGrupo.length === 0) return;
+      const bloco = document.createElement("div");
+      bloco.className = "lista-enviada-grupo";
+      const tituloGrupo = document.createElement("div");
+      tituloGrupo.className = "lista-enviada-grupo__titulo";
+      tituloGrupo.textContent = `${rotuloCategoria} (${doGrupo.length})`;
+      bloco.appendChild(tituloGrupo);
+      doGrupo.forEach((it) => {
+        const linha = document.createElement("div");
+        linha.className = "intencao-item";
+        linha.textContent = it.texto;
+        bloco.appendChild(linha);
+      });
+      corpo.appendChild(bloco);
+    });
+
+    cabecalho.addEventListener("click", () => {
+      item.classList.toggle("aberto");
+      corpo.classList.toggle("oculto");
+    });
+
+    item.appendChild(cabecalho);
+    item.appendChild(corpo);
+    listaIntencoesEnviadasPublico.appendChild(item);
+  });
+}
+
+ouvirTodasIntencoes(renderizarListasEnviadasPublico);

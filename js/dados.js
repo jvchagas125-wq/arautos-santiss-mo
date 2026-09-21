@@ -329,29 +329,51 @@ export async function excluirListaIntencoes(dataMissa, horaMissa) {
 
 /* ---------------- Avisos ---------------- */
 
-// Lista (em tempo real) todos os avisos, mais recentes primeiro — para o site público e o painel admin.
+// ordem efetiva de um aviso: usa o campo "ordem" (manual, definido ao reordenar) quando
+// existe; para avisos antigos que ainda não têm esse campo, cai pro negativo de
+// criadoEmOrdenacao, o que preserva o comportamento antigo de "mais recentes primeiro"
+// (valor mais recente = mais negativo = aparece primeiro numa ordenação crescente).
+function ordemEfetiva(aviso) {
+  return aviso.ordem !== undefined ? aviso.ordem : -(aviso.criadoEmOrdenacao || 0);
+}
+
+// Lista (em tempo real) todos os avisos, na ordem manual (ou mais recentes primeiro, por
+// padrão) — para o site público e o painel admin.
 export function ouvirAvisos(callback) {
   return onSnapshot(collection(db, "avisos"), (snap) => {
     const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    lista.sort((a, b) => (b.criadoEmOrdenacao || 0) - (a.criadoEmOrdenacao || 0));
+    lista.sort((a, b) => ordemEfetiva(a) - ordemEfetiva(b));
     callback(lista);
   });
 }
 
 export async function criarAviso({ titulo, texto, imagemUrl }) {
   const ref = doc(collection(db, "avisos"));
+  const agora = Date.now();
   await setDoc(ref, {
     titulo, texto, imagemUrl: imagemUrl || "",
-    criadoEmOrdenacao: Date.now(),
+    criadoEmOrdenacao: agora,
+    ordem: -agora, // entra no topo da lista, como um aviso novo
     criadoEm: serverTimestamp()
   });
   return ref.id;
 }
 
-export async function atualizarAviso(id, { titulo, texto }) {
-  // não mexe em imagemUrl — o painel não tem mais campo pra isso; um aviso
-  // antigo que já tinha imagem continua com ela, só título/texto mudam.
-  await updateDoc(doc(db, "avisos", id), { titulo, texto });
+export async function atualizarAviso(id, { titulo, texto, imagemUrl }) {
+  const dados = { titulo, texto };
+  // só mexe em imagemUrl quando o admin realmente trocou a imagem (envia um novo valor);
+  // se não mexeu, o aviso mantém a imagem que já tinha.
+  if (imagemUrl !== undefined) dados.imagemUrl = imagemUrl;
+  await updateDoc(doc(db, "avisos", id), dados);
+}
+
+// Troca a posição de dois avisos adjacentes na lista (usado pelos botões "subir"/"descer"
+// no painel admin). Recebe os dois objetos de aviso já com id e ordem/criadoEmOrdenacao.
+export async function trocarOrdemAvisos(avisoA, avisoB) {
+  await Promise.all([
+    updateDoc(doc(db, "avisos", avisoA.id), { ordem: ordemEfetiva(avisoB) }),
+    updateDoc(doc(db, "avisos", avisoB.id), { ordem: ordemEfetiva(avisoA) })
+  ]);
 }
 
 export async function excluirAviso(id) {

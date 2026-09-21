@@ -229,6 +229,11 @@
               <label for="campoAvisoTexto">Texto</label>
               <textarea id="campoAvisoTexto" rows="4" placeholder="Digite o aviso (se colar um link de site ou formulário, ele aparece clicável)" required></textarea>
             </div>
+            <div class="campo">
+              <label for="campoAvisoImagem">Anexar imagem (opcional)</label>
+              <input type="file" id="campoAvisoImagem" accept="image/*" />
+              <img id="previewAvisoImagem" alt="" class="oculto" style="margin-top:8px; max-height:140px; border-radius:8px; display:block;" />
+            </div>
             <button type="submit" class="btn btn-dourado">Publicar aviso</button>
           </form>
         </div>

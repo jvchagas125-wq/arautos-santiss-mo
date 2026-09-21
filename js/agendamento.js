@@ -71,7 +71,12 @@ async function iniciar() {
       return;
     }
 
-    mesAtual = new Date(isoParaData(diasHorarios.dataInicio).getFullYear(), isoParaData(diasHorarios.dataInicio).getMonth(), 1);
+    // Abre no mês de início do período, mas nunca antes do mês atual (senão a pessoa cairia
+    // num mês inteiramente bloqueado por dias já passados).
+    const hoje = isoParaData(hojeIso());
+    const inicioPeriodo = isoParaData(diasHorarios.dataInicio);
+    const mesInicial = inicioPeriodo > hoje ? inicioPeriodo : hoje;
+    mesAtual = new Date(mesInicial.getFullYear(), mesInicial.getMonth(), 1);
     renderizarCalendario();
     dataInput.disabled = false;
 
@@ -85,7 +90,9 @@ async function iniciar() {
 erroCarregarPeriodo.addEventListener("click", () => iniciar());
 
 function dataDentroDoPeriodo(iso) {
-  return iso >= diasHorarios.dataInicio && iso <= diasHorarios.dataFim;
+  // hojeIso() garante que dias já passados fiquem bloqueados, mesmo estando dentro do
+  // período configurado — o dia de hoje continua disponível normalmente.
+  return iso >= diasHorarios.dataInicio && iso <= diasHorarios.dataFim && iso >= hojeIso();
 }
 
 /* ---------- Calendário de agendamentos: igual ao "Acompanhamento" do painel administrativo,
@@ -311,8 +318,11 @@ function renderizarCalendario() {
     calendarioDias.appendChild(btn);
   }
 
-  // navegação de mês limitada ao período configurado
-  const mesInicioPeriodo = isoParaData(diasHorarios.dataInicio);
+  // navegação de mês limitada ao período configurado, e nunca para antes do mês atual
+  // (dias passados já ficam bloqueados, então não faz sentido nem deixar voltar até eles)
+  const hojeNav = isoParaData(hojeIso());
+  const inicioPeriodoNav = isoParaData(diasHorarios.dataInicio);
+  const mesInicioPeriodo = inicioPeriodoNav > hojeNav ? inicioPeriodoNav : hojeNav;
   const mesFimPeriodo = isoParaData(diasHorarios.dataFim);
   const anteriorHabilitado = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 0) >=
     new Date(mesInicioPeriodo.getFullYear(), mesInicioPeriodo.getMonth(), 1);

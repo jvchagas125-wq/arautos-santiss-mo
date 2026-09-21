@@ -10,7 +10,7 @@ import {
   ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
   marcarAgendamentoExtra,
   obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
-  ouvirAvisos, criarAviso, atualizarAviso, excluirAviso
+  ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
 
@@ -585,10 +585,31 @@ function configurarIntencoes() {
 }
 
 /* ---------------- Avisos ---------------- */
+
+// Upload de imagem pro Cloudinary (preset "unsigned", não precisa de chave secreta no
+// front-end). Retorna a URL segura (https) da imagem já hospedada.
+const CLOUDINARY_CLOUD_NAME = "dcvhqnr1c";
+const CLOUDINARY_UPLOAD_PRESET = "arautos-adoracao";
+
+async function enviarImagemParaCloudinary(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  const resposta = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    method: "POST",
+    body: formData
+  });
+  if (!resposta.ok) throw new Error("Falha no upload da imagem para o Cloudinary");
+  const dados = await resposta.json();
+  return dados.secure_url;
+}
+
 function configurarAvisos() {
   const formNovo = document.getElementById("formNovoAviso");
   const campoTitulo = document.getElementById("campoAvisoTitulo");
   const campoTexto = document.getElementById("campoAvisoTexto");
+  const campoImagem = document.getElementById("campoAvisoImagem");
+  const previewImagemNovo = document.getElementById("previewAvisoImagem");
   const listaAvisosAdmin = document.getElementById("listaAvisosAdmin");
   const avisoSemAvisos = document.getElementById("avisoSemAvisos");
 
@@ -596,21 +617,36 @@ function configurarAvisos() {
   const nomeExcluirAviso = document.getElementById("nomeExcluirAviso");
   let avisoParaExcluir = null;
 
+  campoImagem.addEventListener("change", () => {
+    const file = campoImagem.files[0];
+    if (!file) { previewImagemNovo.classList.add("oculto"); return; }
+    previewImagemNovo.src = URL.createObjectURL(file);
+    previewImagemNovo.classList.remove("oculto");
+  });
+
   formNovo.addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = formNovo.querySelector("button[type=submit]");
     btn.disabled = true;
-    btn.textContent = "Publicando...";
     try {
+      let imagemUrl = "";
+      const file = campoImagem.files[0];
+      if (file) {
+        btn.textContent = "Enviando imagem...";
+        imagemUrl = await enviarImagemParaCloudinary(file);
+      }
+      btn.textContent = "Publicando...";
       await criarAviso({
         titulo: campoTitulo.value.trim(),
-        texto: campoTexto.value.trim()
+        texto: campoTexto.value.trim(),
+        imagemUrl
       });
       formNovo.reset();
+      previewImagemNovo.classList.add("oculto");
       mostrarToast("Aviso publicado!");
     } catch (err) {
       console.error(err);
-      mostrarToast("Não foi possível publicar. Tente novamente.");
+      mostrarToast("Não foi possível publicar. Verifique a imagem e tente novamente.");
     } finally {
       btn.disabled = false;
       btn.textContent = "Publicar aviso";
@@ -621,7 +657,7 @@ function configurarAvisos() {
     listaAvisosAdmin.innerHTML = "";
     avisoSemAvisos.classList.toggle("oculto", lista.length > 0);
 
-    lista.forEach((aviso) => {
+    lista.forEach((aviso, indice) => {
       const card = document.createElement("div");
       card.className = "cartao-aviso-admin";
       card.innerHTML = `
@@ -630,6 +666,8 @@ function configurarAvisos() {
           <div class="cartao-aviso-admin__titulo">${aviso.titulo}</div>
           <p class="cartao-aviso-admin__texto"></p>
           <div class="cartao-aviso-admin__acoes">
+            <button type="button" class="btn btn-contorno btn-pequeno btn-subir-aviso" title="Mover para cima" ${indice === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" class="btn btn-contorno btn-pequeno btn-descer-aviso" title="Mover para baixo" ${indice === lista.length - 1 ? "disabled" : ""}>↓</button>
             <button type="button" class="btn btn-contorno btn-pequeno btn-editar-aviso">Editar</button>
             <button type="button" class="btn btn-vermelho btn-pequeno btn-excluir-aviso" title="Apagar aviso">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px; vertical-align:-2px;"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
@@ -645,6 +683,11 @@ function configurarAvisos() {
               <label>Texto</label>
               <textarea rows="3" class="campo-edit-texto" required>${aviso.texto}</textarea>
             </div>
+            <div class="campo">
+              <label>Trocar imagem (opcional)</label>
+              <input type="file" class="campo-edit-imagem" accept="image/*" />
+              ${aviso.imagemUrl ? `<img src="${aviso.imagemUrl}" alt="" class="cartao-aviso-admin__img" style="margin-top:8px; max-height:100px; border-radius:8px;" />` : ""}
+            </div>
             <div class="cartao-aviso-admin__acoes">
               <button type="button" class="btn btn-contorno btn-pequeno btn-cancelar-edicao-aviso">Cancelar</button>
               <button type="submit" class="btn btn-dourado btn-pequeno">Salvar</button>
@@ -659,6 +702,31 @@ function configurarAvisos() {
       const btnEditar = card.querySelector(".btn-editar-aviso");
       const btnExcluir = card.querySelector(".btn-excluir-aviso");
       const btnCancelarEdicao = card.querySelector(".btn-cancelar-edicao-aviso");
+      const btnSubir = card.querySelector(".btn-subir-aviso");
+      const btnDescer = card.querySelector(".btn-descer-aviso");
+
+      btnSubir.addEventListener("click", async () => {
+        if (indice === 0) return;
+        btnSubir.disabled = true;
+        btnDescer.disabled = true;
+        try {
+          await trocarOrdemAvisos(aviso, lista[indice - 1]);
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível reordenar. Tente novamente.");
+        }
+      });
+      btnDescer.addEventListener("click", async () => {
+        if (indice === lista.length - 1) return;
+        btnSubir.disabled = true;
+        btnDescer.disabled = true;
+        try {
+          await trocarOrdemAvisos(aviso, lista[indice + 1]);
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível reordenar. Tente novamente.");
+        }
+      });
 
       btnEditar.addEventListener("click", () => {
         formEdicao.classList.remove("oculto");
@@ -677,12 +745,18 @@ function configurarAvisos() {
         e.preventDefault();
         const btnSalvar = formEdicao.querySelector("button[type=submit]");
         btnSalvar.disabled = true;
-        btnSalvar.textContent = "Salvando...";
         try {
-          await atualizarAviso(aviso.id, {
+          const dadosSalvar = {
             titulo: formEdicao.querySelector(".campo-edit-titulo").value.trim(),
             texto: formEdicao.querySelector(".campo-edit-texto").value.trim()
-          });
+          };
+          const fileEdicao = formEdicao.querySelector(".campo-edit-imagem").files[0];
+          if (fileEdicao) {
+            btnSalvar.textContent = "Enviando imagem...";
+            dadosSalvar.imagemUrl = await enviarImagemParaCloudinary(fileEdicao);
+          }
+          btnSalvar.textContent = "Salvando...";
+          await atualizarAviso(aviso.id, dadosSalvar);
           mostrarToast("Aviso atualizado!");
         } catch (err) {
           console.error(err);
