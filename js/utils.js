@@ -305,6 +305,50 @@ export function limparUsuarioSessao() {
    #btnMenu #btnFecharMenu #menuLateral #overlay
    #btnPerfil #dropdownPerfil #perfilNome #perfilTelefone #btnSair
 */
+/* ---------- Ordem das páginas do site público (usada nos botões "Anterior / Próxima") ---------- */
+const ORDEM_PAGINAS = [
+  { chave: "index", label: "Início", href: "index.html" },
+  { chave: "agendamento", label: "Agendar horário", href: "agendamento.html" },
+  { chave: "meus-agendamentos", label: "Meus agendamentos", href: "meus-agendamentos.html" },
+  { chave: "intencoes", label: "Intenções da missa", href: "intencoes.html" },
+  { chave: "avisos", label: "Avisos", href: "avisos.html" },
+  { chave: "contatos", label: "Contatos", href: "contatos.html" },
+  { chave: "sobre", label: "Sobre", href: "sobre.html" }
+];
+
+// Insere, no fim do conteúdo principal (antes do rodapé), os botões "‹ Anterior" e "Próxima ›"
+// que levam para a página vizinha nesse ciclo. Páginas fora da lista (ex.: admin) não recebem nada.
+function inserirNavegacaoEntrePaginas(paginaAtual) {
+  const indice = ORDEM_PAGINAS.findIndex((p) => p.chave === paginaAtual);
+  if (indice === -1) return;
+
+  const main = document.querySelector("main.conteudo");
+  if (!main || main.querySelector(".navegacao-paginas")) return;
+
+  const anterior = ORDEM_PAGINAS[(indice - 1 + ORDEM_PAGINAS.length) % ORDEM_PAGINAS.length];
+  const proxima = ORDEM_PAGINAS[(indice + 1) % ORDEM_PAGINAS.length];
+
+  const nav = document.createElement("div");
+  nav.className = "navegacao-paginas";
+  nav.innerHTML = `
+    <a class="navegacao-paginas__item navegacao-paginas__item--anterior" href="${anterior.href}" aria-label="Página anterior: ${anterior.label}">
+      <span class="navegacao-paginas__rotulo">‹ Anterior</span>
+      <span class="navegacao-paginas__nome">${anterior.label}</span>
+    </a>
+    <a class="navegacao-paginas__item navegacao-paginas__item--proxima" href="${proxima.href}" aria-label="Próxima página: ${proxima.label}">
+      <span class="navegacao-paginas__rotulo">Próxima ›</span>
+      <span class="navegacao-paginas__nome">${proxima.label}</span>
+    </a>
+  `;
+
+  const rodape = main.querySelector(".rodape-simples");
+  if (rodape) {
+    main.insertBefore(nav, rodape);
+  } else {
+    main.appendChild(nav);
+  }
+}
+
 export function inicializarNavegacao(paginaAtual) {
   const btnMenu = document.getElementById("btnMenu");
   const btnFecharMenu = document.getElementById("btnFecharMenu");
@@ -360,6 +404,8 @@ export function inicializarNavegacao(paginaAtual) {
     limparUsuarioSessao();
     window.location.href = "index.html";
   });
+
+  inserirNavegacaoEntrePaginas(paginaAtual);
 }
 
 /* ---------- Aplica logo e fundo dinâmicos vindos da configuração ---------- */

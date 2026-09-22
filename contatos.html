@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Meus Agendamentos — Adoração ao Santíssimo Sacramento</title>
+<title>Contatos — Adoração ao Santíssimo Sacramento</title>
+<meta name="description" content="Endereço, telefone/WhatsApp e Instagram dos Arautos do Evangelho — Campos dos Goytacazes/RJ." />
 <link rel="icon" href="assets/favicon.png" />
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#7a0c1e" />
@@ -60,68 +61,51 @@
   </div>
 
   <main class="conteudo">
-    <h1 class="titulo-pagina">Meus Agendamentos</h1>
+    <h1 class="titulo-pagina">Contatos</h1>
     <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-    <div class="abas">
-      <button type="button" class="aba ativa" data-aba="agendados">Agendados</button>
-      <button type="button" class="aba" data-aba="cancelados">Cancelados</button>
+    <div class="painel">
+      <div class="painel__titulo"><span class="emoji">📇</span> Fale conosco</div>
+
+      <a class="contato-item" href="https://www.google.com/maps/place/R.+Pedro+Maciel+Neto,+242+-+Res.+Santo+ANT%C3%94NIO,+Campos+dos+Goytacazes+-+RJ,+28022-322/@-21.801233,-41.3059589,19.75z/data=!4m15!1m8!3m7!1s0xbdd66e9dbc40e3:0x25c6c6949ccfc621!2sR.+Pedro+Maciel+Neto,+242+-+Res.+Santo+ANT%C3%94NIO,+Campos+dos+Goytacazes+-+RJ,+28022-322!3b1!8m2!3d-21.8010612!4d-41.3060419!16s%2Fg%2F11rz9kbt31!3m5!1s0xbdd66e9dbc40e3:0x25c6c6949ccfc621!8m2!3d-21.8010612!4d-41.3060419!16s%2Fg%2F11rz9kbt31?entry=ttu&g_ep=EgoyMDI2MDkxNi4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener">
+        <span class="contato-item__icone">📍</span>
+        <span class="contato-item__texto">
+          <span class="contato-item__rotulo">Endereço</span>
+          <span class="contato-item__valor">Rua Pedro Maciel Netto, 242 — Parque Residencial Santo Antônio</span>
+          <span class="contato-item__obs">(ao lado do Parque Imperial) — Campos dos Goytacazes/RJ, 28022-322<br/>Toque para abrir no Google Maps</span>
+        </span>
+      </a>
+
+      <div class="contato-item">
+        <span class="contato-item__icone">📞</span>
+        <span class="contato-item__texto">
+          <span class="contato-item__rotulo">Telefone / WhatsApp</span>
+          <span class="contato-item__valor">(22) 2735-6577</span>
+          <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+            <a href="tel:+552227356577" class="btn btn-contorno btn-pequeno">📞 Ligar</a>
+            <a href="https://wa.me/552227356577" target="_blank" rel="noopener" class="btn btn-contorno btn-pequeno">💬 WhatsApp</a>
+          </div>
+        </span>
+      </div>
+
+      <a class="contato-item" href="https://www.instagram.com/arautoscampos" target="_blank" rel="noopener">
+        <span class="contato-item__icone">📷</span>
+        <span class="contato-item__texto">
+          <span class="contato-item__rotulo">Instagram</span>
+          <span class="contato-item__valor">@arautoscampos</span>
+        </span>
+      </a>
     </div>
 
-    <div id="painelAgendados" style="width:100%;">
-      <div id="listaAgendados" class="lista-agendamentos">
-        <div class="skeleton-agendamento"><div class="skeleton-linha"></div><div class="skeleton-linha"></div><div class="skeleton-linha"></div></div>
-      </div>
-    </div>
-
-    <div id="painelCancelados" class="oculto" style="width:100%;">
-      <div class="acoes-lista">
-        <button type="button" class="btn btn-contorno btn-pequeno" id="btnLimparCancelados">Limpar cancelados</button>
-      </div>
-      <div id="listaCancelados" class="lista-agendamentos">
-        <div class="skeleton-agendamento"><div class="skeleton-linha"></div><div class="skeleton-linha"></div><div class="skeleton-linha"></div></div>
-      </div>
-    </div>
-
-    <a href="agendamento.html" class="btn btn-dourado" style="margin-top:22px;">+ Novo agendamento</a>
+    <a href="agendamento.html" class="btn btn-dourado" style="margin-top:22px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+      Agende seu horário
+    </a>
 
     <p class="rodape-simples">Arautos do Evangelho Campos - RJ</p>
   </main>
 
-  <!-- Modal de cancelamento -->
-  <div class="modal-overlay" id="modalCancelar">
-    <div class="modal">
-      <button class="modal--fechar" id="fecharModalCancelar" aria-label="Fechar">&times;</button>
-      <div class="modal__icone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
-      </div>
-      <h3>Cancelar agendamento</h3>
-      <p>Seu horário era <strong id="cancelarInfo">—</strong>. Poderia nos contar o motivo do cancelamento?</p>
-      <div class="campo" style="text-align:left;">
-        <label for="motivoCancelamento">Motivo (opcional)</label>
-        <textarea id="motivoCancelamento" rows="3" placeholder="Ex: Não vou poder mais nesse horário"></textarea>
-      </div>
-      <div class="modal__acoes">
-        <button class="btn btn-contorno" id="btnVoltarModal">Voltar</button>
-        <button class="btn btn-vermelho" id="btnConfirmarCancelamento">Cancelar horário</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal de confirmação para limpar cancelados -->
-  <div class="modal-overlay" id="modalLimparCancelados">
-    <div class="modal">
-      <button class="modal--fechar" id="fecharModalLimparCancelados" aria-label="Fechar">&times;</button>
-      <h3>Limpar cancelados</h3>
-      <p>Deseja remover todo o seu histórico de agendamentos cancelados? Essa ação não pode ser desfeita.</p>
-      <div class="modal__acoes">
-        <button class="btn btn-contorno btn-full" id="btnVoltarLimparCancelados">Voltar</button>
-        <button class="btn btn-vermelho btn-full" id="btnConfirmarLimparCancelados">Limpar cancelados</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="js/meus-agendamentos.js"></script>
+  <script type="module" src="js/contatos.js"></script>
   <script type="module" src="js/instalar-app.js"></script>
 </body>
 </html>

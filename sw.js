@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v3";
+const CACHE_NAME = "arautos-shell-v4";
 
 const ARQUIVOS_APP_SHELL = [
   "./",
@@ -12,6 +12,7 @@ const ARQUIVOS_APP_SHELL = [
   "./intencoes.html",
   "./avisos.html",
   "./meus-agendamentos.html",
+  "./contatos.html",
   "./sobre.html",
   "./admin.html",
   "./manifest.json",
@@ -27,6 +28,7 @@ const ARQUIVOS_APP_SHELL = [
   "./js/avisos.js",
   "./js/meus-agendamentos.js",
   "./js/sobre.js",
+  "./js/contatos.js",
   "./js/admin.js",
   "./js/instalar-app.js",
   "./js/sw-registro.js",

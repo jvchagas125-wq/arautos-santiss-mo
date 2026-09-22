@@ -170,7 +170,7 @@ img{ max-width: 100%; display:block; }
   padding: 0 22px 18px; margin-bottom: 8px;
   border-bottom: 1.5px solid rgba(157,122,31,.3);
 }
-.menu-lateral__topo img{ height: 34px; }
+.menu-lateral__topo img{ height: 44px; }
 .menu-lateral__topo span{ font-family:'Cinzel'; font-weight:600; color:var(--vermelho-escuro); font-size:.95rem; line-height:1.2; }
 .menu-lateral__fechar{
   margin-left:auto; background:none; border:none; font-size:1.4rem; color:var(--vermelho); line-height:1;
@@ -848,6 +848,53 @@ img{ max-width: 100%; display:block; }
   font-size:.68rem; font-weight:700; letter-spacing:.02em; color: rgba(255,253,248,.5);
 }
 .pagina-clara .rodape-dev{ color: var(--texto-suave); opacity:.7; }
+
+/* ============ PÁGINA DE CONTATOS ============ */
+.contato-item{
+  display:flex; align-items:flex-start; gap:14px;
+  width:100%; text-decoration:none; color:inherit;
+}
+.contato-item + .contato-item{ margin-top:20px; padding-top:20px; border-top:1.5px dashed rgba(157,122,31,.3); }
+.contato-item__icone{
+  flex-shrink:0; width:44px; height:44px; border-radius:50%;
+  background: rgba(122,12,30,.08); color: var(--vermelho-escuro);
+  display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+  transition: background var(--transicao);
+}
+.contato-item__texto{ flex:1; padding-top:2px; }
+.contato-item__rotulo{
+  font-family:'Cinzel'; font-size:.76rem; letter-spacing:.04em; text-transform:uppercase;
+  color: var(--dourado-escuro); margin-bottom:4px; font-weight:600;
+}
+.contato-item__valor{ font-size:.95rem; line-height:1.6; color: var(--texto); word-break:break-word; }
+a.contato-item:hover .contato-item__valor{ color: var(--vermelho); text-decoration:underline; }
+a.contato-item:hover .contato-item__icone{ background: rgba(122,12,30,.16); }
+.contato-item__obs{ font-size:.82rem; color: var(--texto-suave); margin-top:3px; line-height:1.5; }
+
+/* ============ NAVEGAÇÃO ENTRE PÁGINAS (avançar / voltar) ============ */
+.navegacao-paginas{
+  display:flex; align-items:stretch; gap:12px; width:100%;
+  margin-top:28px;
+}
+.navegacao-paginas__item{
+  flex:1; display:flex; flex-direction:column; gap:3px; min-width:0;
+  text-decoration:none; padding:12px 16px; border-radius:12px;
+  border:1.5px solid rgba(157,122,31,.35); background: rgba(255,253,248,.06);
+  transition: background var(--transicao), transform var(--transicao);
+}
+.pagina-clara .navegacao-paginas__item{ background: var(--branco); border-color: rgba(157,122,31,.28); }
+.navegacao-paginas__item:hover{ transform: translateY(-2px); background: rgba(205,164,52,.16); }
+.navegacao-paginas__item--proxima{ text-align:right; align-items:flex-end; }
+.navegacao-paginas__rotulo{
+  font-size:.68rem; letter-spacing:.05em; text-transform:uppercase;
+  color: var(--dourado-claro); font-family:'Cinzel'; opacity:.9;
+}
+.pagina-clara .navegacao-paginas__rotulo{ color: var(--dourado-escuro); }
+.navegacao-paginas__nome{
+  font-family:'Cinzel'; font-weight:600; font-size:.86rem; line-height:1.3;
+  color: var(--branco); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;
+}
+.pagina-clara .navegacao-paginas__nome{ color: var(--vermelho-escuro); }
 
 /* ============ RESPONSIVO ============ */
 @media (min-width: 720px){
