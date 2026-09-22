@@ -126,6 +126,22 @@ export async function excluirUsuario(telefoneDigits) {
   await deleteDoc(doc(db, "usuarios", telefoneDigits));
 }
 
+// Edita nome e/ou telefone de um contato já cadastrado (usado pelo painel admin em "Contatos").
+// O telefone é o próprio identificador do registro no banco, então, se ele mudar, o cadastro
+// precisa ser recriado sob o novo número e o registro antigo é removido.
+export async function editarUsuario(telefoneDigitsAntigo, novoTelefoneDigits, nome, telefoneFormatado) {
+  await setDoc(doc(db, "usuarios", novoTelefoneDigits), {
+    nome,
+    telefone: telefoneFormatado,
+    telefoneDigits: novoTelefoneDigits,
+    atualizadoEm: serverTimestamp()
+  }, { merge: true });
+
+  if (novoTelefoneDigits !== telefoneDigitsAntigo) {
+    await deleteDoc(doc(db, "usuarios", telefoneDigitsAntigo));
+  }
+}
+
 /* ---------------- Agendamentos ---------------- */
 
 // Retorna o conjunto de horas (números) já ocupadas (status "agendado") numa data

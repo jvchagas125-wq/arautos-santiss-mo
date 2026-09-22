@@ -1,13 +1,15 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
-  MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto } from "./utils.js";
+  MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto,
+  capitalizarNome, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterFrases, salvarFrases,
   obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
-  ouvirTodosAgendamentos, ouvirTodosUsuarios, excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
+  ouvirTodosAgendamentos, ouvirTodosUsuarios, obterUsuario, cadastrarOuAtualizarUsuario, editarUsuario,
+  excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
   marcarAgendamentoExtra,
   obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos
@@ -411,13 +413,13 @@ function configurarIntencoes() {
     docPdf.setFont("times", "bold");
     docPdf.setFontSize(16);
     docPdf.setTextColor(122, 12, 30);
-    docPdf.text("Arautos do Evangelho", larguraPagina / 2, y, { align: "center" });
+    docPdf.text("Arautos do Evangelho Campos", larguraPagina / 2, y, { align: "center" });
     y += 20;
 
     docPdf.setFont("times", "normal");
     docPdf.setFontSize(11);
     docPdf.setTextColor(90, 70, 54);
-    docPdf.text("Adoração Eucarística — Intenções da Missa", larguraPagina / 2, y, { align: "center" });
+    docPdf.text("Intenções da Santa Missa", larguraPagina / 2, y, { align: "center" });
     y += 24;
 
     docPdf.setDrawColor(205, 164, 52);
@@ -1392,6 +1394,9 @@ function configurarContatos() {
           <a class="card-contato__whats" href="https://wa.me/${numeroWhats}" target="_blank" rel="noopener" title="Chamar no WhatsApp">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 20l1-5.5A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8.5 10.5c.3 2.4 2.1 4.2 4.5 4.5"/></svg>
           </a>
+          <button type="button" class="card-contato__editar" data-tel="${escaparHtml(c.telefoneDigits)}" data-nome="${escaparHtml(c.nome)}" data-tel-formatado="${escaparHtml(c.telefone)}" title="Editar cadastro">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
           <button type="button" class="card-contato__excluir" data-tel="${escaparHtml(c.telefoneDigits)}" data-nome="${escaparHtml(c.nome)}" title="Remover cadastro">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>
           </button>
@@ -1405,7 +1410,7 @@ function configurarContatos() {
       ? todosContatos
       : todosContatos.filter((c) => normalizar(c.nome).includes(filtro) || normalizar(c.telefone).includes(filtro));
 
-    contagemEl.textContent = `(${filtrados.length})`;
+    contagemEl.textContent = `${filtrados.length}`;
 
     if (filtrados.length === 0) {
       lista.innerHTML = todosContatos.length === 0
@@ -1420,6 +1425,12 @@ function configurarContatos() {
         telefoneParaRemover = btn.dataset.tel;
         nomeRemoverEl.textContent = btn.dataset.nome || "esta pessoa";
         abrirModal(modalRemover);
+      });
+    });
+
+    lista.querySelectorAll(".card-contato__editar").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        entrarEmModoEdicao(btn.dataset.tel, btn.dataset.nome, btn.dataset.telFormatado);
       });
     });
   }
@@ -1439,6 +1450,8 @@ function configurarContatos() {
       await excluirUsuario(telefoneParaRemover);
       mostrarToast("Cadastro removido com sucesso.");
       fecharModal(modalRemover);
+      // se a pessoa removida estava sendo editada no formulário, sai do modo edição
+      if (telefoneParaRemover === telefoneDigitsEmEdicao) sairDoModoEdicao();
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível remover o cadastro. Tente novamente.");
@@ -1454,6 +1467,95 @@ function configurarContatos() {
   ouvirTodosUsuarios((lista_) => {
     todosContatos = lista_;
     renderizar();
+  });
+
+  /* ---------- Acordeão: abrir/fechar a lista de pessoas cadastradas ---------- */
+  const quadroContatos = document.getElementById("quadroContatos");
+  const corpoContatos = document.getElementById("corpoContatos");
+  document.getElementById("cabecalhoContatos").addEventListener("click", () => {
+    quadroContatos.classList.toggle("aberto");
+    corpoContatos.classList.toggle("oculto");
+  });
+
+  /* ---------- Formulário: cadastrar nova pessoa / editar pessoa existente ---------- */
+  const formContato = document.getElementById("formContato");
+  const campoNomeContato = document.getElementById("campoNomeContato");
+  const campoTelefoneContato = document.getElementById("campoTelefoneContato");
+  const btnSalvarContato = document.getElementById("btnSalvarContato");
+  const btnCancelarEdicaoContato = document.getElementById("btnCancelarEdicaoContato");
+  const tituloFormContato = document.getElementById("tituloFormContato");
+
+  vincularMascaraTelefone(campoTelefoneContato);
+  campoNomeContato.addEventListener("blur", () => {
+    if (campoNomeContato.value.trim()) campoNomeContato.value = capitalizarNome(campoNomeContato.value.trim());
+  });
+
+  let telefoneDigitsEmEdicao = null; // null = cadastrando pessoa nova; string = editando esse telefone
+
+  function entrarEmModoEdicao(telefoneDigits, nome, telefoneFormatado) {
+    telefoneDigitsEmEdicao = telefoneDigits;
+    campoNomeContato.value = nome || "";
+    campoTelefoneContato.value = telefoneFormatado || "";
+    tituloFormContato.textContent = "Editar pessoa";
+    btnSalvarContato.textContent = "Salvar alterações";
+    btnCancelarEdicaoContato.classList.remove("oculto");
+    document.getElementById("painelFormContato").scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => campoNomeContato.focus(), 300);
+  }
+
+  function sairDoModoEdicao() {
+    telefoneDigitsEmEdicao = null;
+    formContato.reset();
+    tituloFormContato.textContent = "Cadastrar pessoa";
+    btnSalvarContato.textContent = "Cadastrar";
+    btnCancelarEdicaoContato.classList.add("oculto");
+  }
+  btnCancelarEdicaoContato.addEventListener("click", sairDoModoEdicao);
+
+  formContato.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const nome = capitalizarNome(campoNomeContato.value.trim());
+    if (nome.split(" ").filter(Boolean).length < 2) {
+      mostrarToast("Digite o nome completo da pessoa.");
+      campoNomeContato.focus();
+      return;
+    }
+    const telefoneFormatado = campoTelefoneContato.value.trim();
+    if (!telefoneValido(telefoneFormatado)) {
+      mostrarToast("Digite um telefone válido, ex: (11) 91234-5678.");
+      campoTelefoneContato.focus();
+      return;
+    }
+    const telefoneDigits = telefoneParaDigits(telefoneFormatado);
+
+    btnSalvarContato.disabled = true;
+    btnSalvarContato.textContent = telefoneDigitsEmEdicao ? "Salvando..." : "Cadastrando...";
+    try {
+      // impede sobrescrever sem querer o cadastro de outra pessoa que já usa esse telefone
+      if (telefoneDigits !== telefoneDigitsEmEdicao) {
+        const existente = await obterUsuario(telefoneDigits);
+        if (existente && existente.nome) {
+          mostrarToast(`Esse telefone já está cadastrado para ${existente.nome}. Edite o cadastro existente na lista.`);
+          return;
+        }
+      }
+
+      if (telefoneDigitsEmEdicao) {
+        await editarUsuario(telefoneDigitsEmEdicao, telefoneDigits, nome, telefoneFormatado);
+        mostrarToast("Cadastro atualizado com sucesso!");
+      } else {
+        await cadastrarOuAtualizarUsuario(telefoneDigits, nome, telefoneFormatado);
+        mostrarToast("Pessoa cadastrada com sucesso!");
+      }
+      sairDoModoEdicao();
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar o cadastro. Verifique sua conexão.");
+    } finally {
+      btnSalvarContato.disabled = false;
+      btnSalvarContato.textContent = telefoneDigitsEmEdicao ? "Salvar alterações" : "Cadastrar";
+    }
   });
 }
 
