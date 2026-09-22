@@ -583,17 +583,33 @@ img{ max-width: 100%; display:block; }
   .btn-ver-tabela-mobile{ display:none; }
 }
 
-/* ---------- Avisos ---------- */
+/* ---------- Avisos (acordeão: só o título fica visível até a pessoa tocar) ---------- */
 .cartao-aviso{
   width:100%; border:1.5px solid rgba(157,122,31,.3); border-radius:14px; overflow:hidden;
   margin-bottom:18px; background:#fffefb; text-align:left; box-shadow: 0 4px 14px rgba(0,0,0,.05);
+  transition: box-shadow var(--transicao);
 }
-.cartao-aviso__img{ width:100%; max-height:220px; object-fit:cover; display:block; }
-.cartao-aviso__corpo{ padding:16px 18px; }
+.cartao-aviso.aberto{ box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+.cartao-aviso__cabecalho{
+  display:flex; align-items:center; gap:12px; width:100%; padding:16px 18px;
+  background:none; border:none; cursor:pointer; text-align:left; font:inherit; color:inherit;
+}
+.cartao-aviso__cabecalho-texto{ flex:1; min-width:0; }
 .cartao-aviso__titulo{
-  font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); font-size:1.02rem; margin-bottom:8px;
+  display:block; font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); font-size:1.02rem;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+.cartao-aviso__dica{
+  display:block; margin-top:5px; font-size:.74rem; font-style:italic; color: var(--dourado-escuro);
+}
+.cartao-aviso__seta{
+  flex-shrink:0; width:18px; height:18px; color: var(--vermelho); transition: transform .25s ease;
+}
+.cartao-aviso.aberto .cartao-aviso__seta{ transform: rotate(180deg); }
+.cartao-aviso__img{ width:100%; max-height:220px; object-fit:cover; display:block; }
+.cartao-aviso__corpo{ padding:0 18px 18px; border-top:1px solid rgba(157,122,31,.2); padding-top:14px; }
+.cartao-aviso__corpo.oculto{ display:none; }
+.cartao-aviso__corpo .cartao-aviso__img{ border-radius:10px; margin-bottom:12px; }
 .cartao-aviso__texto{ margin:0; font-size:.92rem; line-height:1.7; color: var(--texto); white-space:pre-wrap; }
 .link-aviso{
   color: var(--vermelho-escuro); font-weight:600; text-decoration:underline;
@@ -850,48 +866,70 @@ img{ max-width: 100%; display:block; }
 .pagina-clara .rodape-dev{ color: var(--texto-suave); opacity:.7; }
 
 /* ============ PÁGINA DE CONTATOS ============ */
-.contato-item{
-  display:flex; align-items:flex-start; gap:14px;
-  width:100%; text-decoration:none; color:inherit;
+.painel-contatos{ padding-bottom:8px; }
+.contato-card{
+  display:flex; align-items:flex-start; gap:16px; width:100%;
+  padding:18px 0;
 }
-.contato-item + .contato-item{ margin-top:20px; padding-top:20px; border-top:1.5px dashed rgba(157,122,31,.3); }
-.contato-item__icone{
-  flex-shrink:0; width:44px; height:44px; border-radius:50%;
-  background: rgba(122,12,30,.08); color: var(--vermelho-escuro);
+.contato-card + .contato-card{ border-top:1.5px dashed rgba(157,122,31,.3); }
+.contato-card__icone{
+  flex-shrink:0; width:46px; height:46px; border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, rgba(205,164,52,.22), rgba(122,12,30,.08));
+  border:1px solid rgba(157,122,31,.25); color: var(--vermelho-escuro);
   display:flex; align-items:center; justify-content:center; font-size:1.3rem;
-  transition: background var(--transicao);
 }
-.contato-item__texto{ flex:1; padding-top:2px; }
-.contato-item__rotulo{
+.contato-card__corpo{ flex:1; min-width:0; padding-top:2px; }
+.contato-card__rotulo{
   font-family:'Cinzel'; font-size:.76rem; letter-spacing:.04em; text-transform:uppercase;
-  color: var(--dourado-escuro); margin-bottom:4px; font-weight:600;
+  color: var(--dourado-escuro); margin-bottom:5px; font-weight:600;
 }
-.contato-item__valor{ font-size:.95rem; line-height:1.6; color: var(--texto); word-break:break-word; }
-a.contato-item:hover .contato-item__valor{ color: var(--vermelho); text-decoration:underline; }
-a.contato-item:hover .contato-item__icone{ background: rgba(122,12,30,.16); }
-.contato-item__obs{ font-size:.82rem; color: var(--texto-suave); margin-top:3px; line-height:1.5; }
+.contato-card__valor{ font-size:.98rem; line-height:1.6; color: var(--texto); word-break:break-word; font-weight:600; }
+.contato-card__obs{ font-size:.82rem; color: var(--texto-suave); margin-top:2px; line-height:1.5; }
+.contato-acoes{ display:flex; gap:10px; flex-wrap:wrap; margin-top:13px; }
 
-/* ============ NAVEGAÇÃO ENTRE PÁGINAS (avançar / voltar) ============ */
+/* botões de ação personalizados por tipo de contato — pílula fina, discreta, com leve realce na cor do serviço */
+.btn-contato{
+  display:inline-flex; align-items:center; gap:7px;
+  padding:9px 18px; border-radius:999px; text-decoration:none;
+  font-family:'Cinzel'; font-weight:600; font-size:.76rem; letter-spacing:.02em;
+  border:1.5px solid transparent; transition: transform var(--transicao), box-shadow var(--transicao), background var(--transicao);
+}
+.btn-contato:hover{ transform: translateY(-2px); }
+.btn-contato svg{ flex-shrink:0; }
+.btn-contato--mapa{ color: var(--vermelho-escuro); background: rgba(122,12,30,.07); border-color: rgba(122,12,30,.18); }
+.btn-contato--mapa:hover{ background: rgba(122,12,30,.14); box-shadow: 0 6px 16px rgba(122,12,30,.15); }
+.btn-contato--ligar{ color: var(--dourado-escuro); background: rgba(205,164,52,.14); border-color: rgba(157,122,31,.3); }
+.btn-contato--ligar:hover{ background: rgba(205,164,52,.24); box-shadow: 0 6px 16px rgba(157,122,31,.2); }
+.btn-contato--whats{ color:#1c6b4a; background: rgba(37,140,94,.1); border-color: rgba(37,140,94,.28); }
+.btn-contato--whats:hover{ background: rgba(37,140,94,.18); box-shadow: 0 6px 16px rgba(37,140,94,.18); }
+.btn-contato--instagram{ color:#9a3f7a; background: rgba(191,74,140,.1); border-color: rgba(191,74,140,.28); }
+.btn-contato--instagram:hover{ background: rgba(191,74,140,.18); box-shadow: 0 6px 16px rgba(191,74,140,.18); }
+
+/* ============ NAVEGAÇÃO ENTRE PÁGINAS (avançar / voltar) — discreta, no rodapé do conteúdo ============ */
 .navegacao-paginas{
-  display:flex; align-items:stretch; gap:12px; width:100%;
-  margin-top:28px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%;
+  margin-top:30px; padding-top:16px; border-top:1px solid rgba(157,122,31,.22);
 }
 .navegacao-paginas__item{
-  flex:1; display:flex; flex-direction:column; gap:3px; min-width:0;
-  text-decoration:none; padding:12px 16px; border-radius:12px;
-  border:1.5px solid rgba(157,122,31,.35); background: rgba(255,253,248,.06);
-  transition: background var(--transicao), transform var(--transicao);
+  display:flex; align-items:center; gap:8px; min-width:0; max-width:47%;
+  text-decoration:none; padding:4px 2px; opacity:.78;
+  transition: opacity var(--transicao), transform var(--transicao);
 }
-.pagina-clara .navegacao-paginas__item{ background: var(--branco); border-color: rgba(157,122,31,.28); }
-.navegacao-paginas__item:hover{ transform: translateY(-2px); background: rgba(205,164,52,.16); }
-.navegacao-paginas__item--proxima{ text-align:right; align-items:flex-end; }
+.navegacao-paginas__item:hover{ opacity:1; transform: translateY(-1px); }
+.navegacao-paginas__item--proxima{ flex-direction:row-reverse; text-align:right; margin-left:auto; }
+.navegacao-paginas__seta{
+  width:15px; height:15px; flex-shrink:0; color: var(--dourado);
+}
+.pagina-clara .navegacao-paginas__seta{ color: var(--dourado-escuro); }
+.navegacao-paginas__textos{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.navegacao-paginas__item--proxima .navegacao-paginas__textos{ align-items:flex-end; }
 .navegacao-paginas__rotulo{
-  font-size:.68rem; letter-spacing:.05em; text-transform:uppercase;
-  color: var(--dourado-claro); font-family:'Cinzel'; opacity:.9;
+  font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  color: var(--dourado-claro); font-family:'Cinzel'; opacity:.85;
 }
 .pagina-clara .navegacao-paginas__rotulo{ color: var(--dourado-escuro); }
 .navegacao-paginas__nome{
-  font-family:'Cinzel'; font-weight:600; font-size:.86rem; line-height:1.3;
+  font-family:'Cinzel'; font-weight:600; font-size:.8rem; line-height:1.3;
   color: var(--branco); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;
 }
 .pagina-clara .navegacao-paginas__nome{ color: var(--vermelho-escuro); }

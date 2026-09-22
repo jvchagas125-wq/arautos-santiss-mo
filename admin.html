@@ -31,7 +31,7 @@
         </div>
         <button type="submit" class="btn btn-vermelho btn-full">Entrar</button>
       </form>
-      <a href="index.html" class="admin-login__voltar">← Voltar ao site</a>
+      <a href="/" class="admin-login__voltar">← Voltar ao site</a>
     </div>
   </div>
 
@@ -55,7 +55,7 @@
         <a href="#configuracoes" data-secao="configuracoes"><span class="emoji">⚙️</span> Configurações</a>
       </nav>
       <div class="menu-lateral__rodape">
-        <a href="index.html" style="display:block;margin-bottom:8px;">← Ver site</a>
+        <a href="/" style="display:block;margin-bottom:8px;">← Ver site</a>
         <button id="btnSairAdmin" class="btn btn-contorno" style="width:100%;">Sair do painel</button>
       </div>
     </aside>
@@ -299,6 +299,46 @@
       <section class="admin-secao oculto" id="secao-contatos">
         <h1 class="titulo-pagina">Contatos</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">☎️</span> Informações de contato do site público</div>
+          <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
+            Esses dados aparecem na página "Contatos" que qualquer pessoa vê no site — não têm relação com as
+            pessoas cadastradas logo abaixo.
+          </p>
+          <form id="formInfoContato">
+            <div class="campo">
+              <label for="campoContatoTelefoneTexto">Telefone exibido</label>
+              <input type="text" id="campoContatoTelefoneTexto" placeholder="Ex: (22) 2735-6577" required />
+            </div>
+            <div class="campo">
+              <label for="campoContatoTelefoneDigits">Número para ligar/WhatsApp (só números, com DDD e código do país)</label>
+              <input type="text" id="campoContatoTelefoneDigits" placeholder="Ex: 552227356577" inputmode="numeric" required />
+              <small class="campo-ajuda">55 (Brasil) + DDD + número, sem espaços nem símbolos. Usado nos botões "Ligar" e "WhatsApp".</small>
+            </div>
+            <div class="campo">
+              <label for="campoContatoEnderecoTexto">Endereço (linha principal)</label>
+              <input type="text" id="campoContatoEnderecoTexto" placeholder="Ex: Rua Pedro Maciel Netto, 242 — ..." required />
+            </div>
+            <div class="campo">
+              <label for="campoContatoEnderecoObs">Endereço (complemento — bairro, cidade, CEP)</label>
+              <input type="text" id="campoContatoEnderecoObs" placeholder="Ex: (ao lado do Parque Imperial) — Campos dos Goytacazes/RJ, 28022-322" />
+            </div>
+            <div class="campo">
+              <label for="campoContatoEnderecoLink">Link do Google Maps</label>
+              <input type="text" id="campoContatoEnderecoLink" placeholder="https://www.google.com/maps/..." required />
+            </div>
+            <div class="campo">
+              <label for="campoContatoInstagramTexto">Instagram exibido</label>
+              <input type="text" id="campoContatoInstagramTexto" placeholder="Ex: @arautoscampos" required />
+            </div>
+            <div class="campo">
+              <label for="campoContatoInstagramLink">Link do Instagram</label>
+              <input type="text" id="campoContatoInstagramLink" placeholder="https://www.instagram.com/..." required />
+            </div>
+            <button type="submit" class="btn btn-dourado">Salvar informações de contato</button>
+          </form>
+        </div>
 
         <div class="painel" id="painelFormContato">
           <div class="painel__titulo"><span class="emoji">➕</span> <span id="tituloFormContato">Cadastrar pessoa</span></div>

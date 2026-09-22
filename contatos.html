@@ -22,16 +22,16 @@
       <button class="menu-lateral__fechar" id="btnFecharMenu" aria-label="Fechar menu">&times;</button>
     </div>
     <nav>
-      <a href="index.html" data-pagina="index"><span class="emoji">🏠</span> Início</a>
-      <a href="agendamento.html" data-pagina="agendamento"><span class="emoji">📅</span> Agendar horário</a>
-      <a href="meus-agendamentos.html" data-pagina="meus-agendamentos"><span class="emoji">🗓️</span> Meus agendamentos</a>
-      <a href="intencoes.html" data-pagina="intencoes"><span class="emoji">🙏</span> Intenções da missa</a>
-      <a href="avisos.html" data-pagina="avisos"><span class="emoji">📢</span> Avisos</a>
-      <a href="contatos.html" data-pagina="contatos"><span class="emoji">📍</span> Contatos</a>
-      <a href="sobre.html" data-pagina="sobre"><span class="emoji">ℹ️</span> Sobre</a>
+      <a href="/" data-pagina="index"><span class="emoji">🏠</span> Início</a>
+      <a href="agendamento" data-pagina="agendamento"><span class="emoji">📅</span> Agendar horário</a>
+      <a href="meus-agendamentos" data-pagina="meus-agendamentos"><span class="emoji">🗓️</span> Meus agendamentos</a>
+      <a href="intencoes" data-pagina="intencoes"><span class="emoji">🙏</span> Intenções da missa</a>
+      <a href="avisos" data-pagina="avisos"><span class="emoji">📢</span> Avisos</a>
+      <a href="contatos" data-pagina="contatos"><span class="emoji">📍</span> Contatos</a>
+      <a href="sobre" data-pagina="sobre"><span class="emoji">ℹ️</span> Sobre</a>
     </nav>
     <div class="menu-lateral__rodape">
-      <a href="admin.html" class="menu-lateral__admin-btn"><span class="emoji">🔐</span> Painel administrativo</a>
+      <a href="admin" class="menu-lateral__admin-btn"><span class="emoji">🔐</span> Painel administrativo</a>
     </div>
   </aside>
 
@@ -56,7 +56,7 @@
     <div class="dropdown-perfil__nome" id="perfilNome">—</div>
     <div class="dropdown-perfil__tel" id="perfilTelefone">—</div>
     <hr/>
-    <a href="meus-agendamentos.html">🗓️ Meus agendamentos</a>
+    <a href="meus-agendamentos">🗓️ Meus agendamentos</a>
     <button id="btnSair">🚪 Sair</button>
   </div>
 
@@ -64,43 +64,56 @@
     <h1 class="titulo-pagina">Contatos</h1>
     <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-    <div class="painel">
+    <div class="painel painel-contatos">
       <div class="painel__titulo"><span class="emoji">📇</span> Fale conosco</div>
 
-      <a class="contato-item" href="https://www.google.com/maps/place/R.+Pedro+Maciel+Neto,+242+-+Res.+Santo+ANT%C3%94NIO,+Campos+dos+Goytacazes+-+RJ,+28022-322/@-21.801233,-41.3059589,19.75z/data=!4m15!1m8!3m7!1s0xbdd66e9dbc40e3:0x25c6c6949ccfc621!2sR.+Pedro+Maciel+Neto,+242+-+Res.+Santo+ANT%C3%94NIO,+Campos+dos+Goytacazes+-+RJ,+28022-322!3b1!8m2!3d-21.8010612!4d-41.3060419!16s%2Fg%2F11rz9kbt31!3m5!1s0xbdd66e9dbc40e3:0x25c6c6949ccfc621!8m2!3d-21.8010612!4d-41.3060419!16s%2Fg%2F11rz9kbt31?entry=ttu&g_ep=EgoyMDI2MDkxNi4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener">
-        <span class="contato-item__icone">📍</span>
-        <span class="contato-item__texto">
-          <span class="contato-item__rotulo">Endereço</span>
-          <span class="contato-item__valor">Rua Pedro Maciel Netto, 242 — Parque Residencial Santo Antônio</span>
-          <span class="contato-item__obs">(ao lado do Parque Imperial) — Campos dos Goytacazes/RJ, 28022-322<br/>Toque para abrir no Google Maps</span>
-        </span>
-      </a>
-
-      <div class="contato-item">
-        <span class="contato-item__icone">📞</span>
-        <span class="contato-item__texto">
-          <span class="contato-item__rotulo">Telefone / WhatsApp</span>
-          <span class="contato-item__valor">(22) 2735-6577</span>
-          <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-            <a href="tel:+552227356577" class="btn btn-contorno btn-pequeno">📞 Ligar</a>
-            <a href="https://wa.me/552227356577" target="_blank" rel="noopener" class="btn btn-contorno btn-pequeno">💬 WhatsApp</a>
+      <div class="contato-card">
+        <div class="contato-card__icone">📍</div>
+        <div class="contato-card__corpo">
+          <div class="contato-card__rotulo">Endereço</div>
+          <div class="contato-card__valor" id="contatoEnderecoTexto">Rua Pedro Maciel Netto, 242 — Parque Residencial Santo Antônio</div>
+          <div class="contato-card__obs" id="contatoEnderecoObs">(ao lado do Parque Imperial) — Campos dos Goytacazes/RJ, 28022-322</div>
+          <div class="contato-acoes">
+            <a id="linkEndereco" class="btn-contato btn-contato--mapa" href="#" target="_blank" rel="noopener">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Ver no mapa
+            </a>
           </div>
-        </span>
+        </div>
       </div>
 
-      <a class="contato-item" href="https://www.instagram.com/arautoscampos" target="_blank" rel="noopener">
-        <span class="contato-item__icone">📷</span>
-        <span class="contato-item__texto">
-          <span class="contato-item__rotulo">Instagram</span>
-          <span class="contato-item__valor">@arautoscampos</span>
-        </span>
-      </a>
-    </div>
+      <div class="contato-card">
+        <div class="contato-card__icone">📞</div>
+        <div class="contato-card__corpo">
+          <div class="contato-card__rotulo">Telefone / WhatsApp</div>
+          <div class="contato-card__valor" id="contatoTelefoneTexto">(22) 2735-6577</div>
+          <div class="contato-acoes">
+            <a id="linkLigar" class="btn-contato btn-contato--ligar" href="#">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.5 2.1L8 9.7a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.7 2Z"/></svg>
+              Ligar
+            </a>
+            <a id="linkWhatsapp" class="btn-contato btn-contato--whats" href="#" target="_blank" rel="noopener">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.6-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.2.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.5.1-.6l.4-.5c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4C10.6 9.4 10 8 9.8 7.5c-.2-.4-.3-.4-.5-.4h-.5c-.2 0-.4 0-.6.3-.2.3-.8.8-.8 2s.8 2.3 1 2.5c.1.1 1.7 2.6 4.2 3.6 2.4 1 2.4.6 2.9.6.4 0 1.3-.5 1.5-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.5-.3ZM12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm0 18.2c-1.6 0-3.1-.4-4.5-1.2l-.3-.2-3.1.8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2Z"/></svg>
+              WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
 
-    <a href="agendamento.html" class="btn btn-dourado" style="margin-top:22px;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
-      Agende seu horário
-    </a>
+      <div class="contato-card">
+        <div class="contato-card__icone">📷</div>
+        <div class="contato-card__corpo">
+          <div class="contato-card__rotulo">Instagram</div>
+          <div class="contato-card__valor" id="contatoInstagramTexto">@arautoscampos</div>
+          <div class="contato-acoes">
+            <a id="linkInstagram" class="btn-contato btn-contato--instagram" href="#" target="_blank" rel="noopener">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1"/></svg>
+              Seguir no Instagram
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <p class="rodape-simples">Arautos do Evangelho Campos - RJ</p>
   </main>

@@ -307,13 +307,13 @@ export function limparUsuarioSessao() {
 */
 /* ---------- Ordem das páginas do site público (usada nos botões "Anterior / Próxima") ---------- */
 const ORDEM_PAGINAS = [
-  { chave: "index", label: "Início", href: "index.html" },
-  { chave: "agendamento", label: "Agendar horário", href: "agendamento.html" },
-  { chave: "meus-agendamentos", label: "Meus agendamentos", href: "meus-agendamentos.html" },
-  { chave: "intencoes", label: "Intenções da missa", href: "intencoes.html" },
-  { chave: "avisos", label: "Avisos", href: "avisos.html" },
-  { chave: "contatos", label: "Contatos", href: "contatos.html" },
-  { chave: "sobre", label: "Sobre", href: "sobre.html" }
+  { chave: "index", label: "Início", href: "/" },
+  { chave: "agendamento", label: "Agendar horário", href: "agendamento" },
+  { chave: "meus-agendamentos", label: "Meus agendamentos", href: "meus-agendamentos" },
+  { chave: "intencoes", label: "Intenções da missa", href: "intencoes" },
+  { chave: "avisos", label: "Avisos", href: "avisos" },
+  { chave: "contatos", label: "Contatos", href: "contatos" },
+  { chave: "sobre", label: "Sobre", href: "sobre" }
 ];
 
 // Insere, no fim do conteúdo principal (antes do rodapé), os botões "‹ Anterior" e "Próxima ›"
@@ -328,16 +328,27 @@ function inserirNavegacaoEntrePaginas(paginaAtual) {
   const anterior = ORDEM_PAGINAS[(indice - 1 + ORDEM_PAGINAS.length) % ORDEM_PAGINAS.length];
   const proxima = ORDEM_PAGINAS[(indice + 1) % ORDEM_PAGINAS.length];
 
+  const seta = (direcao) => `
+    <svg class="navegacao-paginas__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="${direcao === "esquerda" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"}"/>
+    </svg>`;
+
   const nav = document.createElement("div");
   nav.className = "navegacao-paginas";
   nav.innerHTML = `
     <a class="navegacao-paginas__item navegacao-paginas__item--anterior" href="${anterior.href}" aria-label="Página anterior: ${anterior.label}">
-      <span class="navegacao-paginas__rotulo">‹ Anterior</span>
-      <span class="navegacao-paginas__nome">${anterior.label}</span>
+      ${seta("esquerda")}
+      <span class="navegacao-paginas__textos">
+        <span class="navegacao-paginas__rotulo">Anterior</span>
+        <span class="navegacao-paginas__nome">${anterior.label}</span>
+      </span>
     </a>
     <a class="navegacao-paginas__item navegacao-paginas__item--proxima" href="${proxima.href}" aria-label="Próxima página: ${proxima.label}">
-      <span class="navegacao-paginas__rotulo">Próxima ›</span>
-      <span class="navegacao-paginas__nome">${proxima.label}</span>
+      <span class="navegacao-paginas__textos">
+        <span class="navegacao-paginas__rotulo">Próxima</span>
+        <span class="navegacao-paginas__nome">${proxima.label}</span>
+      </span>
+      ${seta("direita")}
     </a>
   `;
 
@@ -402,7 +413,7 @@ export function inicializarNavegacao(paginaAtual) {
   const btnSair = document.getElementById("btnSair");
   btnSair?.addEventListener("click", () => {
     limparUsuarioSessao();
-    window.location.href = "index.html";
+    window.location.href = "/";
   });
 
   inserirNavegacaoEntrePaginas(paginaAtual);

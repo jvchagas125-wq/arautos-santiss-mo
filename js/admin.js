@@ -99,6 +99,7 @@ function iniciarPainel() {
   configurarIntencoes();
   configurarAvisos();
   configurarAcompanhamento();
+  configurarInfoContato();
   configurarContatos();
   configurarConfiguracoes();
 }
@@ -1363,6 +1364,53 @@ function escaparHtml(texto) {
   const div = document.createElement("div");
   div.textContent = texto || "";
   return div.innerHTML;
+}
+
+/* ---------------- Informações de contato do site público (endereço, telefone, Instagram) ---------------- */
+function configurarInfoContato() {
+  const form = document.getElementById("formInfoContato");
+  const campoTelefoneTexto = document.getElementById("campoContatoTelefoneTexto");
+  const campoTelefoneDigits = document.getElementById("campoContatoTelefoneDigits");
+  const campoEnderecoTexto = document.getElementById("campoContatoEnderecoTexto");
+  const campoEnderecoObs = document.getElementById("campoContatoEnderecoObs");
+  const campoEnderecoLink = document.getElementById("campoContatoEnderecoLink");
+  const campoInstagramTexto = document.getElementById("campoContatoInstagramTexto");
+  const campoInstagramLink = document.getElementById("campoContatoInstagramLink");
+
+  obterConfiguracoesGerais().then((config) => {
+    campoTelefoneTexto.value = config.contatoTelefoneTexto || "";
+    campoTelefoneDigits.value = config.contatoTelefoneDigits || "";
+    campoEnderecoTexto.value = config.contatoEnderecoTexto || "";
+    campoEnderecoObs.value = config.contatoEnderecoObs || "";
+    campoEnderecoLink.value = config.contatoEnderecoLink || "";
+    campoInstagramTexto.value = config.contatoInstagramTexto || "";
+    campoInstagramLink.value = config.contatoInstagramLink || "";
+  }).catch((err) => console.error(err));
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true;
+    btn.textContent = "Salvando...";
+    try {
+      await salvarConfiguracoesGerais({
+        contatoTelefoneTexto: campoTelefoneTexto.value.trim(),
+        contatoTelefoneDigits: campoTelefoneDigits.value.replace(/\D/g, ""),
+        contatoEnderecoTexto: campoEnderecoTexto.value.trim(),
+        contatoEnderecoObs: campoEnderecoObs.value.trim(),
+        contatoEnderecoLink: campoEnderecoLink.value.trim(),
+        contatoInstagramTexto: campoInstagramTexto.value.trim(),
+        contatoInstagramLink: campoInstagramLink.value.trim()
+      });
+      mostrarToast("Informações de contato atualizadas.");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar agora. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Salvar informações de contato";
+    }
+  });
 }
 
 /* ---------------- Contatos (pessoas cadastradas) ---------------- */

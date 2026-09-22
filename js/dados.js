@@ -18,7 +18,15 @@ const PADRAO_CONFIG_GERAL = {
   fraseDoDia: "Não omitais nunca a visita a cada dia ao Santíssimo Sacramento, ainda que seja muito breve, mas contanto que seja constante.",
   autorFrase: "São João Bosco",
   logoUrl: "",
-  fundoUrl: ""
+  fundoUrl: "",
+  // Página pública "Contatos" — editável em Configurações > Informações de contato
+  contatoTelefoneTexto: "(22) 2735-6577",
+  contatoTelefoneDigits: "552227356577", // só dígitos, com código do país — usado em "Ligar" e "WhatsApp"
+  contatoEnderecoTexto: "Rua Pedro Maciel Netto, 242 — Parque Residencial Santo Antônio",
+  contatoEnderecoObs: "(ao lado do Parque Imperial) — Campos dos Goytacazes/RJ, 28022-322",
+  contatoEnderecoLink: "https://www.google.com/maps/place/R.+Pedro+Maciel+Neto,+242+-+Res.+Santo+ANT%C3%94NIO,+Campos+dos+Goytacazes+-+RJ,+28022-322/@-21.801233,-41.3059589,19.75z/data=!4m15!1m8!3m7!1s0xbdd66e9dbc40e3:0x25c6c6949ccfc621!2sR.+Pedro+Maciel+Neto,+242+-+Res.+Santo+ANT%C3%94NIO,+Campos+dos+Goytacazes+-+RJ,+28022-322!3b1!8m2!3d-21.8010612!4d-41.3060419!16s%2Fg%2F11rz9kbt31!3m5!1s0xbdd66e9dbc40e3:0x25c6c6949ccfc621!8m2!3d-21.8010612!4d-41.3060419!16s%2Fg%2F11rz9kbt31?entry=ttu&g_ep=EgoyMDI2MDkxNi4wIKXMDSoASAFQAw%3D%3D",
+  contatoInstagramTexto: "@arautoscampos",
+  contatoInstagramLink: "https://www.instagram.com/arautoscampos"
 };
 
 export async function obterConfiguracoesGerais() {

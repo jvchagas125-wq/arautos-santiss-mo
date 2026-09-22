@@ -34,6 +34,10 @@ window.addEventListener("resize", () => {
   atrasoRedimensionar = setTimeout(ajustarTitulosParaCaber, 150);
 });
 
+// Guarda quais avisos a pessoa já abriu nesta visita (por id), para o card não fechar
+// sozinho sempre que a lista for atualizada em tempo real (ex.: outro aviso publicado).
+const abertosNestaVisita = new Set();
+
 ouvirAvisos((avisos) => {
   lista.innerHTML = "";
   elVazio.classList.toggle("oculto", avisos.length > 0);
@@ -42,27 +46,59 @@ ouvirAvisos((avisos) => {
     const card = document.createElement("div");
     card.className = "cartao-aviso";
 
+    const cabecalho = document.createElement("button");
+    cabecalho.type = "button";
+    cabecalho.className = "cartao-aviso__cabecalho";
+
+    const cabecalhoTexto = document.createElement("span");
+    cabecalhoTexto.className = "cartao-aviso__cabecalho-texto";
+
+    const titulo = document.createElement("span");
+    titulo.className = "cartao-aviso__titulo";
+    titulo.textContent = aviso.titulo || "";
+    cabecalhoTexto.appendChild(titulo);
+
+    const dica = document.createElement("span");
+    dica.className = "cartao-aviso__dica";
+    dica.textContent = "Toque aqui para ver o aviso";
+    cabecalhoTexto.appendChild(dica);
+
+    cabecalho.appendChild(cabecalhoTexto);
+    cabecalho.insertAdjacentHTML("beforeend",
+      `<svg class="cartao-aviso__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`
+    );
+
+    const corpo = document.createElement("div");
+    corpo.className = "cartao-aviso__corpo oculto";
+
     if (aviso.imagemUrl) {
       const img = document.createElement("img");
       img.className = "cartao-aviso__img";
       img.src = aviso.imagemUrl;
       img.alt = aviso.titulo || "";
-      card.appendChild(img);
+      corpo.appendChild(img);
     }
-
-    const corpo = document.createElement("div");
-    corpo.className = "cartao-aviso__corpo";
-
-    const titulo = document.createElement("div");
-    titulo.className = "cartao-aviso__titulo";
-    titulo.textContent = aviso.titulo || "";
-    corpo.appendChild(titulo);
 
     const texto = document.createElement("p");
     texto.className = "cartao-aviso__texto";
     linkificarTexto(aviso.texto || "", texto);
     corpo.appendChild(texto);
 
+    const jaAberto = abertosNestaVisita.has(aviso.id);
+    card.classList.toggle("aberto", jaAberto);
+    corpo.classList.toggle("oculto", !jaAberto);
+
+    cabecalho.addEventListener("click", () => {
+      const vaiAbrir = !card.classList.contains("aberto");
+      card.classList.toggle("aberto", vaiAbrir);
+      corpo.classList.toggle("oculto", !vaiAbrir);
+      dica.textContent = vaiAbrir ? "Toque aqui para esconder o aviso" : "Toque aqui para ver o aviso";
+      if (vaiAbrir) abertosNestaVisita.add(aviso.id);
+      else abertosNestaVisita.delete(aviso.id);
+    });
+    if (jaAberto) dica.textContent = "Toque aqui para esconder o aviso";
+
+    card.appendChild(cabecalho);
     card.appendChild(corpo);
     lista.appendChild(card);
   });

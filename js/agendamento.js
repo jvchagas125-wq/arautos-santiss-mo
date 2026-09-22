@@ -466,7 +466,7 @@ document.getElementById("btnConfirmarModal").addEventListener("click", async (e)
       data: dataSelecionada,
       hora: horaSelecionada
     });
-    window.location.href = "meus-agendamentos.html";
+    window.location.href = "meus-agendamentos";
   } catch (err) {
     console.error(err);
     fecharModal(modalConfirmacao);
