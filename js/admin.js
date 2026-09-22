@@ -1377,6 +1377,14 @@ function configurarInfoContato() {
   const campoInstagramTexto = document.getElementById("campoContatoInstagramTexto");
   const campoInstagramLink = document.getElementById("campoContatoInstagramLink");
 
+  /* ---------- Acordeão: abrir/fechar as informações de contato do site público ---------- */
+  const quadroInfoContato = document.getElementById("quadroInfoContato");
+  const corpoInfoContato = document.getElementById("corpoInfoContato");
+  document.getElementById("cabecalhoInfoContato").addEventListener("click", () => {
+    quadroInfoContato.classList.toggle("aberto");
+    corpoInfoContato.classList.toggle("oculto");
+  });
+
   obterConfiguracoesGerais().then((config) => {
     campoTelefoneTexto.value = config.contatoTelefoneTexto || "";
     campoTelefoneDigits.value = config.contatoTelefoneDigits || "";
@@ -1478,7 +1486,7 @@ function configurarContatos() {
 
     lista.querySelectorAll(".card-contato__editar").forEach((btn) => {
       btn.addEventListener("click", () => {
-        entrarEmModoEdicao(btn.dataset.tel, btn.dataset.nome, btn.dataset.telFormatado);
+        abrirEdicao(btn.dataset.tel, btn.dataset.nome, btn.dataset.telFormatado);
       });
     });
   }
@@ -1498,8 +1506,8 @@ function configurarContatos() {
       await excluirUsuario(telefoneParaRemover);
       mostrarToast("Cadastro removido com sucesso.");
       fecharModal(modalRemover);
-      // se a pessoa removida estava sendo editada no formulário, sai do modo edição
-      if (telefoneParaRemover === telefoneDigitsEmEdicao) sairDoModoEdicao();
+      // se a pessoa removida estava com o modal de edição aberto, fecha o modal
+      if (telefoneParaRemover === telefoneDigitsEmEdicao) fecharEdicao();
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível remover o cadastro. Tente novamente.");
@@ -1525,40 +1533,16 @@ function configurarContatos() {
     corpoContatos.classList.toggle("oculto");
   });
 
-  /* ---------- Formulário: cadastrar nova pessoa / editar pessoa existente ---------- */
+  /* ---------- Formulário: cadastrar nova pessoa ---------- */
   const formContato = document.getElementById("formContato");
   const campoNomeContato = document.getElementById("campoNomeContato");
   const campoTelefoneContato = document.getElementById("campoTelefoneContato");
   const btnSalvarContato = document.getElementById("btnSalvarContato");
-  const btnCancelarEdicaoContato = document.getElementById("btnCancelarEdicaoContato");
-  const tituloFormContato = document.getElementById("tituloFormContato");
 
   vincularMascaraTelefone(campoTelefoneContato);
   campoNomeContato.addEventListener("blur", () => {
     if (campoNomeContato.value.trim()) campoNomeContato.value = capitalizarNome(campoNomeContato.value.trim());
   });
-
-  let telefoneDigitsEmEdicao = null; // null = cadastrando pessoa nova; string = editando esse telefone
-
-  function entrarEmModoEdicao(telefoneDigits, nome, telefoneFormatado) {
-    telefoneDigitsEmEdicao = telefoneDigits;
-    campoNomeContato.value = nome || "";
-    campoTelefoneContato.value = telefoneFormatado || "";
-    tituloFormContato.textContent = "Editar pessoa";
-    btnSalvarContato.textContent = "Salvar alterações";
-    btnCancelarEdicaoContato.classList.remove("oculto");
-    document.getElementById("painelFormContato").scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => campoNomeContato.focus(), 300);
-  }
-
-  function sairDoModoEdicao() {
-    telefoneDigitsEmEdicao = null;
-    formContato.reset();
-    tituloFormContato.textContent = "Cadastrar pessoa";
-    btnSalvarContato.textContent = "Cadastrar";
-    btnCancelarEdicaoContato.classList.add("oculto");
-  }
-  btnCancelarEdicaoContato.addEventListener("click", sairDoModoEdicao);
 
   formContato.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1578,7 +1562,75 @@ function configurarContatos() {
     const telefoneDigits = telefoneParaDigits(telefoneFormatado);
 
     btnSalvarContato.disabled = true;
-    btnSalvarContato.textContent = telefoneDigitsEmEdicao ? "Salvando..." : "Cadastrando...";
+    btnSalvarContato.textContent = "Cadastrando...";
+    try {
+      const existente = await obterUsuario(telefoneDigits);
+      if (existente && existente.nome) {
+        mostrarToast(`Esse telefone já está cadastrado para ${existente.nome}. Edite o cadastro existente na lista.`);
+        return;
+      }
+      await cadastrarOuAtualizarUsuario(telefoneDigits, nome, telefoneFormatado);
+      mostrarToast("Pessoa cadastrada com sucesso!");
+      formContato.reset();
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar o cadastro. Verifique sua conexão.");
+    } finally {
+      btnSalvarContato.disabled = false;
+      btnSalvarContato.textContent = "Cadastrar";
+    }
+  });
+
+  /* ---------- Modal: editar pessoa cadastrada ---------- */
+  const modalEditar = document.getElementById("modalEditarContato");
+  const formEditarContato = document.getElementById("formEditarContato");
+  const campoNomeEditar = document.getElementById("campoNomeEditarContato");
+  const campoTelefoneEditar = document.getElementById("campoTelefoneEditarContato");
+  const btnSalvarEditar = document.getElementById("btnSalvarEditarContato");
+  const btnCancelarEditar = document.getElementById("btnCancelarEditarContato");
+  const fecharModalEditar = document.getElementById("fecharModalEditarContato");
+  let telefoneDigitsEmEdicao = null;
+
+  vincularMascaraTelefone(campoTelefoneEditar);
+  campoNomeEditar.addEventListener("blur", () => {
+    if (campoNomeEditar.value.trim()) campoNomeEditar.value = capitalizarNome(campoNomeEditar.value.trim());
+  });
+
+  function abrirEdicao(telefoneDigits, nome, telefoneFormatado) {
+    telefoneDigitsEmEdicao = telefoneDigits;
+    campoNomeEditar.value = nome || "";
+    campoTelefoneEditar.value = telefoneFormatado || "";
+    abrirModal(modalEditar);
+    setTimeout(() => campoNomeEditar.focus(), 300);
+  }
+
+  function fecharEdicao() {
+    fecharModal(modalEditar);
+    telefoneDigitsEmEdicao = null;
+  }
+  btnCancelarEditar.addEventListener("click", fecharEdicao);
+  fecharModalEditar.addEventListener("click", fecharEdicao);
+
+  formEditarContato.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!telefoneDigitsEmEdicao) return;
+
+    const nome = capitalizarNome(campoNomeEditar.value.trim());
+    if (nome.split(" ").filter(Boolean).length < 2) {
+      mostrarToast("Digite o nome completo da pessoa.");
+      campoNomeEditar.focus();
+      return;
+    }
+    const telefoneFormatado = campoTelefoneEditar.value.trim();
+    if (!telefoneValido(telefoneFormatado)) {
+      mostrarToast("Digite um telefone válido, ex: (11) 91234-5678.");
+      campoTelefoneEditar.focus();
+      return;
+    }
+    const telefoneDigits = telefoneParaDigits(telefoneFormatado);
+
+    btnSalvarEditar.disabled = true;
+    btnSalvarEditar.textContent = "Salvando...";
     try {
       // impede sobrescrever sem querer o cadastro de outra pessoa que já usa esse telefone
       if (telefoneDigits !== telefoneDigitsEmEdicao) {
@@ -1588,21 +1640,15 @@ function configurarContatos() {
           return;
         }
       }
-
-      if (telefoneDigitsEmEdicao) {
-        await editarUsuario(telefoneDigitsEmEdicao, telefoneDigits, nome, telefoneFormatado);
-        mostrarToast("Cadastro atualizado com sucesso!");
-      } else {
-        await cadastrarOuAtualizarUsuario(telefoneDigits, nome, telefoneFormatado);
-        mostrarToast("Pessoa cadastrada com sucesso!");
-      }
-      sairDoModoEdicao();
+      await editarUsuario(telefoneDigitsEmEdicao, telefoneDigits, nome, telefoneFormatado);
+      mostrarToast("Cadastro atualizado com sucesso!");
+      fecharEdicao();
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível salvar o cadastro. Verifique sua conexão.");
     } finally {
-      btnSalvarContato.disabled = false;
-      btnSalvarContato.textContent = telefoneDigitsEmEdicao ? "Salvar alterações" : "Cadastrar";
+      btnSalvarEditar.disabled = false;
+      btnSalvarEditar.textContent = "Salvar alterações";
     }
   });
 }

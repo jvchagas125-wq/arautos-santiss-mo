@@ -300,8 +300,12 @@
         <h1 class="titulo-pagina">Contatos</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-        <div class="painel">
-          <div class="painel__titulo"><span class="emoji">☎️</span> Informações de contato do site público</div>
+        <div class="quadro-dia-missa aberto" id="quadroInfoContato">
+          <div class="quadro-dia-missa__cabecalho" id="cabecalhoInfoContato">
+            <svg class="quadro-dia-missa__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            <span class="quadro-dia-missa__titulo"><span class="emoji">☎️</span> Informações de contato do site público</span>
+          </div>
+          <div class="quadro-dia-missa__corpo" id="corpoInfoContato">
           <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
             Esses dados aparecem na página "Contatos" que qualquer pessoa vê no site — não têm relação com as
             pessoas cadastradas logo abaixo.
@@ -338,10 +342,11 @@
             </div>
             <button type="submit" class="btn btn-dourado">Salvar informações de contato</button>
           </form>
+          </div>
         </div>
 
         <div class="painel" id="painelFormContato">
-          <div class="painel__titulo"><span class="emoji">➕</span> <span id="tituloFormContato">Cadastrar pessoa</span></div>
+          <div class="painel__titulo"><span class="emoji">➕</span> Cadastrar pessoa</div>
           <form id="formContato">
             <div class="campo">
               <label for="campoNomeContato">Nome completo</label>
@@ -351,10 +356,7 @@
               <label for="campoTelefoneContato">Telefone (WhatsApp)</label>
               <input type="tel" id="campoTelefoneContato" placeholder="(00) 00000-0000" inputmode="numeric" autocomplete="off" required />
             </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button type="submit" class="btn btn-dourado" id="btnSalvarContato">Cadastrar</button>
-              <button type="button" class="btn btn-contorno oculto" id="btnCancelarEdicaoContato">Cancelar edição</button>
-            </div>
+            <button type="submit" class="btn btn-dourado" id="btnSalvarContato">Cadastrar</button>
           </form>
         </div>
 
@@ -423,6 +425,28 @@
       </section>
 
     </main>
+  </div>
+
+  <!-- Modal de edição de pessoa cadastrada -->
+  <div class="modal-overlay" id="modalEditarContato">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalEditarContato" aria-label="Fechar">&times;</button>
+      <h3>Editar pessoa</h3>
+      <form id="formEditarContato" style="text-align:left;">
+        <div class="campo">
+          <label for="campoNomeEditarContato">Nome completo</label>
+          <input type="text" id="campoNomeEditarContato" placeholder="Digite o nome completo" autocomplete="off" required />
+        </div>
+        <div class="campo" style="margin-bottom:0;">
+          <label for="campoTelefoneEditarContato">Telefone (WhatsApp)</label>
+          <input type="tel" id="campoTelefoneEditarContato" placeholder="(00) 00000-0000" inputmode="numeric" autocomplete="off" required />
+        </div>
+        <div class="modal__acoes">
+          <button type="button" class="btn btn-contorno btn-full" id="btnCancelarEditarContato">Cancelar</button>
+          <button type="submit" class="btn btn-dourado btn-full" id="btnSalvarEditarContato">Salvar alterações</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Modal confirmação de remoção de contato -->

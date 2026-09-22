@@ -319,6 +319,7 @@ const ORDEM_PAGINAS = [
 // Insere, no fim do conteúdo principal (antes do rodapé), os botões "‹ Anterior" e "Próxima ›"
 // que levam para a página vizinha nesse ciclo. Páginas fora da lista (ex.: admin) não recebem nada.
 function inserirNavegacaoEntrePaginas(paginaAtual) {
+  if (paginaAtual === "index") return; // página inicial não mostra "Anterior / Próxima"
   const indice = ORDEM_PAGINAS.findIndex((p) => p.chave === paginaAtual);
   if (indice === -1) return;
 
