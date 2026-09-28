@@ -210,8 +210,39 @@ semanaProxima.addEventListener("click", () => {
   if (indiceSemanaAtual < blocosSemana.length - 1) { indiceSemanaAtual++; renderizarGradeSemanal(); }
 });
 
-document.getElementById("btnVerCalendarioAgendamentos").addEventListener("click", () => abrirModal(modalCalendarioAgendamentos));
-document.getElementById("fecharModalCalendarioAgendamentos").addEventListener("click", () => fecharModal(modalCalendarioAgendamentos));
+// ---- Botão "Ver planilha de agendamento": abre a planilha em tela cheia, tanto no computador
+// quanto no celular (classe .tela-cheia, ver css/style.css). No celular, tenta também girar a
+// tela pra paisagem — melhor pra ver várias colunas da semana de uma vez (ver girarTelaSePossivel
+// logo abaixo; em navegadores sem suporte, como Safari/iOS, simplesmente não faz nada). ----
+document.getElementById("btnVerCalendarioAgendamentos").addEventListener("click", () => {
+  modalCalendarioAgendamentos.classList.add("tela-cheia");
+  abrirModal(modalCalendarioAgendamentos);
+  girarTelaSePossivel();
+});
+document.getElementById("fecharModalCalendarioAgendamentos").addEventListener("click", () => {
+  fecharModal(modalCalendarioAgendamentos);
+  modalCalendarioAgendamentos.classList.remove("tela-cheia");
+  desfazerGirarTela();
+});
+
+async function girarTelaSePossivel() {
+  if (!window.matchMedia("(max-width: 899px)").matches) return; // só no celular
+  try {
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    }
+    if (screen.orientation && screen.orientation.lock) {
+      await screen.orientation.lock("landscape");
+    }
+  } catch {
+    // sem suporte (comum no iOS/Safari) ou o navegador/pessoa bloqueou — a planilha continua
+    // abrindo normalmente em tela cheia, só sem girar sozinha; a pessoa gira manualmente.
+  }
+}
+function desfazerGirarTela() {
+  try { screen.orientation?.unlock?.(); } catch {}
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch {}
+}
 
 // monta o "cartão" de uma pessoa (só o nome — o telefone é dado sensível e fica visível
 // apenas no painel administrativo, nunca no site público) — usado tanto pela grade semanal

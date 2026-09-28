@@ -103,8 +103,13 @@
           </div>
         </div>
 
-        <button type="button" class="btn btn-contorno btn-full btn-ver-tabela-mobile" id="btnVerCalendarioAgendamentos" style="margin-top:8px;">
-          <span class="emoji">📅</span> Ver calendário de agendamentos
+        <button type="button" class="btn btn-contorno btn-full btn-ver-planilha" id="btnVerCalendarioAgendamentos" style="margin-top:8px;">
+          <svg class="icone-planilha" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="4" fill="#1D6F42" />
+            <rect x="5.2" y="5.2" width="13.6" height="13.6" rx="1.5" fill="#fff" fill-opacity=".95" />
+            <path d="M5.2 10.3h13.6M5.2 14.7h13.6M10.4 5.2v13.6M14.8 5.2v13.6" stroke="#1D6F42" stroke-width="1.2" />
+          </svg>
+          Ver planilha de agendamento
         </button>
 
         <button class="btn btn-vermelho btn-full" id="btnConfirmarAgendamento" style="margin-top:8px;" disabled>
@@ -122,16 +127,17 @@
         </div>
       </div>
 
-      <!-- No celular isto é um modal (aberto pelo botão "Ver calendário de agendamentos"); a partir de
-           900px de largura, o CSS "desmonta" o modal e ele passa a aparecer sempre, como uma
-           segunda coluna ao lado dos horários. Mesmo layout/cores da planilha (Excel) exportada em
-           "Acompanhamento" no painel administrativo, só que ao vivo: uma semana por vez, células
-           coloridas por grupo/Missa/horário livre; ao tocar numa célula com gente, mostra os
-           detalhes de quem reservou. -->
+      <!-- No celular e no computador, o botão "Ver planilha de agendamento" abre isto em tela cheia
+           (classe .tela-cheia, aplicada via JS — ver js/agendamento.js), sem cortar nenhuma coluna.
+           Enquanto não está em tela cheia, a partir de 900px de largura o CSS "desmonta" o modal e
+           ele passa a aparecer sempre, como uma segunda coluna (resumida) ao lado dos horários.
+           Mesmo layout/cores da planilha (Excel) exportada em "Acompanhamento" no painel
+           administrativo, só que ao vivo: uma semana por vez, células coloridas por grupo/Missa/
+           horário livre; ao tocar numa célula com gente, mostra os detalhes de quem reservou. -->
       <div class="modal-overlay" id="modalCalendarioAgendamentos">
         <div class="modal modal--calendario-agendamentos modal--largo">
           <button class="modal--fechar" id="fecharModalCalendarioAgendamentos" aria-label="Fechar">&times;</button>
-          <div class="painel__titulo calendario-agendamentos__titulo"><span class="emoji">📅</span> Calendário de agendamentos</div>
+          <div class="painel__titulo calendario-agendamentos__titulo"><span class="emoji">📅</span> Planilha de agendamento</div>
 
           <div class="grade-semanal" id="gradeSemanalAgendamentos">
             <div class="grade-semanal__cabecalho">

@@ -614,19 +614,42 @@ img{ max-width: 100%; display:block; }
 .legenda-grupos__lista li strong{ color: var(--vermelho-escuro); }
 .legenda-grupos__obs{ margin:0; font-size:.78rem; line-height:1.5; color: var(--texto-suave); font-style:italic; }
 
-/* ---------- Agendamento: calendário de agendamentos (igual ao "Acompanhamento" do painel
+/* ---------- Agendamento: planilha de agendamentos (igual ao "Acompanhamento" do painel
    administrativo) ----------
-   No celular fica dentro de um modal, aberto pelo botão "Ver calendário de agendamentos". A
-   partir de 900px (computador) o CSS "desmonta" esse modal — vira uma segunda coluna sempre
-   visível ao lado dos horários, atualizando em tempo real conforme as pessoas agendam (ver media
-   query mais abaixo, junto com ".agendamento-colunas"). Dias com agendamento ficam em destaque
-   com um selo de quantidade; tocar num dia abre os detalhes de quem reservou em cada horário. */
+   Fora do modo tela cheia, no celular fica dentro de um modal comum, aberto pelo botão "Ver
+   planilha de agendamento". A partir de 900px (computador) o CSS "desmonta" esse modal — vira uma
+   segunda coluna resumida, sempre visível ao lado dos horários, atualizando em tempo real conforme
+   as pessoas agendam (ver media query mais abaixo, junto com ".agendamento-colunas"). O mesmo botão
+   "Ver planilha de agendamento" também funciona no computador: ao ser clicado, o JS adiciona a
+   classe .tela-cheia (ver bloco mais abaixo), que tira a planilha desse modo "encaixado" e mostra
+   ela como um overlay ocupando quase a tela toda — em qualquer tamanho de tela — pra nenhuma coluna
+   ficar cortada. Dias com agendamento ficam em destaque com um selo de quantidade; tocar num dia
+   abre os detalhes de quem reservou em cada horário. */
 .agendamento-colunas{ display:flex; flex-direction:column; width:100%; }
 .agendamento-colunas__principal{ display:flex; flex-direction:column; width:100%; }
-.btn-ver-tabela-mobile{ display:flex; align-items:center; justify-content:center; gap:8px; }
+.btn-ver-planilha{ display:flex; align-items:center; justify-content:center; gap:8px; }
+.btn-ver-planilha .icone-planilha{ width:18px; height:18px; flex-shrink:0; }
 
 .modal--calendario-agendamentos{ max-width: min(94vw, 640px); text-align:center; }
 .calendario-agendamentos__titulo{ justify-content:center; flex-shrink:0; }
+
+/* ---------- Versão "tela cheia" da planilha (botão "Ver planilha de agendamento", computador e
+   celular): tira o elemento do modo "encaixado" (normal no celular / 2ª coluna no computador,
+   ver acima e a media query de 900px) e mostra como overlay quase do tamanho da tela inteira,
+   em qualquer largura — a especificidade de "#id.tela-cheia" garante que isso vence as regras
+   acima, sem precisar de !important. */
+#modalCalendarioAgendamentos.tela-cheia{
+  position:fixed; inset:0; background: rgba(15,3,5,.6); backdrop-filter: blur(3px);
+  display:flex; align-items:center; justify-content:center; padding:14px;
+  opacity:0; pointer-events:none; transition: opacity var(--transicao); z-index:400;
+}
+#modalCalendarioAgendamentos.tela-cheia.aberto{ opacity:1; pointer-events:auto; }
+#modalCalendarioAgendamentos.tela-cheia .modal{
+  max-width:min(97vw, 1400px); width:100%; max-height:min(94vh, 900px); height:94vh;
+  transform: scale(.94) translateY(8px); transition: transform var(--transicao);
+}
+#modalCalendarioAgendamentos.tela-cheia.aberto .modal{ transform: scale(1) translateY(0); }
+#modalCalendarioAgendamentos.tela-cheia .modal--fechar{ display:block; }
 
 /* ---------- Grade semanal de agendamentos: mesmo layout/cores da planilha (Excel) exportada
    em Acompanhamento no painel admin, ao vivo no site público (ver js/agendamento.js). ---------- */
@@ -723,7 +746,6 @@ img{ max-width: 100%; display:block; }
     max-height: min(760px, 80vh);
   }
   #modalCalendarioAgendamentos .modal--fechar{ display:none; }
-  .btn-ver-tabela-mobile{ display:none; }
 }
 
 /* ---------- Avisos (acordeão: só o título fica visível até a pessoa tocar) ---------- */
