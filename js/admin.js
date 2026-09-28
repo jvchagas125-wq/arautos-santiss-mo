@@ -1769,6 +1769,7 @@ function configurarBanners() {
   const previewImagemNovo = document.getElementById("previewBannerImagem");
   const campoTexto = document.getElementById("campoBannerTexto");
   const campoDestino = document.getElementById("campoBannerDestino");
+  const campoLink = document.getElementById("campoBannerLink");
   const listaBannersAdmin = document.getElementById("listaBannersAdmin");
   const bannerSemBanners = document.getElementById("bannerSemBanners");
   const cabecalhoBannersAdmin = document.getElementById("cabecalhoBannersAdmin");
@@ -1795,6 +1796,36 @@ function configurarBanners() {
   }
   preencherSelectDestino(campoDestino);
 
+  // O destino de um banner pode ser uma página do próprio site (select, como sempre foi) OU um
+  // link qualquer digitado à mão (site externo, WhatsApp, Instagram...) — os dois casos ficam
+  // guardados no mesmo campo "paginaDestino" no banco; um link é só um valor que não bate com
+  // nenhuma página conhecida (ver ehLinkPersonalizado/normalizarLink abaixo).
+  function ehLinkPersonalizado(valor) {
+    return !PAGINAS_DESTINO_BANNER.some((p) => p.href === valor);
+  }
+  function normalizarLink(valor) {
+    const v = (valor || "").trim();
+    if (!v || /^https?:\/\//i.test(v)) return v;
+    return "https://" + v; // conveniência: digitou só "wa.me/..." ou "instagram.com/..." sem o https://
+  }
+
+  // alterna a visibilidade/obrigatoriedade entre o <select> de páginas e o <input> de link,
+  // conforme os rádios "Página do site" / "Link personalizado" — reaproveitado tanto pro
+  // formulário de novo banner quanto pro formulário de edição de cada banner já cadastrado.
+  function configurarAlternanciaDestino(radios, select, linkInput) {
+    function atualizar() {
+      const modoLink = [...radios].some((r) => r.checked && r.value === "link");
+      select.classList.toggle("oculto", modoLink);
+      linkInput.classList.toggle("oculto", !modoLink);
+      select.required = !modoLink;
+      linkInput.required = modoLink;
+    }
+    radios.forEach((r) => r.addEventListener("change", atualizar));
+    atualizar();
+    return atualizar;
+  }
+  const atualizarDestinoNovo = configurarAlternanciaDestino(formNovo.querySelectorAll('input[name=bannerDestinoTipo]'), campoDestino, campoLink);
+
   campoImagem.addEventListener("change", () => {
     const file = campoImagem.files[0];
     if (!file) { previewImagemNovo.classList.add("oculto"); return; }
@@ -1807,6 +1838,9 @@ function configurarBanners() {
     const btn = formNovo.querySelector("button[type=submit]");
     const file = campoImagem.files[0];
     if (!file) { mostrarToast("Selecione uma imagem para o banner."); return; }
+    const modoLink = [...formNovo.querySelectorAll('input[name=bannerDestinoTipo]')].some((r) => r.checked && r.value === "link");
+    const paginaDestino = modoLink ? normalizarLink(campoLink.value) : campoDestino.value;
+    if (modoLink && !paginaDestino) { mostrarToast("Informe o link para onde o banner deve levar."); return; }
     btn.disabled = true;
     try {
       btn.textContent = "Enviando imagem...";
@@ -1815,10 +1849,11 @@ function configurarBanners() {
       await criarBanner({
         imagemUrl,
         textoBotao: campoTexto.value.trim(),
-        paginaDestino: campoDestino.value
+        paginaDestino
       });
       formNovo.reset();
       previewImagemNovo.classList.add("oculto");
+      atualizarDestinoNovo();
       mostrarToast("Banner adicionado!");
     } catch (err) {
       console.error(err);
@@ -1836,12 +1871,15 @@ function configurarBanners() {
     lista.forEach((banner, indice) => {
       const nomeDestino = (PAGINAS_DESTINO_BANNER.find((p) => p.href === banner.paginaDestino) || {}).label || banner.paginaDestino;
 
+      const temBotao = !!(banner.textoBotao && banner.textoBotao.trim());
+      const ehLink = ehLinkPersonalizado(banner.paginaDestino);
+
       const card = document.createElement("div");
       card.className = "cartao-aviso-admin";
       card.innerHTML = `
         <img src="${banner.imagemUrl}" alt="" class="cartao-aviso-admin__img" />
         <div class="cartao-aviso-admin__corpo">
-          <div class="cartao-aviso-admin__titulo">${escaparHtml(banner.textoBotao)}</div>
+          <div class="cartao-aviso-admin__titulo">${temBotao ? escaparHtml(banner.textoBotao) : '<em style="color:var(--texto-suave); font-style:italic; font-weight:400;">(sem botão)</em>'}</div>
           <p class="cartao-aviso-admin__texto">Leva para: ${escaparHtml(nomeDestino)}</p>
           <div class="cartao-aviso-admin__acoes">
             <button type="button" class="btn btn-contorno btn-pequeno btn-subir-banner" title="Mover para cima" ${indice === 0 ? "disabled" : ""}>↑</button>
@@ -1858,12 +1896,17 @@ function configurarBanners() {
               <input type="file" class="campo-edit-imagem-banner" accept="image/*" />
             </div>
             <div class="campo">
-              <label>Texto do botão</label>
-              <input type="text" class="campo-edit-texto-banner" value="${escaparHtml(banner.textoBotao)}" required />
+              <label>Texto do botão (opcional)</label>
+              <input type="text" class="campo-edit-texto-banner" value="${escaparHtml(banner.textoBotao || "")}" placeholder="Deixe em branco para não mostrar nenhum botão sobre o banner" />
             </div>
             <div class="campo" style="margin-bottom:0;">
-              <label>Página de destino</label>
+              <label>Para onde o banner leva ao ser tocado</label>
+              <div class="banner-destino-tipo">
+                <label><input type="radio" name="bannerDestinoTipoEdit${indice}" class="campo-edit-destino-tipo" value="pagina" ${ehLink ? "" : "checked"} /> Página do site</label>
+                <label><input type="radio" name="bannerDestinoTipoEdit${indice}" class="campo-edit-destino-tipo" value="link" ${ehLink ? "checked" : ""} /> Link (site externo, WhatsApp, etc.)</label>
+              </div>
               <select class="campo-edit-destino-banner"></select>
+              <input type="text" class="campo-edit-link-banner oculto" placeholder="Ex: https://wa.me/5511999999999" value="${ehLink ? escaparHtml(banner.paginaDestino || "") : ""}" />
             </div>
             <div class="cartao-aviso-admin__acoes" style="margin-top:12px;">
               <button type="button" class="btn btn-contorno btn-pequeno btn-cancelar-edicao-banner">Cancelar</button>
@@ -1873,7 +1916,12 @@ function configurarBanners() {
         </div>
       `;
       listaBannersAdmin.appendChild(card);
-      preencherSelectDestino(card.querySelector(".campo-edit-destino-banner"), banner.paginaDestino);
+      preencherSelectDestino(card.querySelector(".campo-edit-destino-banner"), ehLink ? "" : banner.paginaDestino);
+      configurarAlternanciaDestino(
+        card.querySelectorAll(".campo-edit-destino-tipo"),
+        card.querySelector(".campo-edit-destino-banner"),
+        card.querySelector(".campo-edit-link-banner")
+      );
 
       const formEdicao = card.querySelector(".form-editar-banner");
       const btnEditar = card.querySelector(".btn-editar-banner");
@@ -1913,9 +1961,12 @@ function configurarBanners() {
         const btnSalvar = formEdicao.querySelector("button[type=submit]");
         btnSalvar.disabled = true;
         try {
+          const modoLinkEdit = [...formEdicao.querySelectorAll(".campo-edit-destino-tipo")].some((r) => r.checked && r.value === "link");
+          const linkEdit = formEdicao.querySelector(".campo-edit-link-banner").value;
+          if (modoLinkEdit && !normalizarLink(linkEdit)) { mostrarToast("Informe o link para onde o banner deve levar."); btnSalvar.disabled = false; btnSalvar.textContent = "Salvar"; return; }
           const dadosSalvar = {
             textoBotao: formEdicao.querySelector(".campo-edit-texto-banner").value.trim(),
-            paginaDestino: formEdicao.querySelector(".campo-edit-destino-banner").value
+            paginaDestino: modoLinkEdit ? normalizarLink(linkEdit) : formEdicao.querySelector(".campo-edit-destino-banner").value
           };
           const fileEdicao = formEdicao.querySelector(".campo-edit-imagem-banner").files[0];
           if (fileEdicao) {

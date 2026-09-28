@@ -80,6 +80,12 @@ function criarSlideBanner(banner, indice) {
   const slide = document.createElement("a");
   slide.className = "carrossel-banners__slide";
   slide.href = banner.paginaDestino || "#";
+  // link externo (ex.: WhatsApp, Instagram, outro site) abre em nova aba, pra não tirar a
+  // pessoa do site; página interna continua navegando normalmente na mesma aba.
+  if (/^https?:\/\//i.test(banner.paginaDestino || "")) {
+    slide.target = "_blank";
+    slide.rel = "noopener noreferrer";
+  }
 
   const img = document.createElement("img");
   img.className = "carrossel-banners__img";
