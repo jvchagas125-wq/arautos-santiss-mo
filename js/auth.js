@@ -2,7 +2,7 @@
 // e cadastro (nome + telefone) apenas na primeira vez que aquele número aparece.
 import { cadastrarOuAtualizarUsuario, obterUsuario } from "./dados.js";
 import {
-  capitalizarNome, vincularMascaraTelefone, telefoneValido, telefoneParaDigits,
+  capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits,
   obterUsuarioSessao, salvarUsuarioSessao, limparUsuarioSessao, abrirModal, fecharModal, mostrarToast,
   comLimiteDeTempo
 } from "./utils.js";
@@ -24,9 +24,9 @@ const MODAL_HTML = `
         <span class="campo-erro">Digite um telefone válido, ex: (11) 91234-5678.</span>
       </div>
       <div class="campo oculto" id="campoNome">
-        <label for="inputNome">Nome completo</label>
-        <input type="text" id="inputNome" placeholder="Digite seu nome" autocomplete="name" />
-        <span class="campo-erro">Por favor, digite seu nome completo.</span>
+        <label for="inputNome">Nome e sobrenome</label>
+        <input type="text" id="inputNome" placeholder="Ex: Maria Silva" autocomplete="name" />
+        <span class="campo-erro">Por favor, digite seu nome e sobrenome.</span>
       </div>
       <button type="submit" class="btn btn-dourado btn-full">Continuar</button>
       <button type="button" class="btn btn-contorno btn-full oculto" id="btnTrocarNumero" style="margin-top:10px;">← Usar outro número</button>
@@ -141,12 +141,15 @@ export function exigirCadastro() {
       }
 
       // fase === "nome": concluir o cadastro novo
-      const nome = capitalizarNome(inputNome.value.trim());
-      if (nome.split(" ").filter(Boolean).length < 2) {
+      // guarda só "nome + primeiro sobrenome" (mesmo que a pessoa digite o nome completo) —
+      // evita nomes grandes demais nos quadrados da grade de agendamentos
+      const nomeDigitado = capitalizarNome(inputNome.value.trim());
+      if (nomeDigitado.split(" ").filter(Boolean).length < 2) {
         campoNome.classList.add("invalido");
         return;
       }
       campoNome.classList.remove("invalido");
+      const nome = reduzirNomeParaExibicao(nomeDigitado);
 
       btnSubmit.disabled = true;
       btnSubmit.textContent = "Aguarde...";

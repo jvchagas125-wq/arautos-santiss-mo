@@ -33,6 +33,27 @@ export function capitalizarNome(nome) {
     .join(" ");
 }
 
+/* ---------- Nome: reduz para "primeiro nome + primeiro sobrenome" ----------
+   Usado no cadastro (novo ou existente) para os nomes não ficarem grandes demais nos
+   quadrados da grade de agendamentos. Preserva um conector minúsculo (de/da/do/das/dos)
+   que vier imediatamente antes do sobrenome, ex: "Maria Eduarda da Silva Santos" -> "Maria da Silva".
+   Nomes de uma palavra só voltam como estão (não há sobrenome pra pegar). */
+export function reduzirNomeParaExibicao(nomeCompleto) {
+  const partes = (nomeCompleto || "").trim().split(/\s+/).filter(Boolean);
+  if (partes.length <= 1) return partes.join(" ");
+
+  const primeiroNome = partes[0];
+  let i = 1;
+  const conectores = [];
+  while (i < partes.length && MINUSCULAS.includes(partes[i].toLowerCase())) {
+    conectores.push(partes[i]);
+    i++;
+  }
+  if (i >= partes.length) return partes.join(" "); // só tinha conectores depois do 1º nome (raro)
+
+  return [primeiroNome, ...conectores, partes[i]].join(" ");
+}
+
 /* ---------- Telefone: máscara (XX) XXXXX-XXXX ---------- */
 export function aplicarMascaraTelefone(valor) {
   let d = valor.replace(/\D/g, "");

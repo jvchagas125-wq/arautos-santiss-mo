@@ -150,6 +150,19 @@ export async function editarUsuario(telefoneDigitsAntigo, novoTelefoneDigits, no
   }
 }
 
+// Só o nome (usado por "Padronizar nomes", em massa, no painel admin — não mexe no telefone).
+export async function atualizarNomeUsuario(telefoneDigits, novoNome) {
+  await updateDoc(doc(db, "usuarios", telefoneDigits), { nome: novoNome, atualizadoEm: serverTimestamp() });
+}
+
+// Corrige o nome já gravado (no momento da reserva) em todos os agendamentos desse telefone —
+// sem isso, "Padronizar nomes" só valeria pras reservas futuras, e os quadrados da grade
+// continuariam mostrando o nome grande antigo nos agendamentos já feitos.
+export async function atualizarNomeEmAgendamentosDoTelefone(telefoneDigits, novoNome) {
+  const snap = await getDocs(query(collection(db, "agendamentos"), where("telefoneDigits", "==", telefoneDigits)));
+  await Promise.all(snap.docs.map((d) => updateDoc(doc(db, "agendamentos", d.id), { nome: novoNome })));
+}
+
 /* ---------------- Agendamentos ---------------- */
 
 // Retorna o conjunto de horas (números) já ocupadas (status "agendado") numa data

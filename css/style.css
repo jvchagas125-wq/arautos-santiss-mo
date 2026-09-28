@@ -625,8 +625,53 @@ img{ max-width: 100%; display:block; }
 .agendamento-colunas__principal{ display:flex; flex-direction:column; width:100%; }
 .btn-ver-tabela-mobile{ display:flex; align-items:center; justify-content:center; gap:8px; }
 
-.modal--calendario-agendamentos{ max-width: min(94vw, 480px); text-align:center; }
-.calendario-agendamentos__titulo{ justify-content:center; }
+.modal--calendario-agendamentos{ max-width: min(94vw, 640px); text-align:center; }
+.calendario-agendamentos__titulo{ justify-content:center; flex-shrink:0; }
+
+/* ---------- Grade semanal de agendamentos: mesmo layout/cores da planilha (Excel) exportada
+   em Acompanhamento no painel admin, ao vivo no site público (ver js/agendamento.js). ---------- */
+.grade-semanal{ display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
+.grade-semanal__cabecalho{
+  display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:12px; flex-shrink:0;
+  font-family:'Cinzel'; color: var(--vermelho-escuro); font-weight:600; font-size:.92rem;
+}
+.grade-semanal__scroll{
+  overflow:auto; border:1.5px solid var(--dourado); border-radius:12px; -webkit-overflow-scrolling:touch;
+  flex:1 1 auto; min-height:0;
+}
+.grade-semanal__tabela{ border-collapse:collapse; width:100%; min-width:600px; }
+.grade-semanal__tabela th, .grade-semanal__tabela td{
+  border:1px solid rgba(74,7,17,.15); text-align:center; vertical-align:middle;
+  padding:6px 5px; font-size:.7rem; line-height:1.3;
+}
+.grade-semanal__tabela thead th{
+  position:sticky; top:0; z-index:2;
+  background: var(--dourado); color: var(--vermelho-escuro);
+  font-family:'Cinzel'; font-weight:700; font-size:.66rem; padding:8px 5px;
+}
+.grade-semanal__tabela thead th:first-child{ z-index:3; }
+.grade-semanal__tabela tbody th{
+  position:sticky; left:0; z-index:1;
+  background: var(--creme); color: var(--vermelho-escuro); font-weight:700;
+  min-width:40px; font-size:.68rem;
+}
+.grade-semanal__tabela td{ min-width:104px; height:48px; }
+.grade-semanal__tabela td.grade-semanal__cel--com-gente{ cursor:pointer; font-weight:600; }
+.grade-semanal__tabela td.grade-semanal__cel--com-gente:hover{ filter:brightness(.94); }
+.grade-semanal__cel--nicodemos{ background:#BDD7EE; }
+.grade-semanal__cel--arautos{ background:#C6E0B4; }
+.grade-semanal__cel--madalena{ background:#F4D9A0; }
+.grade-semanal__cel--extra{ background:#CBB6E8; }
+.grade-semanal__cel--aberto{ background:#E7ABAB; }
+.grade-semanal__cel--missa{ background:#FFD700; color:#6B5900; font-weight:700; }
+.grade-semanal__cel--bloqueado{ background:#2c2c2c; }
+.grade-semanal__legenda{
+  display:flex; flex-wrap:wrap; gap:7px 16px; margin-top:14px; font-size:.72rem; color:var(--texto-suave); flex-shrink:0;
+}
+.grade-semanal__legenda span{ display:flex; align-items:center; gap:6px; text-align:left; }
+.grade-semanal__legenda i{
+  width:13px; height:13px; border-radius:4px; display:inline-block; flex-shrink:0; border:1px solid rgba(0,0,0,.15);
+}
 
 .calendario-grande{
   width:100%; max-width:460px; margin:0 auto; background: var(--branco);
@@ -674,7 +719,8 @@ img{ max-width: 100%; display:block; }
     flex:1 1 0; min-width:0;
   }
   #modalCalendarioAgendamentos .modal{
-    max-width:none; width:100%; transform:none; box-shadow:0 14px 36px rgba(74,7,17,.12); max-height:none;
+    max-width:none; width:100%; transform:none; box-shadow:0 14px 36px rgba(74,7,17,.12);
+    max-height: min(760px, 80vh);
   }
   #modalCalendarioAgendamentos .modal--fechar{ display:none; }
   .btn-ver-tabela-mobile{ display:none; }

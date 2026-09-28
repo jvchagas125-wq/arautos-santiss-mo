@@ -2,13 +2,14 @@ import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModa
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
   MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto, ORDEM_PAGINAS,
-  capitalizarNome, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
+  capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterFrases, salvarFrases,
   obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios,
   obterSenhaAdmin, salvarSenhaAdmin,
   ouvirTodosAgendamentos, ouvirTodosUsuarios, obterUsuario, cadastrarOuAtualizarUsuario, editarUsuario,
+  atualizarNomeUsuario, atualizarNomeEmAgendamentosDoTelefone,
   excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
   marcarAgendamentoExtra,
   obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
@@ -1549,12 +1550,14 @@ function configurarContatos() {
   formContato.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const nome = capitalizarNome(campoNomeContato.value.trim());
-    if (nome.split(" ").filter(Boolean).length < 2) {
+    const nomeDigitado = capitalizarNome(campoNomeContato.value.trim());
+    if (nomeDigitado.split(" ").filter(Boolean).length < 2) {
       mostrarToast("Digite o nome completo da pessoa.");
       campoNomeContato.focus();
       return;
     }
+    // guarda só "nome + primeiro sobrenome" — evita nomes grandes demais nos quadrados da grade
+    const nome = reduzirNomeParaExibicao(nomeDigitado);
     const telefoneFormatado = campoTelefoneContato.value.trim();
     if (!telefoneValido(telefoneFormatado)) {
       mostrarToast("Digite um telefone válido, ex: (11) 91234-5678.");
@@ -1580,6 +1583,57 @@ function configurarContatos() {
     } finally {
       btnSalvarContato.disabled = false;
       btnSalvarContato.textContent = "Cadastrar";
+    }
+  });
+
+  /* ---------- Padronizar nomes de todos os cadastros (nome + 1º sobrenome) ---------- */
+  const btnPadronizarNomes = document.getElementById("btnPadronizarNomes");
+  const modalPadronizarNomes = document.getElementById("modalPadronizarNomes");
+  const textoPadronizarNomes = document.getElementById("textoPadronizarNomes");
+  const btnCancelarPadronizarNomes = document.getElementById("btnCancelarPadronizarNomes");
+  const btnConfirmarPadronizarNomes = document.getElementById("btnConfirmarPadronizarNomes");
+  const fecharModalPadronizarNomes = document.getElementById("fecharModalPadronizarNomes");
+  let candidatosPadronizacao = [];
+
+  btnPadronizarNomes.addEventListener("click", () => {
+    candidatosPadronizacao = todosContatos
+      .map((c) => ({ ...c, nomeNovo: reduzirNomeParaExibicao(c.nome || "") }))
+      .filter((c) => c.nomeNovo && c.nomeNovo !== c.nome);
+
+    if (candidatosPadronizacao.length === 0) {
+      mostrarToast("Todos os nomes já estão no formato nome + sobrenome.");
+      return;
+    }
+    const qtd = candidatosPadronizacao.length;
+    textoPadronizarNomes.textContent =
+      `${qtd} ${qtd === 1 ? "cadastro vai ter o nome reduzido" : "cadastros vão ter o nome reduzido"} ` +
+      `para só o primeiro nome e o primeiro sobrenome (ex.: "${candidatosPadronizacao[0].nome}" → "${candidatosPadronizacao[0].nomeNovo}"). Deseja continuar?`;
+    abrirModal(modalPadronizarNomes);
+  });
+
+  function fecharPadronizarNomes() {
+    fecharModal(modalPadronizarNomes);
+  }
+  btnCancelarPadronizarNomes.addEventListener("click", fecharPadronizarNomes);
+  fecharModalPadronizarNomes.addEventListener("click", fecharPadronizarNomes);
+
+  btnConfirmarPadronizarNomes.addEventListener("click", async () => {
+    btnConfirmarPadronizarNomes.disabled = true;
+    btnConfirmarPadronizarNomes.textContent = "Padronizando...";
+    try {
+      for (const c of candidatosPadronizacao) {
+        await atualizarNomeUsuario(c.telefoneDigits, c.nomeNovo);
+        await atualizarNomeEmAgendamentosDoTelefone(c.telefoneDigits, c.nomeNovo);
+      }
+      mostrarToast(`${candidatosPadronizacao.length} nome(s) padronizado(s) com sucesso!`);
+      candidatosPadronizacao = [];
+      fecharPadronizarNomes();
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível padronizar todos os nomes. Verifique sua conexão e tente novamente.");
+    } finally {
+      btnConfirmarPadronizarNomes.disabled = false;
+      btnConfirmarPadronizarNomes.textContent = "Padronizar";
     }
   });
 
@@ -1617,12 +1671,14 @@ function configurarContatos() {
     e.preventDefault();
     if (!telefoneDigitsEmEdicao) return;
 
-    const nome = capitalizarNome(campoNomeEditar.value.trim());
-    if (nome.split(" ").filter(Boolean).length < 2) {
+    const nomeDigitado = capitalizarNome(campoNomeEditar.value.trim());
+    if (nomeDigitado.split(" ").filter(Boolean).length < 2) {
       mostrarToast("Digite o nome completo da pessoa.");
       campoNomeEditar.focus();
       return;
     }
+    // guarda só "nome + primeiro sobrenome" — evita nomes grandes demais nos quadrados da grade
+    const nome = reduzirNomeParaExibicao(nomeDigitado);
     const telefoneFormatado = campoTelefoneEditar.value.trim();
     if (!telefoneValido(telefoneFormatado)) {
       mostrarToast("Digite um telefone válido, ex: (11) 91234-5678.");

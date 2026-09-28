@@ -124,45 +124,41 @@
 
       <!-- No celular isto é um modal (aberto pelo botão "Ver calendário de agendamentos"); a partir de
            900px de largura, o CSS "desmonta" o modal e ele passa a aparecer sempre, como uma
-           segunda coluna ao lado dos horários. Mesmo calendário do "Acompanhamento" do painel
-           administrativo: dias com agendamento ficam em destaque com um selo de quantidade; ao
-           tocar num dia, abre os detalhes de quem reservou em cada horário. -->
+           segunda coluna ao lado dos horários. Mesmo layout/cores da planilha (Excel) exportada em
+           "Acompanhamento" no painel administrativo, só que ao vivo: uma semana por vez, células
+           coloridas por grupo/Missa/horário livre; ao tocar numa célula com gente, mostra os
+           detalhes de quem reservou. -->
       <div class="modal-overlay" id="modalCalendarioAgendamentos">
-        <div class="modal modal--calendario-agendamentos">
+        <div class="modal modal--calendario-agendamentos modal--largo">
           <button class="modal--fechar" id="fecharModalCalendarioAgendamentos" aria-label="Fechar">&times;</button>
           <div class="painel__titulo calendario-agendamentos__titulo"><span class="emoji">📅</span> Calendário de agendamentos</div>
 
-          <div class="calendario-grande" id="calendarioGrandeAgendamentos">
-            <div class="calendario__cabecalho">
-              <button type="button" class="calendario__nav" id="calGrandeMesAnterior" aria-label="Mês anterior">‹</button>
-              <strong id="calGrandeMesAno">—</strong>
-              <button type="button" class="calendario__nav" id="calGrandeMesProximo" aria-label="Próximo mês">›</button>
+          <div class="grade-semanal" id="gradeSemanalAgendamentos">
+            <div class="grade-semanal__cabecalho">
+              <button type="button" class="calendario__nav" id="semanaAnterior" aria-label="Semana anterior">‹</button>
+              <strong id="semanaTitulo">—</strong>
+              <button type="button" class="calendario__nav" id="semanaProxima" aria-label="Próxima semana">›</button>
             </div>
-            <div class="calendario__semana">
-              <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+            <div class="grade-semanal__scroll">
+              <table class="grade-semanal__tabela" id="gradeSemanalTabela"></table>
             </div>
-            <div class="calendario__dias" id="calGrandeDias"></div>
-            <div class="calendario__legenda-dupla">
-              <span><i class="legenda-dot legenda-dot--disponivel"></i> dia disponível, sem agendamentos</span>
-              <span><i class="legenda-dot legenda-dot--agendado"></i> tem agendamento — toque para ver detalhes</span>
+            <div class="grade-semanal__legenda">
+              <span><i class="grade-semanal__cel--arautos"></i> Arautos (07h–11h)</span>
+              <span><i class="grade-semanal__cel--nicodemos"></i> São Nicodemos — Homens (00h–06h e 21h–23h)</span>
+              <span><i class="grade-semanal__cel--madalena"></i> Santa Maria Madalena — todos (12h–20h)</span>
+              <span><i class="grade-semanal__cel--extra"></i> Extra</span>
+              <span><i class="grade-semanal__cel--missa"></i> Missa</span>
+              <span><i class="grade-semanal__cel--aberto"></i> Horário livre</span>
+              <span><i class="grade-semanal__cel--bloqueado"></i> Fora do período</span>
             </div>
           </div>
           <p class="mensagem-vazia oculto" id="calGrandeVazia">Nenhum período de adoração está configurado no momento.</p>
 
           <div class="aviso-info">
             <span class="aviso-info__icone">ℹ️</span>
-            <p><strong>Observação:</strong> os dias em vermelho, com o número dourado, já têm gente agendada — toque neles para ver quem reservou em cada horário. Os dias em bege estão dentro do período de adoração, mas ainda sem ninguém inscrito. Use as setas para navegar entre os meses.</p>
+            <p><strong>Observação:</strong> cada quadrado mostra quem já reservou aquele horário — toque num quadrado com nomes para ver os detalhes. Use as setas para navegar entre as semanas.</p>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Modal de detalhes de um dia do calendário de agendamentos (mostra quem reservou em cada horário) -->
-    <div class="modal-overlay" id="modalDiaCalendario">
-      <div class="modal modal--largo">
-        <button class="modal--fechar" id="fecharModalDiaCalendario" aria-label="Fechar">&times;</button>
-        <h3 id="diaCalendarioTitulo">—</h3>
-        <div id="diaCalendarioConteudo" class="modal__conteudo-scroll" style="text-align:left;"></div>
       </div>
     </div>
 

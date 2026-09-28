@@ -349,8 +349,9 @@
           <div class="painel__titulo"><span class="emoji">➕</span> Cadastrar pessoa</div>
           <form id="formContato">
             <div class="campo">
-              <label for="campoNomeContato">Nome completo</label>
-              <input type="text" id="campoNomeContato" placeholder="Digite o nome completo" autocomplete="off" required />
+              <label for="campoNomeContato">Nome e sobrenome</label>
+              <input type="text" id="campoNomeContato" placeholder="Ex: Maria Silva" autocomplete="off" required />
+              <small class="campo-ajuda">Só é salvo o nome e o primeiro sobrenome, mesmo digitando o nome completo.</small>
             </div>
             <div class="campo">
               <label for="campoTelefoneContato">Telefone (WhatsApp)</label>
@@ -367,6 +368,9 @@
             <span class="quadro-dia-missa__resumo" id="contagemContatos">0</span>
           </div>
           <div class="quadro-dia-missa__corpo oculto" id="corpoContatos">
+            <button type="button" class="btn btn-contorno btn-pequeno" id="btnPadronizarNomes" style="margin-bottom:14px;">
+              Padronizar nomes (nome + sobrenome)
+            </button>
             <div class="campo" style="margin-bottom:6px;">
               <input type="text" id="buscaContatos" placeholder="Buscar por nome ou telefone..." autocomplete="off" />
             </div>
@@ -469,8 +473,9 @@
       <h3>Editar pessoa</h3>
       <form id="formEditarContato" style="text-align:left;">
         <div class="campo">
-          <label for="campoNomeEditarContato">Nome completo</label>
-          <input type="text" id="campoNomeEditarContato" placeholder="Digite o nome completo" autocomplete="off" required />
+          <label for="campoNomeEditarContato">Nome e sobrenome</label>
+          <input type="text" id="campoNomeEditarContato" placeholder="Ex: Maria Silva" autocomplete="off" required />
+          <small class="campo-ajuda">Só é salvo o nome e o primeiro sobrenome, mesmo digitando o nome completo.</small>
         </div>
         <div class="campo" style="margin-bottom:0;">
           <label for="campoTelefoneEditarContato">Telefone (WhatsApp)</label>
@@ -481,6 +486,20 @@
           <button type="submit" class="btn btn-dourado btn-full" id="btnSalvarEditarContato">Salvar alterações</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal confirmação: padronizar nomes de todos os cadastros -->
+  <div class="modal-overlay" id="modalPadronizarNomes">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalPadronizarNomes" aria-label="Fechar">&times;</button>
+      <h3>Padronizar nomes</h3>
+      <p id="textoPadronizarNomes">—</p>
+      <p style="font-size:.82rem; color:var(--texto-suave);">Isso também corrige o nome já salvo nos agendamentos dessas pessoas, para a grade de agendamentos mostrar o nome certo.</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnCancelarPadronizarNomes">Cancelar</button>
+        <button class="btn btn-dourado btn-full" id="btnConfirmarPadronizarNomes">Padronizar</button>
+      </div>
     </div>
   </div>
 

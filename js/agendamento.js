@@ -1,7 +1,8 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
-  isoParaData, dataParaIso, formatarDataBR, formatarHora, formatarDataComDiaSemana, hojeIso,
-  horariosDisponiveisNoDia, MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
+  isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso,
+  horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
+  MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
 import { obterConfiguracoesGerais, obterDiasHorarios, ouvirAgendamentosDaData, ouvirTodosAgendamentos, criarAgendamento } from "./dados.js";
 
 inicializarNavegacao("agendamento");
@@ -14,8 +15,10 @@ let horaSelecionada = null; // number
 let pararEscutaHorarios = null;
 let horariosOcupados = []; // [{ hora, nome, telefone, telefoneDigits }]
 
-// ---- Calendário de agendamentos (igual ao "Acompanhamento" do painel administrativo, ao vivo) ----
-let mesAtualCalendario = null; // Date (dia 1 do mês visível no calendário grande)
+// ---- Grade semanal de agendamentos (mesmo estilo da planilha exportada em Acompanhamento,
+// ao vivo no site público) ----
+let blocosSemana = []; // gerarBlocosDeSemana(dataInicio, dataFim): array de semanas, cada uma um array de isos
+let indiceSemanaAtual = 0;
 let todosAgendamentosAtivos = []; // todo mundo com status "agendado", de todas as datas
 let pararEscutaTodosAgendamentos = null;
 
@@ -34,16 +37,12 @@ const erroCarregarPeriodo = document.getElementById("erroCarregarPeriodo");
 const modalConfirmacao = document.getElementById("modalConfirmacao");
 
 const modalCalendarioAgendamentos = document.getElementById("modalCalendarioAgendamentos");
-const calendarioGrandeAgendamentos = document.getElementById("calendarioGrandeAgendamentos");
-const calGrandeMesAno = document.getElementById("calGrandeMesAno");
-const calGrandeDias = document.getElementById("calGrandeDias");
-const calGrandeMesAnterior = document.getElementById("calGrandeMesAnterior");
-const calGrandeMesProximo = document.getElementById("calGrandeMesProximo");
+const gradeSemanalAgendamentos = document.getElementById("gradeSemanalAgendamentos");
+const gradeSemanalTabela = document.getElementById("gradeSemanalTabela");
+const semanaTitulo = document.getElementById("semanaTitulo");
+const semanaAnterior = document.getElementById("semanaAnterior");
+const semanaProxima = document.getElementById("semanaProxima");
 const calGrandeVazia = document.getElementById("calGrandeVazia");
-
-const modalDiaCalendario = document.getElementById("modalDiaCalendario");
-const diaCalendarioTitulo = document.getElementById("diaCalendarioTitulo");
-const diaCalendarioConteudo = document.getElementById("diaCalendarioConteudo");
 
 // O campo de data começa desabilitado (veja o atributo "disabled" no HTML) — só é liberado
 // quando os dados realmente terminam de carregar. Isso evita o bug de, no celular, tocar no
@@ -95,136 +94,128 @@ function dataDentroDoPeriodo(iso) {
   return iso >= diasHorarios.dataInicio && iso <= diasHorarios.dataFim && iso >= hojeIso();
 }
 
-/* ---------- Calendário de agendamentos: igual ao "Acompanhamento" do painel administrativo,
-   só que ao vivo no site público. Dias com agendamento ficam em destaque com um selo de
-   quantidade; tocar num dia mostra quem reservou em cada horário. No celular abre num modal
-   (botão "Ver calendário de agendamentos"); no computador o CSS transforma esse mesmo modal
-   numa segunda coluna sempre visível (ver style.css). ---------- */
-// mapa "data iso" -> array de agendamentos ativos naquele dia, recalculado UMA VEZ a cada
-// atualização em vez de varrer a lista inteira de novo pra cada um dos ~30 dias do mês (isso
-// era o que deixava o calendário lento/travando no celular quando a lista de agendamentos
-// crescia: 30 varreduras completas a cada agendamento novo de qualquer pessoa, em qualquer dia).
-let mapAgendamentosPorDia = new Map();
+/* ---------- Grade semanal de agendamentos: mesmo layout/cores da planilha (Excel) exportada
+   em Acompanhamento no painel admin, só que ao vivo no site público. Uma semana por vez (setas
+   pra navegar), 24 linhas (horas) x colunas (dias), célula colorida por grupo/Missa/extra/livre;
+   toque numa célula com gente mostra os detalhes. No celular abre num modal (botão "Ver
+   calendário de agendamentos"); no computador o CSS transforma esse mesmo modal numa segunda
+   coluna sempre visível (ver style.css). ---------- */
+// mapa "data iso + hora" -> array de agendamentos ativos naquele horário, recalculado UMA VEZ a
+// cada atualização em vez de varrer a lista inteira de novo pra cada uma das 24x7 células.
+let mapAgendamentosPorDiaHora = new Map();
 
-function reconstruirMapaAgendamentosPorDia() {
-  mapAgendamentosPorDia = new Map();
+function reconstruirMapaAgendamentosPorDiaHora() {
+  mapAgendamentosPorDiaHora = new Map();
   todosAgendamentosAtivos.forEach((a) => {
-    if (!mapAgendamentosPorDia.has(a.data)) mapAgendamentosPorDia.set(a.data, []);
-    mapAgendamentosPorDia.get(a.data).push(a);
+    const chave = `${a.data}_${a.hora}`;
+    if (!mapAgendamentosPorDiaHora.has(chave)) mapAgendamentosPorDiaHora.set(chave, []);
+    mapAgendamentosPorDiaHora.get(chave).push(a);
   });
 }
 
-function agendamentosDoDiaCalendario(iso) {
-  return mapAgendamentosPorDia.get(iso) || [];
+function classeCorPorHora(hora) {
+  if ((hora >= 0 && hora <= 6) || (hora >= 21 && hora <= 23)) return "grade-semanal__cel--nicodemos";
+  if (hora >= 7 && hora <= 11) return "grade-semanal__cel--arautos";
+  return "grade-semanal__cel--madalena"; // 12h-20h
 }
 
 function iniciarCalendarioAgendamentos() {
   if (!diasHorarios || !diasHorarios.dataInicio || !diasHorarios.dataFim) {
-    mesAtualCalendario = null;
-    renderizarCalendarioGrande();
+    blocosSemana = [];
+    indiceSemanaAtual = 0;
+    renderizarGradeSemanal();
     return;
   }
 
-  mesAtualCalendario = new Date(
-    isoParaData(diasHorarios.dataInicio).getFullYear(),
-    isoParaData(diasHorarios.dataInicio).getMonth(),
-    1
-  );
+  blocosSemana = gerarBlocosDeSemana(diasHorarios.dataInicio, diasHorarios.dataFim);
+  const hoje = hojeIso();
+  const idx = blocosSemana.findIndex((dias) => dias[dias.length - 1] >= hoje);
+  indiceSemanaAtual = idx === -1 ? Math.max(0, blocosSemana.length - 1) : idx;
 
   if (pararEscutaTodosAgendamentos) pararEscutaTodosAgendamentos();
   pararEscutaTodosAgendamentos = ouvirTodosAgendamentos("agendado", (lista) => {
     todosAgendamentosAtivos = lista;
-    reconstruirMapaAgendamentosPorDia();
-    renderizarCalendarioGrande();
-    // se o modal de detalhes de um dia estiver aberto, atualiza a lista dele também
-    if (isoDiaCalendarioAberto) abrirModalDiaCalendario(isoDiaCalendarioAberto);
+    reconstruirMapaAgendamentosPorDiaHora();
+    renderizarGradeSemanal();
   });
 
-  renderizarCalendarioGrande();
+  renderizarGradeSemanal();
 }
 
-function renderizarCalendarioGrande() {
-  const semPeriodo = !mesAtualCalendario;
+function renderizarGradeSemanal() {
+  const semPeriodo = blocosSemana.length === 0;
   calGrandeVazia.classList.toggle("oculto", !semPeriodo);
-  calendarioGrandeAgendamentos.classList.toggle("oculto", semPeriodo);
+  gradeSemanalAgendamentos.classList.toggle("oculto", semPeriodo);
   if (semPeriodo) return;
 
-  const nomeMes = MESES[mesAtualCalendario.getMonth()];
-  calGrandeMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesAtualCalendario.getFullYear()}`;
+  const dias = blocosSemana[indiceSemanaAtual];
+  semanaTitulo.textContent = `${formatarDataBR(dias[0]).slice(0, 5)} a ${formatarDataBR(dias[dias.length - 1]).slice(0, 5)}`;
 
-  const primeiroDiaSemana = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), 1).getDay();
-  const totalDias = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() + 1, 0).getDate();
+  const horasAtivasPorDia = new Map(dias.map((iso) => [iso, new Set(horariosDisponiveisNoDia(diasHorarios, iso))]));
+  const horasDeMissaPorDia = new Map(dias.map((iso) => [iso, horasDeMissaNoDia(diasHorarios, iso)]));
 
-  // monta tudo fora do DOM (um DocumentFragment) e só então troca de uma vez com replaceChildren
-  // — um único reflow, em vez de innerHTML="" seguido de várias inserções uma a uma
-  const fragmento = document.createDocumentFragment();
+  const thead = document.createElement("thead");
+  const trCabecalho = document.createElement("tr");
+  trCabecalho.appendChild(document.createElement("th"));
+  dias.forEach((iso) => {
+    const th = document.createElement("th");
+    const nomeDia = DIAS_SEMANA_ABREV[isoParaData(iso).getDay()];
+    th.innerHTML = `${nomeDia}<br>${formatarDataBR(iso).slice(0, 5)}`;
+    trCabecalho.appendChild(th);
+  });
+  thead.appendChild(trCabecalho);
 
-  for (let i = 0; i < primeiroDiaSemana; i++) {
-    const vazio = document.createElement("span");
-    vazio.className = "calendario__vazio";
-    fragmento.appendChild(vazio);
-  }
+  const tbody = document.createElement("tbody");
+  for (let hora = 0; hora < 24; hora++) {
+    const tr = document.createElement("tr");
+    const thHora = document.createElement("th");
+    thHora.textContent = `${String(hora).padStart(2, "0")}h`;
+    tr.appendChild(thHora);
 
-  for (let dia = 1; dia <= totalDias; dia++) {
-    const iso = dataParaIso(new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), dia));
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "calendario__dia";
-    btn.textContent = dia;
+    dias.forEach((iso) => {
+      const td = document.createElement("td");
+      const horasAtivas = horasAtivasPorDia.get(iso);
+      const horasMissa = horasDeMissaPorDia.get(iso);
+      const pessoas = mapAgendamentosPorDiaHora.get(`${iso}_${hora}`) || [];
 
-    if (dataDentroDoPeriodo(iso)) {
-      btn.classList.add("disponivel");
-      const qtd = agendamentosDoDiaCalendario(iso).length;
-      if (qtd > 0) {
-        btn.classList.add("tem-agendamentos");
-        btn.dataset.iso = iso;
-        btn.title = `${qtd} ${qtd === 1 ? "agendamento" : "agendamentos"} — toque para ver detalhes`;
-        const badge = document.createElement("span");
-        badge.className = "calendario__dia-badge";
-        badge.textContent = String(qtd);
-        btn.appendChild(badge);
+      if (horasMissa.has(hora)) {
+        td.textContent = "Missa";
+        td.className = "grade-semanal__cel--missa";
+      } else if (!horasAtivas.has(hora)) {
+        td.className = "grade-semanal__cel--bloqueado";
+      } else if (pessoas.length > 0) {
+        const algumExtra = pessoas.some((p) => p.extra);
+        td.textContent = pessoas.map((p) => p.nome || "—").join(" / ");
+        td.className = `${algumExtra ? "grade-semanal__cel--extra" : classeCorPorHora(hora)} grade-semanal__cel--com-gente`;
+        td.dataset.iso = iso;
+        td.dataset.hora = String(hora);
+      } else {
+        td.className = "grade-semanal__cel--aberto";
       }
-    }
-    fragmento.appendChild(btn);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
   }
 
-  calGrandeDias.replaceChildren(fragmento);
+  gradeSemanalTabela.replaceChildren(thead, tbody);
 
-  const mesInicioPeriodo = isoParaData(diasHorarios.dataInicio);
-  const mesFimPeriodo = isoParaData(diasHorarios.dataFim);
-  const anteriorHabilitado = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth(), 0) >=
-    new Date(mesInicioPeriodo.getFullYear(), mesInicioPeriodo.getMonth(), 1);
-  const proximoHabilitado = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() + 1, 1) <=
-    new Date(mesFimPeriodo.getFullYear(), mesFimPeriodo.getMonth(), 1);
-  calGrandeMesAnterior.disabled = !anteriorHabilitado;
-  calGrandeMesProximo.disabled = !proximoHabilitado;
+  semanaAnterior.disabled = indiceSemanaAtual <= 0;
+  semanaProxima.disabled = indiceSemanaAtual >= blocosSemana.length - 1;
 }
 
-calGrandeMesAnterior.addEventListener("click", () => {
-  mesAtualCalendario = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() - 1, 1);
-  renderizarCalendarioGrande();
+semanaAnterior.addEventListener("click", () => {
+  if (indiceSemanaAtual > 0) { indiceSemanaAtual--; renderizarGradeSemanal(); }
 });
-calGrandeMesProximo.addEventListener("click", () => {
-  mesAtualCalendario = new Date(mesAtualCalendario.getFullYear(), mesAtualCalendario.getMonth() + 1, 1);
-  renderizarCalendarioGrande();
-});
-
-// um único listener "delegado" no container dos dias, em vez de um listener novo em cada botão
-// a cada re-renderização — evita recriar dezenas de closures toda vez que alguém agenda algo
-calGrandeDias.addEventListener("click", (e) => {
-  const btn = e.target.closest(".calendario__dia.tem-agendamentos");
-  if (btn && btn.dataset.iso) abrirModalDiaCalendario(btn.dataset.iso);
+semanaProxima.addEventListener("click", () => {
+  if (indiceSemanaAtual < blocosSemana.length - 1) { indiceSemanaAtual++; renderizarGradeSemanal(); }
 });
 
 document.getElementById("btnVerCalendarioAgendamentos").addEventListener("click", () => abrirModal(modalCalendarioAgendamentos));
 document.getElementById("fecharModalCalendarioAgendamentos").addEventListener("click", () => fecharModal(modalCalendarioAgendamentos));
 
-/* ---- modal de detalhes do dia (quem reservou em cada horário) ---- */
-let isoDiaCalendarioAberto = null;
-
 // monta o "cartão" de uma pessoa (só o nome — o telefone é dado sensível e fica visível
-// apenas no painel administrativo, nunca no site público) — usado tanto aqui quanto no
-// modal de detalhes de horário da grade de "Horários disponíveis" (abrirModalDetalhesOcupado)
+// apenas no painel administrativo, nunca no site público) — usado tanto pela grade semanal
+// quanto pelo modal de detalhes de horário da grade de "Horários disponíveis" (abaixo)
 function criarItemPessoaOcupado(o) {
   const item = document.createElement("div");
   item.className = "pessoa-ocupado-item";
@@ -239,53 +230,15 @@ function criarItemPessoaOcupado(o) {
   return item;
 }
 
-function abrirModalDiaCalendario(iso) {
-  isoDiaCalendarioAberto = iso;
-  const doDia = agendamentosDoDiaCalendario(iso).sort((a, b) => a.hora - b.hora);
-  diaCalendarioTitulo.textContent = formatarDataComDiaSemana(iso);
-  diaCalendarioConteudo.innerHTML = "";
-
-  const porHora = new Map();
-  doDia.forEach((a) => {
-    if (!porHora.has(a.hora)) porHora.set(a.hora, []);
-    porHora.get(a.hora).push(a);
-  });
-
-  // mostra todos os horários ativos do dia (não só os que já têm gente agendada)
-  const horasDoDia = horariosDisponiveisNoDia(diasHorarios, iso);
-
-  horasDoDia.forEach((hora) => {
-    const pessoas = porHora.get(hora) || [];
-
-    const grupo = document.createElement("div");
-    grupo.className = "grupo-horario-dia";
-
-    const titulo = document.createElement("div");
-    titulo.className = "grupo-horario-dia__titulo";
-    titulo.innerHTML = `${formatarHora(hora)} ${pessoas.length ? `<span class="contagem-contatos">${pessoas.length}</span>` : ""}`;
-    grupo.appendChild(titulo);
-
-    if (pessoas.length === 0) {
-      const aviso = document.createElement("p");
-      aviso.className = "horario-vazio-msg";
-      aviso.textContent = "Horário livre — ninguém agendado.";
-      grupo.appendChild(aviso);
-    } else {
-      const listaEl = document.createElement("div");
-      listaEl.className = "lista-pessoas-ocupado";
-      pessoas.forEach((a) => listaEl.appendChild(criarItemPessoaOcupado(a)));
-      grupo.appendChild(listaEl);
-    }
-
-    diaCalendarioConteudo.appendChild(grupo);
-  });
-
-  abrirModal(modalDiaCalendario);
-}
-
-document.getElementById("fecharModalDiaCalendario").addEventListener("click", () => {
-  fecharModal(modalDiaCalendario);
-  isoDiaCalendarioAberto = null;
+// um único listener "delegado" na tabela, em vez de um listener novo em cada célula a cada
+// re-renderização — evita recriar dezenas de closures toda vez que alguém agenda algo
+gradeSemanalTabela.addEventListener("click", (e) => {
+  const td = e.target.closest("td.grade-semanal__cel--com-gente");
+  if (!td) return;
+  const iso = td.dataset.iso;
+  const hora = Number(td.dataset.hora);
+  const pessoas = mapAgendamentosPorDiaHora.get(`${iso}_${hora}`) || [];
+  abrirModalDetalhesOcupado(hora, pessoas, iso);
 });
 
 function renderizarCalendario() {
@@ -426,8 +379,8 @@ const modalDetalhesOcupado = document.getElementById("modalDetalhesOcupado");
 const detalhesOcupadoHora = document.getElementById("detalhesOcupadoHora");
 const detalhesOcupadoLista = document.getElementById("detalhesOcupadoLista");
 
-function abrirModalDetalhesOcupado(hora, ocupacoes) {
-  detalhesOcupadoHora.textContent = `${formatarDataBR(dataSelecionada)} — ${textoHora(hora)}`;
+function abrirModalDetalhesOcupado(hora, ocupacoes, iso) {
+  detalhesOcupadoHora.textContent = `${formatarDataBR(iso || dataSelecionada)} — ${textoHora(hora)}`;
   detalhesOcupadoLista.innerHTML = "";
   ocupacoes.forEach((o) => detalhesOcupadoLista.appendChild(criarItemPessoaOcupado(o)));
   abrirModal(modalDetalhesOcupado);
