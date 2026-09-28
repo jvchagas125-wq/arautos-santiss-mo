@@ -41,10 +41,10 @@ comLimiteDeTempo(obterFrases()).then((dados) => {
 });
 
 /* ---------- Carrossel de banners da Home ----------
-   Enquanto não há nenhum banner cadastrado (Configurações > Banners), mantém a logo e o
-   título de sempre (#heroEstatico). Assim que existe ao menos um banner, esconde o
-   cabeçalho estático e mostra o carrossel no lugar dele. */
-const heroEstatico = document.getElementById("heroEstatico");
+   Só aparece quando existe ao menos um banner cadastrado (Configurações > Banners no painel
+   admin) — antigamente, enquanto não havia nenhum banner, a página mostrava uma logo/título
+   fixos ("Adoração ao Santíssimo Sacramento"); isso foi removido a pedido, então agora, sem
+   banner cadastrado, essa área simplesmente fica vazia. */
 const carrosselBanners = document.getElementById("carrosselBanners");
 const carrosselPista = document.getElementById("carrosselPista");
 const carrosselPontos = document.getElementById("carrosselPontos");
@@ -134,13 +134,11 @@ function renderizarCarrossel(lista, opts = {}) {
   if (!opts.doCache) salvarBannersCache(lista); // não reescreve o cache com os dados que vieram dele mesmo
 
   if (!lista.length) {
-    heroEstatico.classList.remove("oculto");
     carrosselBanners.classList.add("oculto");
     pararAutoplay();
     return;
   }
 
-  heroEstatico.classList.add("oculto");
   carrosselBanners.classList.remove("oculto");
   carrosselBanners.classList.toggle("carrossel-banners--unico", lista.length === 1);
 

@@ -74,7 +74,13 @@ img{ max-width: 100%; display:block; }
   content: "";
   position: fixed;
   inset: 0;
-  background-image: var(--fundo-img, url('../assets/fundo-altar.jpg'));
+  /* SEM imagem padrão fixa aqui de propósito: só deve aparecer o fundo realmente configurado em
+     Configurações > Fundo no painel admin (aplicado via --fundo-img, cedo, a partir do cache
+     deste aparelho — ver aplicarConfigVisualEmCache em js/utils.js). Enquanto isso não estiver
+     definido (só na primeiríssima visita de todas, antes de qualquer cache existir), fica só a
+     cor/gradiente abaixo — nunca uma foto antiga ou "de fábrica". */
+  background-image: var(--fundo-img);
+  background-color: var(--vermelho-escuro);
   background-size: cover;
   background-position: center 20%;
   filter: saturate(1.05);
@@ -640,10 +646,13 @@ img{ max-width: 100%; display:block; }
 }
 #modalCalendarioAgendamentos.tela-cheia.aberto{ opacity:1; pointer-events:auto; }
 #modalCalendarioAgendamentos.tela-cheia .modal{
-  max-width:min(97vw, 1400px); width:100%; max-height:min(94vh, 900px); height:94vh;
+  /* de propósito NÃO ocupa a tela inteira (isso ficava apertado/estranho no celular) — fica um
+     pouco menor, com uma margem visível ao redor, e quem quiser ver os detalhes maior pode dar
+     zoom com os dedos normalmente (o site não trava o zoom em nenhuma página). */
+  max-width:min(92vw, 1200px); width:100%; max-height:min(85vh, 800px); height:85vh;
   /* ver explicação do "dvh" acima em .modal--largo — aqui é o que mais importa, porque é
      essa altura que decide quanto sobra pra tabela rolar dentro do modal no celular */
-  max-height:min(94dvh, 900px); height:94dvh;
+  max-height:min(85dvh, 800px); height:85dvh;
   transform: scale(.94) translateY(8px); transition: transform var(--transicao);
 }
 #modalCalendarioAgendamentos.tela-cheia.aberto .modal{ transform: scale(1) translateY(0); }
@@ -686,14 +695,6 @@ img{ max-width: 100%; display:block; }
 .grade-semanal__cel--aberto{ background:#E7ABAB; }
 .grade-semanal__cel--missa{ background:#FFD700; color:#6B5900; font-weight:700; }
 .grade-semanal__cel--bloqueado{ background:#2c2c2c; }
-.grade-semanal__legenda{
-  display:flex; flex-wrap:wrap; gap:7px 16px; margin-top:14px; font-size:.72rem; color:var(--texto-suave); flex-shrink:0;
-}
-.grade-semanal__legenda span{ display:flex; align-items:center; gap:6px; text-align:left; }
-.grade-semanal__legenda i{
-  width:13px; height:13px; border-radius:4px; display:inline-block; flex-shrink:0; border:1px solid rgba(0,0,0,.15);
-}
-
 .calendario-grande{
   width:100%; max-width:460px; margin:0 auto; background: var(--branco);
   border: 1.5px solid var(--dourado); border-radius:14px;
