@@ -1687,6 +1687,14 @@ function configurarBanners() {
   const campoDestino = document.getElementById("campoBannerDestino");
   const listaBannersAdmin = document.getElementById("listaBannersAdmin");
   const bannerSemBanners = document.getElementById("bannerSemBanners");
+  const cabecalhoBannersAdmin = document.getElementById("cabecalhoBannersAdmin");
+  const corpoBannersAdmin = document.getElementById("corpoBannersAdmin");
+
+  // abre/fecha a lista de banners cadastrados (fica compacto quando há muitos banners)
+  cabecalhoBannersAdmin?.addEventListener("click", () => {
+    corpoBannersAdmin.classList.toggle("oculto");
+    cabecalhoBannersAdmin.classList.toggle("recolhido");
+  });
 
   // páginas de destino disponíveis pro botão do banner (todas, menos a própria Início —
   // não faz sentido um banner da Home redirecionar pra Home)

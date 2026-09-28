@@ -51,6 +51,20 @@ const carrosselPontos = document.getElementById("carrosselPontos");
 const btnCarrosselAnterior = document.getElementById("carrosselAnterior");
 const btnCarrosselProximo = document.getElementById("carrosselProximo");
 
+// Enquanto a lista de banners ainda não chegou do Firestore (ouvirBanners é assíncrono),
+// evita mostrar por uma fração de segundo a logo/título estáticos (#heroEstatico) pra quem
+// já tinha banners na última visita — guardamos essa informação num cache local e já
+// deixamos a tela no estado certo antes mesmo da primeira resposta do banco.
+const CHAVE_CACHE_TEM_BANNERS = "arautos_tem_banners_cache";
+try {
+  if (localStorage.getItem(CHAVE_CACHE_TEM_BANNERS) === "1") {
+    heroEstatico.classList.add("oculto");
+    carrosselBanners.classList.remove("oculto");
+  }
+} catch {
+  // sem localStorage disponível — sem problema, só perde a otimização
+}
+
 const INTERVALO_AUTOPLAY_MS = 6000;
 let bannersAtuais = [];
 let indiceAtual = 0;
@@ -105,6 +119,7 @@ function irParaSlideManual(indice) {
 
 function renderizarCarrossel(lista) {
   bannersAtuais = lista;
+  try { localStorage.setItem(CHAVE_CACHE_TEM_BANNERS, lista.length ? "1" : "0"); } catch {}
 
   if (!lista.length) {
     heroEstatico.classList.remove("oculto");

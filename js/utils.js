@@ -363,6 +363,8 @@ function inserirNavegacaoEntrePaginas(paginaAtual) {
 }
 
 export function inicializarNavegacao(paginaAtual) {
+  aplicarConfigVisualEmCache();
+
   const btnMenu = document.getElementById("btnMenu");
   const btnFecharMenu = document.getElementById("btnFecharMenu");
   const menuLateral = document.getElementById("menuLateral");
@@ -421,15 +423,54 @@ export function inicializarNavegacao(paginaAtual) {
   inserirNavegacaoEntrePaginas(paginaAtual);
 }
 
-/* ---------- Aplica logo e fundo dinâmicos vindos da configuração ---------- */
+/* ---------- Aplica logo e fundo dinâmicos vindos da configuração ----------
+   Guardamos o último logo/fundo aplicados com sucesso num cache local: assim, ao recarregar
+   a página, mostramos de cara a imagem certa (a mais recente já vista neste aparelho) em vez
+   da logo/fundo padrão do site enquanto a configuração real ainda não chegou do Firestore —
+   sem isso, dava pra ver um "flash" da imagem antiga por uma fração de segundo a cada load. */
+const CHAVE_CACHE_VISUAL = "arautos_config_visual_cache";
+
+function lerCacheVisual() {
+  try {
+    const bruto = localStorage.getItem(CHAVE_CACHE_VISUAL);
+    return bruto ? JSON.parse(bruto) : null;
+  } catch {
+    return null;
+  }
+}
+function salvarCacheVisual(campo, url) {
+  try {
+    const atual = lerCacheVisual() || {};
+    atual[campo] = url;
+    localStorage.setItem(CHAVE_CACHE_VISUAL, JSON.stringify(atual));
+  } catch {
+    // sem localStorage disponível (modo privado etc.) — só perde a otimização, sem quebrar nada
+  }
+}
+
+// Chamada bem no início de cada página (dentro de inicializarNavegacao), antes de qualquer
+// resposta do Firestore, pra já pintar o logo/fundo vistos da última vez.
+export function aplicarConfigVisualEmCache() {
+  const cache = lerCacheVisual();
+  if (!cache) return;
+  if (cache.logoUrl) {
+    document.querySelectorAll(".js-logo").forEach((img) => { img.src = cache.logoUrl; });
+  }
+  if (cache.fundoUrl) {
+    document.documentElement.style.setProperty("--fundo-img", `url('${cache.fundoUrl}')`);
+  }
+}
+
 export function aplicarLogo(url) {
   document.querySelectorAll(".js-logo").forEach((img) => {
     if (url) img.src = url;
   });
+  if (url) salvarCacheVisual("logoUrl", url);
 }
 export function aplicarFundo(url) {
   if (!url) return;
   document.documentElement.style.setProperty("--fundo-img", `url('${url}')`);
+  salvarCacheVisual("fundoUrl", url);
 }
 
 /* ---------- Botão "olho" para mostrar/ocultar senha ----------

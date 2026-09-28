@@ -236,6 +236,11 @@ img{ max-width: 100%; display:block; }
   padding: 42px 20px 60px; text-align:center; color: var(--branco);
   max-width: 640px; margin: 0 auto; width:100%;
 }
+.titulo-cidade{
+  font-family:'Cinzel'; font-size:.8rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  color: var(--dourado-claro); margin-bottom: 18px; text-shadow: 0 2px 8px rgba(0,0,0,.4);
+  animation: aparecer .8s ease both;
+}
 .selo-decorativo{
   height: 68px; width:auto; margin-bottom: 14px;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
@@ -405,6 +410,13 @@ img{ max-width: 100%; display:block; }
   display:flex; align-items:center; gap:10px; margin-bottom:16px;
 }
 .painel__titulo .emoji{ font-size:1.1rem; }
+.painel__titulo--clicavel{ cursor:pointer; user-select:none; }
+.painel__seta{
+  margin-left:auto; width:18px; height:18px; color: var(--vermelho); flex-shrink:0;
+  transition: transform .25s ease;
+}
+.painel__titulo--clicavel.recolhido .painel__seta{ transform: rotate(-90deg); }
+#corpoBannersAdmin.oculto{ display:none; }
 
 .campo{ margin-bottom: 18px; }
 .campo label{
