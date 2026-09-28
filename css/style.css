@@ -300,12 +300,15 @@ img{ max-width: 100%; display:block; }
   text-decoration:none; background: var(--vermelho-escuro);
 }
 .carrossel-banners__img{ width:100%; height:100%; object-fit:cover; display:block; }
-.carrossel-banners__botao{
+/* especificidade extra (.carrossel-banners__slide + .carrossel-banners__botao) de propósito:
+   essa regra precisa vencer a classe genérica ".btn" (padding/font-size padrão dos botões do
+   site), que é definida mais abaixo no arquivo — sem isso, ".btn" venceria por vir depois. */
+.carrossel-banners__slide .carrossel-banners__botao{
   position:absolute; left:73%; bottom:8%; right:auto; transform: translateX(-50%);
-  white-space:nowrap; padding: 8px 18px; font-size:.68rem; pointer-events:none;
+  white-space:nowrap; padding: 4px 11px; font-size:.42rem; letter-spacing:.02em; pointer-events:none;
 }
 @media (max-width: 480px){
-  .carrossel-banners__botao{ padding: 5px 12px; font-size:.56rem; left:73%; bottom:6%; }
+  .carrossel-banners__slide .carrossel-banners__botao{ padding: 2px 7px; font-size:.34rem; left:73%; bottom:6%; }
 }
 .carrossel-banners__seta{
   position:absolute; top:50%; transform: translateY(-50%);
