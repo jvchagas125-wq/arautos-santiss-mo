@@ -305,8 +305,9 @@ export function limparUsuarioSessao() {
    #btnMenu #btnFecharMenu #menuLateral #overlay
    #btnPerfil #dropdownPerfil #perfilNome #perfilTelefone #btnSair
 */
-/* ---------- Ordem das páginas do site público (usada nos botões "Anterior / Próxima") ---------- */
-const ORDEM_PAGINAS = [
+/* ---------- Ordem das páginas do site público (usada nos botões "Anterior / Próxima" e,
+   no painel admin, como lista de páginas de destino dos banners da Home) ---------- */
+export const ORDEM_PAGINAS = [
   { chave: "index", label: "Início", href: "/" },
   { chave: "agendamento", label: "Agendar horário", href: "agendamento" },
   { chave: "meus-agendamentos", label: "Meus agendamentos", href: "meus-agendamentos" },

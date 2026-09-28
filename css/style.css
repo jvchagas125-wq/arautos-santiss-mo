@@ -281,6 +281,51 @@ img{ max-width: 100%; display:block; }
 }
 .card-frase cite{ font-family:'Cinzel'; font-size:.85rem; color: var(--dourado-claro); font-style:normal; }
 
+/* ============ CARROSSEL DE BANNERS (página inicial) ============ */
+.carrossel-banners{
+  width:100%; margin-bottom: 22px;
+  animation: subir .8s .05s ease both;
+}
+.carrossel-banners__viewport{
+  position:relative; width:100%; overflow:hidden;
+  border-radius: var(--radius);
+  box-shadow: 0 12px 34px rgba(0,0,0,.35);
+}
+.carrossel-banners__pista{
+  display:flex; width:100%;
+  transition: transform .5s cubic-bezier(.4,0,.2,1);
+}
+.carrossel-banners__slide{
+  flex: 0 0 100%; width:100%; aspect-ratio: 2 / 1; position:relative; display:block;
+  text-decoration:none; background: var(--vermelho-escuro);
+}
+.carrossel-banners__img{ width:100%; height:100%; object-fit:cover; display:block; }
+.carrossel-banners__botao{
+  position:absolute; left:50%; bottom:16px; transform: translateX(-50%);
+  white-space:nowrap; padding: 11px 26px; font-size:.82rem; pointer-events:none;
+}
+.carrossel-banners__seta{
+  position:absolute; top:50%; transform: translateY(-50%);
+  width:36px; height:36px; border-radius:50%; border:none; cursor:pointer; padding:0;
+  background: rgba(20,6,6,.42); color: var(--branco); display:flex; align-items:center; justify-content:center;
+  backdrop-filter: blur(3px); transition: background .2s ease, transform .2s ease;
+  z-index:2;
+}
+.carrossel-banners__seta svg{ width:18px; height:18px; }
+.carrossel-banners__seta:hover{ background: rgba(20,6,6,.65); transform: translateY(-50%) scale(1.06); }
+.carrossel-banners__seta--esq{ left:8px; }
+.carrossel-banners__seta--dir{ right:8px; }
+.carrossel-banners--unico .carrossel-banners__seta{ display:none; }
+.carrossel-banners__pontos{
+  display:flex; justify-content:center; gap:7px; margin-top:12px;
+}
+.carrossel-banners--unico .carrossel-banners__pontos{ display:none; }
+.carrossel-banners__ponto{
+  width:8px; height:8px; border-radius:50%; border:none; padding:0; cursor:pointer;
+  background: rgba(255,253,248,.4); transition: background .2s ease, transform .2s ease;
+}
+.carrossel-banners__ponto.ativo{ background: var(--dourado-claro); transform: scale(1.3); }
+
 .pergunta-dia{
   font-family:'Cinzel'; font-size:1.15rem; font-weight:500;
   margin-bottom:26px; text-shadow: 0 2px 10px rgba(0,0,0,.5);

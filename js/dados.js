@@ -403,3 +403,48 @@ export async function trocarOrdemAvisos(avisoA, avisoB) {
 export async function excluirAviso(id) {
   await deleteDoc(doc(db, "avisos", id));
 }
+
+/* ---------------- Banners (carrossel da página inicial) ---------------- */
+
+// Lista (em tempo real) os banners do carrossel da Home, na ordem manual definida no
+// painel admin (botões "subir"/"descer") — usada tanto pelo carrossel público quanto
+// pela lista de gerenciamento em Configurações.
+export function ouvirBanners(callback) {
+  return onSnapshot(collection(db, "banners"), (snap) => {
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    lista.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+    callback(lista);
+  });
+}
+
+// Banners novos entram no fim da fila (maior "ordem" = último); use trocarOrdemBanners
+// para reordenar depois de criado.
+export async function criarBanner({ imagemUrl, textoBotao, paginaDestino }) {
+  const ref = doc(collection(db, "banners"));
+  await setDoc(ref, {
+    imagemUrl, textoBotao, paginaDestino,
+    ordem: Date.now(),
+    criadoEm: serverTimestamp()
+  });
+  return ref.id;
+}
+
+export async function atualizarBanner(id, { imagemUrl, textoBotao, paginaDestino }) {
+  const dados = { textoBotao, paginaDestino };
+  // só mexe em imagemUrl quando o admin realmente trocou a imagem (envia um novo valor);
+  // se não mexeu, o banner mantém a imagem que já tinha.
+  if (imagemUrl !== undefined) dados.imagemUrl = imagemUrl;
+  await updateDoc(doc(db, "banners", id), dados);
+}
+
+// Troca a posição de dois banners adjacentes (botões "subir"/"descer" no painel admin).
+export async function trocarOrdemBanners(bannerA, bannerB) {
+  await Promise.all([
+    updateDoc(doc(db, "banners", bannerA.id), { ordem: bannerB.ordem ?? 0 }),
+    updateDoc(doc(db, "banners", bannerB.id), { ordem: bannerA.ordem ?? 0 })
+  ]);
+}
+
+export async function excluirBanner(id) {
+  await deleteDoc(doc(db, "banners", id));
+}

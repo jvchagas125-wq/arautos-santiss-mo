@@ -65,9 +65,29 @@
 
   <!-- Conteúdo -->
   <main class="conteudo">
-    <img class="selo-decorativo" src="assets/selo-adoracao.png" alt="" />
-    <h1 class="titulo-pagina">Adoração ao Santíssimo Sacramento</h1>
-    <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+    <!-- Enquanto não há banners cadastrados em Configurações > Banners, mostra a logo e o
+         título de sempre. Assim que o primeiro banner é cadastrado, isso é escondido e dá
+         lugar ao carrossel (ver js/main.js). -->
+    <div id="heroEstatico">
+      <img class="selo-decorativo" src="assets/selo-adoracao.png" alt="" />
+      <h1 class="titulo-pagina">Adoração ao Santíssimo Sacramento</h1>
+      <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+    </div>
+
+    <!-- Carrossel de banners da Home, preenchido dinamicamente pelo js/main.js a partir dos
+         banners cadastrados no painel admin (Configurações > Banners da página inicial). -->
+    <div class="carrossel-banners oculto" id="carrosselBanners">
+      <div class="carrossel-banners__viewport">
+        <div class="carrossel-banners__pista" id="carrosselPista"></div>
+        <button type="button" class="carrossel-banners__seta carrossel-banners__seta--esq" id="carrosselAnterior" aria-label="Banner anterior">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <button type="button" class="carrossel-banners__seta carrossel-banners__seta--dir" id="carrosselProximo" aria-label="Próximo banner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <div class="carrossel-banners__pontos" id="carrosselPontos"></div>
+    </div>
 
     <div class="card-frase">
       <div class="card-frase__eyebrow">Frase do dia</div>

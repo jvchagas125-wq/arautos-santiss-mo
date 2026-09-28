@@ -1,7 +1,7 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
-  MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto,
+  MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto, ORDEM_PAGINAS,
   capitalizarNome, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -12,7 +12,8 @@ import {
   excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
   marcarAgendamentoExtra,
   obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
-  ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos
+  ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
+  ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
 
@@ -101,6 +102,7 @@ function iniciarPainel() {
   configurarAcompanhamento();
   configurarInfoContato();
   configurarContatos();
+  configurarBanners();
   configurarConfiguracoes();
 }
 
@@ -1673,6 +1675,186 @@ function comprimirImagem(file, maxWidth, qualidade, tipoSaida) {
     };
     leitor.onerror = reject;
     leitor.readAsDataURL(file);
+  });
+}
+
+/* ---------------- Banners da página inicial (carrossel) ---------------- */
+function configurarBanners() {
+  const formNovo = document.getElementById("formNovoBanner");
+  const campoImagem = document.getElementById("campoBannerImagem");
+  const previewImagemNovo = document.getElementById("previewBannerImagem");
+  const campoTexto = document.getElementById("campoBannerTexto");
+  const campoDestino = document.getElementById("campoBannerDestino");
+  const listaBannersAdmin = document.getElementById("listaBannersAdmin");
+  const bannerSemBanners = document.getElementById("bannerSemBanners");
+
+  // páginas de destino disponíveis pro botão do banner (todas, menos a própria Início —
+  // não faz sentido um banner da Home redirecionar pra Home)
+  const PAGINAS_DESTINO_BANNER = ORDEM_PAGINAS.filter((p) => p.chave !== "index");
+
+  function preencherSelectDestino(select, valorSelecionado) {
+    PAGINAS_DESTINO_BANNER.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.href;
+      opt.textContent = p.label;
+      if (p.href === valorSelecionado) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+  preencherSelectDestino(campoDestino);
+
+  campoImagem.addEventListener("change", () => {
+    const file = campoImagem.files[0];
+    if (!file) { previewImagemNovo.classList.add("oculto"); return; }
+    previewImagemNovo.src = URL.createObjectURL(file);
+    previewImagemNovo.classList.remove("oculto");
+  });
+
+  formNovo.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = formNovo.querySelector("button[type=submit]");
+    const file = campoImagem.files[0];
+    if (!file) { mostrarToast("Selecione uma imagem para o banner."); return; }
+    btn.disabled = true;
+    try {
+      btn.textContent = "Enviando imagem...";
+      const imagemUrl = await enviarImagemParaCloudinary(file);
+      btn.textContent = "Adicionando...";
+      await criarBanner({
+        imagemUrl,
+        textoBotao: campoTexto.value.trim(),
+        paginaDestino: campoDestino.value
+      });
+      formNovo.reset();
+      previewImagemNovo.classList.add("oculto");
+      mostrarToast("Banner adicionado!");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível adicionar o banner. Verifique a imagem e tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Adicionar banner";
+    }
+  });
+
+  ouvirBanners((lista) => {
+    listaBannersAdmin.innerHTML = "";
+    bannerSemBanners.classList.toggle("oculto", lista.length > 0);
+
+    lista.forEach((banner, indice) => {
+      const nomeDestino = (PAGINAS_DESTINO_BANNER.find((p) => p.href === banner.paginaDestino) || {}).label || banner.paginaDestino;
+
+      const card = document.createElement("div");
+      card.className = "cartao-aviso-admin";
+      card.innerHTML = `
+        <img src="${banner.imagemUrl}" alt="" class="cartao-aviso-admin__img" />
+        <div class="cartao-aviso-admin__corpo">
+          <div class="cartao-aviso-admin__titulo">${escaparHtml(banner.textoBotao)}</div>
+          <p class="cartao-aviso-admin__texto">Leva para: ${escaparHtml(nomeDestino)}</p>
+          <div class="cartao-aviso-admin__acoes">
+            <button type="button" class="btn btn-contorno btn-pequeno btn-subir-banner" title="Mover para cima" ${indice === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" class="btn btn-contorno btn-pequeno btn-descer-banner" title="Mover para baixo" ${indice === lista.length - 1 ? "disabled" : ""}>↓</button>
+            <button type="button" class="btn btn-contorno btn-pequeno btn-editar-banner">Editar</button>
+            <button type="button" class="btn btn-vermelho btn-pequeno btn-excluir-banner" title="Apagar banner">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px; vertical-align:-2px;"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
+              Apagar
+            </button>
+          </div>
+          <form class="form-editar-banner oculto">
+            <div class="campo">
+              <label>Trocar imagem (opcional)</label>
+              <input type="file" class="campo-edit-imagem-banner" accept="image/*" />
+            </div>
+            <div class="campo">
+              <label>Texto do botão</label>
+              <input type="text" class="campo-edit-texto-banner" value="${escaparHtml(banner.textoBotao)}" required />
+            </div>
+            <div class="campo" style="margin-bottom:0;">
+              <label>Página de destino</label>
+              <select class="campo-edit-destino-banner"></select>
+            </div>
+            <div class="cartao-aviso-admin__acoes" style="margin-top:12px;">
+              <button type="button" class="btn btn-contorno btn-pequeno btn-cancelar-edicao-banner">Cancelar</button>
+              <button type="submit" class="btn btn-dourado btn-pequeno">Salvar</button>
+            </div>
+          </form>
+        </div>
+      `;
+      listaBannersAdmin.appendChild(card);
+      preencherSelectDestino(card.querySelector(".campo-edit-destino-banner"), banner.paginaDestino);
+
+      const formEdicao = card.querySelector(".form-editar-banner");
+      const btnEditar = card.querySelector(".btn-editar-banner");
+      const btnExcluir = card.querySelector(".btn-excluir-banner");
+      const btnCancelarEdicao = card.querySelector(".btn-cancelar-edicao-banner");
+      const btnSubir = card.querySelector(".btn-subir-banner");
+      const btnDescer = card.querySelector(".btn-descer-banner");
+
+      btnSubir.addEventListener("click", async () => {
+        if (indice === 0) return;
+        btnSubir.disabled = true;
+        btnDescer.disabled = true;
+        try {
+          await trocarOrdemBanners(banner, lista[indice - 1]);
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível reordenar. Tente novamente.");
+        }
+      });
+      btnDescer.addEventListener("click", async () => {
+        if (indice === lista.length - 1) return;
+        btnSubir.disabled = true;
+        btnDescer.disabled = true;
+        try {
+          await trocarOrdemBanners(banner, lista[indice + 1]);
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível reordenar. Tente novamente.");
+        }
+      });
+
+      btnEditar.addEventListener("click", () => formEdicao.classList.remove("oculto"));
+      btnCancelarEdicao.addEventListener("click", () => formEdicao.classList.add("oculto"));
+
+      formEdicao.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btnSalvar = formEdicao.querySelector("button[type=submit]");
+        btnSalvar.disabled = true;
+        try {
+          const dadosSalvar = {
+            textoBotao: formEdicao.querySelector(".campo-edit-texto-banner").value.trim(),
+            paginaDestino: formEdicao.querySelector(".campo-edit-destino-banner").value
+          };
+          const fileEdicao = formEdicao.querySelector(".campo-edit-imagem-banner").files[0];
+          if (fileEdicao) {
+            btnSalvar.textContent = "Enviando imagem...";
+            dadosSalvar.imagemUrl = await enviarImagemParaCloudinary(fileEdicao);
+          }
+          btnSalvar.textContent = "Salvando...";
+          await atualizarBanner(banner.id, dadosSalvar);
+          mostrarToast("Banner atualizado!");
+          formEdicao.classList.add("oculto");
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível salvar. Tente novamente.");
+        } finally {
+          btnSalvar.disabled = false;
+          btnSalvar.textContent = "Salvar";
+        }
+      });
+
+      btnExcluir.addEventListener("click", async () => {
+        btnExcluir.disabled = true;
+        try {
+          await excluirBanner(banner.id);
+          mostrarToast("Banner removido.");
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível remover. Tente novamente.");
+          btnExcluir.disabled = false;
+        }
+      });
+    });
   });
 }
 

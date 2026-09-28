@@ -409,6 +409,36 @@
         </div>
 
         <div class="painel">
+          <div class="painel__titulo"><span class="emoji">🖼️</span> Banners da página inicial (carrossel)</div>
+          <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
+            Esses banners passam em rotação automática no topo da página inicial, no lugar da logo e do
+            título. Sem nenhum banner cadastrado, a Home volta a mostrar a logo e o título normalmente.
+          </p>
+          <form id="formNovoBanner">
+            <div class="campo">
+              <label for="campoBannerImagem">Imagem do banner</label>
+              <input type="file" id="campoBannerImagem" accept="image/*" required />
+              <img id="previewBannerImagem" alt="" class="oculto" style="margin-top:8px; max-height:140px; border-radius:8px; display:block;" />
+            </div>
+            <div class="campo">
+              <label for="campoBannerTexto">Texto do botão</label>
+              <input type="text" id="campoBannerTexto" placeholder="Ex: Agende seu horário" required />
+            </div>
+            <div class="campo" style="margin-bottom:0;">
+              <label for="campoBannerDestino">Página de destino (ao tocar no banner)</label>
+              <select id="campoBannerDestino" required></select>
+            </div>
+            <button type="submit" class="btn btn-dourado" style="margin-top:16px;">Adicionar banner</button>
+          </form>
+        </div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">🎞️</span> Banners cadastrados</div>
+          <p class="mensagem-vazia oculto" id="bannerSemBanners">Nenhum banner cadastrado ainda.</p>
+          <div id="listaBannersAdmin"></div>
+        </div>
+
+        <div class="painel">
           <div class="painel__titulo"><span class="emoji">🔒</span> Senha do painel administrativo</div>
           <div class="campo">
             <label for="campoNovaSenha">Nova senha</label>
