@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Intenções da Missa — Adoração ao Santíssimo Sacramento</title>
+<title>Intenções da Santa Missa — Adoração ao Santíssimo Sacramento</title>
 <link rel="icon" href="assets/favicon.png" />
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#7a0c1e" />
@@ -60,7 +60,7 @@
   </div>
 
   <main class="conteudo" id="conteudoIntencoes">
-    <h1 class="titulo-pagina">Intenções da Missa</h1>
+    <h1 class="titulo-pagina">Intenções da Santa Missa</h1>
     <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
     <div class="painel" id="painelDataIntencoes">
@@ -117,6 +117,21 @@
       <div class="modal__acoes">
         <button class="btn btn-contorno" id="btnCancelarIntencaoRepetida">Cancelar</button>
         <button class="btn btn-dourado" id="btnConfirmarIntencaoRepetida">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmação: apagar uma intenção enviada por mim (ver js/intencoes.js). -->
+  <div class="modal-overlay" id="modalApagarIntencao">
+    <div class="modal">
+      <div class="modal__icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+      </div>
+      <h3>Apagar intenção</h3>
+      <p>Tem certeza que deseja apagar esta intenção? Essa ação não pode ser desfeita.</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno" id="btnCancelarApagarIntencao">Cancelar</button>
+        <button class="btn btn-dourado" id="btnConfirmarApagarIntencao">Apagar</button>
       </div>
     </div>
   </div>

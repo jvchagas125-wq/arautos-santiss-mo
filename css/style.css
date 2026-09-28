@@ -641,6 +641,9 @@ img{ max-width: 100%; display:block; }
 #modalCalendarioAgendamentos.tela-cheia.aberto{ opacity:1; pointer-events:auto; }
 #modalCalendarioAgendamentos.tela-cheia .modal{
   max-width:min(97vw, 1400px); width:100%; max-height:min(94vh, 900px); height:94vh;
+  /* ver explicação do "dvh" acima em .modal--largo — aqui é o que mais importa, porque é
+     essa altura que decide quanto sobra pra tabela rolar dentro do modal no celular */
+  max-height:min(94dvh, 900px); height:94dvh;
   transform: scale(.94) translateY(8px); transition: transform var(--transicao);
 }
 #modalCalendarioAgendamentos.tela-cheia.aberto .modal{ transform: scale(1) translateY(0); }
@@ -655,7 +658,7 @@ img{ max-width: 100%; display:block; }
 }
 .grade-semanal__scroll{
   overflow:auto; border:1.5px solid var(--dourado); border-radius:12px; -webkit-overflow-scrolling:touch;
-  flex:1 1 auto; min-height:0;
+  flex:1 1 auto; min-height:220px;
 }
 .grade-semanal__tabela{ border-collapse:collapse; width:100%; min-width:600px; }
 .grade-semanal__tabela th, .grade-semanal__tabela td{
@@ -784,7 +787,29 @@ img{ max-width: 100%; display:block; }
 .intencao-item{
   background: rgba(122,12,30,.05); border:1px solid rgba(157,122,31,.2);
   border-radius:10px; padding:9px 13px; font-size:.88rem; color: var(--texto); line-height:1.5;
+  display:flex; align-items:center; gap:10px;
 }
+.intencao-item__texto{ flex:1; min-width:0; }
+.intencao-item__acoes{ display:flex; gap:6px; flex-shrink:0; }
+.intencao-item__btn{
+  flex-shrink:0; width:28px; height:28px; border-radius:50%; border:none; display:flex;
+  align-items:center; justify-content:center; cursor:pointer;
+  background: rgba(205,164,52,.15); color: var(--dourado-escuro); transition: background .2s ease, transform .2s ease;
+}
+.intencao-item__btn svg{ width:14px; height:14px; }
+.intencao-item__btn:hover{ background: rgba(205,164,52,.28); transform: scale(1.06); }
+.intencao-item__btn--apagar{ background: rgba(122,12,30,.08); color: var(--vermelho); }
+.intencao-item__btn--apagar:hover{ background: rgba(122,12,30,.18); }
+/* item entra em modo de edição: mesma "moldura", mas troca o texto por um formulário inline */
+.intencao-item--editando{ flex-direction:column; align-items:stretch; gap:8px; }
+.intencao-item__editar-form{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+.intencao-item__editar-form textarea{
+  flex:1; min-width:180px; border:1px solid rgba(157,122,31,.35); border-radius:10px;
+  padding:9px 11px; font-family:'EB Garamond', serif; font-size:.92rem; color: var(--texto);
+  background:#fffefb; resize:vertical;
+}
+.intencao-item__editar-form textarea:focus{ outline:none; border-color: var(--dourado); }
+.intencao-item__editar-acoes{ display:flex; gap:8px; flex-shrink:0; }
 .categoria-intencao__vazio{ margin:0 0 10px; font-size:.82rem; color: var(--texto-suave); font-style:italic; }
 .categoria-intencao__form{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
 .categoria-intencao__form textarea{
@@ -905,6 +930,12 @@ img{ max-width: 100%; display:block; }
 }
 .modal--largo{
   max-height: calc(100vh - 40px);
+  /* dvh (altura "dinâmica" de viewport) acompanha a barra de endereço do celular sumindo/
+     aparecendo — sem isso, "vh" no celular é calculado com base na tela SEM a barra de
+     endereço (maior que o espaço realmente visível), fazendo o modal nascer maior que a tela
+     e cortar o conteúdo de baixo. Repetir a propriedade assim é seguro: navegadores que não
+     conhecem "dvh" simplesmente ignoram essa linha e ficam com o valor em "vh" de cima. */
+  max-height: calc(100dvh - 40px);
   display:flex; flex-direction:column;
 }
 .modal--largo h3{ flex-shrink:0; }

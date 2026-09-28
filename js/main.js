@@ -51,24 +51,30 @@ const carrosselPontos = document.getElementById("carrosselPontos");
 const btnCarrosselAnterior = document.getElementById("carrosselAnterior");
 const btnCarrosselProximo = document.getElementById("carrosselProximo");
 
-// Enquanto a lista de banners ainda não chegou do Firestore (ouvirBanners é assíncrono),
-// evita mostrar por uma fração de segundo a logo/título estáticos (#heroEstatico) pra quem
-// já tinha banners na última visita — guardamos essa informação num cache local e já
-// deixamos a tela no estado certo antes mesmo da primeira resposta do banco.
-const CHAVE_CACHE_TEM_BANNERS = "arautos_tem_banners_cache";
-try {
-  if (localStorage.getItem(CHAVE_CACHE_TEM_BANNERS) === "1") {
-    heroEstatico.classList.add("oculto");
-    carrosselBanners.classList.remove("oculto");
+// Enquanto a lista de banners ainda não chegou do Firestore (ouvirBanners é assíncrono, e o
+// site não usa cache local do Firestore — cada recarregada de página pede tudo de novo pela
+// rede), guardamos a última lista de banners vista neste aparelho e já a exibimos de cara,
+// antes mesmo da primeira resposta do banco — assim ninguém vê a logo/título antigos piscarem
+// por um instante a cada load. Assim que a resposta real chega, o carrossel é atualizado (troca
+// suave, sem voltar pro estado vazio no meio do caminho).
+const CHAVE_CACHE_BANNERS = "arautos_banners_cache";
+function lerBannersCache() {
+  try {
+    const bruto = localStorage.getItem(CHAVE_CACHE_BANNERS);
+    return bruto ? JSON.parse(bruto) : null;
+  } catch {
+    return null;
   }
-} catch {
-  // sem localStorage disponível — sem problema, só perde a otimização
+}
+function salvarBannersCache(lista) {
+  try { localStorage.setItem(CHAVE_CACHE_BANNERS, JSON.stringify(lista)); } catch {}
 }
 
 const INTERVALO_AUTOPLAY_MS = 6000;
 let bannersAtuais = [];
 let indiceAtual = 0;
 let temporizadorAutoplay = null;
+let ultimaAssinaturaBanners = null;
 
 function criarSlideBanner(banner, indice) {
   const slide = document.createElement("a");
@@ -117,9 +123,15 @@ function irParaSlideManual(indice) {
   reiniciarAutoplay();
 }
 
-function renderizarCarrossel(lista) {
+function renderizarCarrossel(lista, opts = {}) {
+  // evita reconstruir tudo (e reiniciar a transição/autoplay) quando a lista chegou do
+  // Firestore mas é idêntica à que já estava em tela (ex.: a que acabamos de mostrar do cache)
+  const assinatura = JSON.stringify(lista);
+  if (assinatura === ultimaAssinaturaBanners) return;
+  ultimaAssinaturaBanners = assinatura;
+
   bannersAtuais = lista;
-  try { localStorage.setItem(CHAVE_CACHE_TEM_BANNERS, lista.length ? "1" : "0"); } catch {}
+  if (!opts.doCache) salvarBannersCache(lista); // não reescreve o cache com os dados que vieram dele mesmo
 
   if (!lista.length) {
     heroEstatico.classList.remove("oculto");
@@ -181,4 +193,11 @@ carrosselBanners.addEventListener("touchend", (e) => {
   }
 }, { passive: true });
 
+// aplica a lista salva deste aparelho ANTES de qualquer resposta do Firestore chegar — é isso
+// que faz o carrossel (com imagens de verdade, não uma caixa vazia) já aparecer de cara ao
+// recarregar a página, sem esperar a rede
+const bannersCache = lerBannersCache();
+if (bannersCache && bannersCache.length) {
+  renderizarCarrossel(bannersCache, { doCache: true });
+}
 ouvirBanners(renderizarCarrossel);

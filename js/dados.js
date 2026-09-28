@@ -361,6 +361,18 @@ export function ouvirTodasIntencoes(callback) {
   });
 }
 
+// Atualiza o texto (e o tipo, se for "gracas") de uma intenção já enviada — usado quando a
+// própria pessoa edita algo que ela escreveu (ver js/intencoes.js).
+export async function atualizarIntencao(id, dadosParciais) {
+  await updateDoc(doc(db, "intencoes", id), dadosParciais);
+}
+
+// Apaga uma única intenção — usado quando a própria pessoa apaga algo que ela escreveu
+// (diferente de excluirListaIntencoes, que apaga a lista inteira e é só do painel admin).
+export async function excluirIntencao(id) {
+  await deleteDoc(doc(db, "intencoes", id));
+}
+
 // Apaga todas as intenções de uma lista específica (usado pelo padre no painel admin, com confirmação).
 export async function excluirListaIntencoes(dataMissa, horaMissa) {
   const q = query(

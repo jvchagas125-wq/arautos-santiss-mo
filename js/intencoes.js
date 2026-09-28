@@ -5,13 +5,27 @@ import {
   horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO
 } from "./utils.js";
 import {
-  obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao
+  obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao,
+  atualizarIntencao, excluirIntencao
 } from "./dados.js";
 
 inicializarNavegacao("intencoes");
 // identificação padrão do site (mesmo telefone/nome usado em agendamentos etc.) — agora cada
 // intenção guarda o nome de quem enviou (ver dados.js), pra aparecer no PDF extraído pelo padre.
 const usuarioPromise = exigirCadastro();
+
+// No site público cada pessoa só vê as intenções que ELA MESMA colocou em cada categoria (o
+// painel administrativo continua mostrando as de todo mundo, via ouvirTodasIntencoes — não
+// mexe nisso). Enquanto a identificação (usuarioPromise) ainda não terminou — ex.: alguém
+// preenchendo o cadastro pela primeira vez — não dá pra saber o que é "meu" ainda, então as
+// listas ficam vazias/"carregando" até resolver; nesse momento, refaz a exibição de tudo que já
+// está montado na tela sem esperar um novo evento do Firestore.
+let usuarioAtual = null;
+let blocosAtivos = []; // funções de re-render dos blocos de categoria (categoria-intencao) na tela agora
+usuarioPromise.then((usuario) => {
+  usuarioAtual = usuario;
+  blocosAtivos.forEach((reRenderizar) => reRenderizar());
+});
 
 obterConfiguracoesGerais().then((config) => {
   aplicarLogo(config.logoUrl);
@@ -54,6 +68,27 @@ btnConfirmarIntencaoRepetida.addEventListener("click", () => {
   resolverConfirmacaoRepetida = null;
 });
 
+/* ---------- Confirmação de exclusão (apagar uma intenção que eu mesmo coloquei) ---------- */
+const modalApagarIntencao = document.getElementById("modalApagarIntencao");
+const btnCancelarApagarIntencao = document.getElementById("btnCancelarApagarIntencao");
+const btnConfirmarApagarIntencao = document.getElementById("btnConfirmarApagarIntencao");
+let resolverConfirmacaoApagar = null;
+
+function confirmarExclusaoIntencao() {
+  abrirModal(modalApagarIntencao);
+  return new Promise((resolve) => { resolverConfirmacaoApagar = resolve; });
+}
+btnCancelarApagarIntencao.addEventListener("click", () => {
+  fecharModal(modalApagarIntencao);
+  resolverConfirmacaoApagar?.(false);
+  resolverConfirmacaoApagar = null;
+});
+btnConfirmarApagarIntencao.addEventListener("click", () => {
+  fecharModal(modalApagarIntencao);
+  resolverConfirmacaoApagar?.(true);
+  resolverConfirmacaoApagar = null;
+});
+
 let configAtual = null;
 let diaSelecionado = null; // nada selecionado até a pessoa escolher no calendário
 let pararEscutas = []; // unsubscribes das listas do dia atualmente exibido
@@ -70,6 +105,7 @@ const calendario = criarCalendario(calendarioEl, dataInput, {
 function pararTodasEscutas() {
   pararEscutas.forEach((parar) => parar());
   pararEscutas = [];
+  blocosAtivos = [];
 }
 
 function textoStatusFechado(status) {
@@ -78,19 +114,93 @@ function textoStatusFechado(status) {
     `${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.`;
 }
 
-function renderizarEntradasNaLista(listaEl, entradas) {
+// Usado só pra colocar o texto atual dentro do <textarea> de edição via innerHTML sem correr o
+// risco de um caractere como "<" ou "&" quebrar o HTML (ou, pior, virar uma tag de verdade).
+function escaparHtml(texto) {
+  const div = document.createElement("div");
+  div.textContent = texto;
+  return div.innerHTML;
+}
+
+const ICONE_LAPIS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>`;
+const ICONE_LIXEIRA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>`;
+
+// Renderiza a lista de intenções da pessoa nesta categoria — como agora cada pessoa só vê as
+// próprias (ver usuarioAtual acima), toda intenção aqui é dela, então todas recebem os botões
+// de editar/apagar. "onSalvar"/"onApagar" cuidam de persistir no Firestore.
+function renderizarEntradasNaLista(listaEl, entradas, { categoria, onSalvar, onApagar }) {
   listaEl.innerHTML = "";
   if (entradas.length === 0) {
     const vazio = document.createElement("p");
     vazio.className = "categoria-intencao__vazio";
-    vazio.textContent = "Nenhuma intenção adicionada ainda.";
+    vazio.textContent = usuarioAtual
+      ? "Você ainda não colocou nenhuma intenção aqui."
+      : "Carregando suas intenções...";
     listaEl.appendChild(vazio);
     return;
   }
   entradas.forEach((it) => {
     const item = document.createElement("div");
     item.className = "intencao-item";
-    item.textContent = it.texto;
+
+    function mostrarVisualizacao() {
+      item.className = "intencao-item";
+      item.innerHTML = `
+        <span class="intencao-item__texto"></span>
+        <span class="intencao-item__acoes">
+          <button type="button" class="intencao-item__btn intencao-item__btn--editar" title="Editar" aria-label="Editar esta intenção">${ICONE_LAPIS}</button>
+          <button type="button" class="intencao-item__btn intencao-item__btn--apagar" title="Apagar" aria-label="Apagar esta intenção">${ICONE_LIXEIRA}</button>
+        </span>
+      `;
+      item.querySelector(".intencao-item__texto").textContent = it.texto;
+      item.querySelector(".intencao-item__btn--editar").addEventListener("click", mostrarEdicao);
+      item.querySelector(".intencao-item__btn--apagar").addEventListener("click", async () => {
+        const confirmar = await confirmarExclusaoIntencao();
+        if (confirmar) onApagar(it.id);
+      });
+    }
+
+    function mostrarEdicao() {
+      item.className = "intencao-item intencao-item--editando";
+      item.innerHTML = `
+        <form class="intencao-item__editar-form">
+          ${categoria === "gracas" ? CAMPO_TIPO_GRACA : ""}
+          <textarea rows="2" required>${escaparHtml(it.texto)}</textarea>
+          <span class="intencao-item__editar-acoes">
+            <button type="submit" class="btn btn-dourado btn-pequeno">Salvar</button>
+            <button type="button" class="btn btn-contorno btn-pequeno intencao-item__cancelar">Cancelar</button>
+          </span>
+        </form>
+      `;
+      if (categoria === "gracas") {
+        const radio = item.querySelector(`input[name=tipoGraca][value="${it.tipoGraca || "pedido"}"]`);
+        if (radio) radio.checked = true;
+      }
+      item.querySelector(".intencao-item__cancelar").addEventListener("click", mostrarVisualizacao);
+      item.querySelector("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const texto = form.querySelector("textarea").value.trim();
+        if (!texto) return;
+        const tipoGraca = categoria === "gracas" ? form.querySelector("input[name=tipoGraca]:checked")?.value : undefined;
+        const btn = form.querySelector("button[type=submit]");
+        btn.disabled = true;
+        btn.textContent = "Salvando...";
+        try {
+          const dadosParciais = { texto };
+          if (categoria === "gracas" && tipoGraca) dadosParciais.tipoGraca = tipoGraca;
+          await onSalvar(it.id, dadosParciais);
+          mostrarToast("Intenção atualizada!");
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível salvar. Verifique sua conexão.");
+          btn.disabled = false;
+          btn.textContent = "Salvar";
+        }
+      });
+    }
+
+    mostrarVisualizacao();
     listaEl.appendChild(item);
   });
 }
@@ -125,9 +235,27 @@ function criarBlocoCategoria(categoria, rotulo, iso, hora) {
   const listaEl = bloco.querySelector(".categoria-intencao__lista");
   const form = bloco.querySelector("form");
 
-  // guarda as entradas atuais dessa categoria (atualizadas a cada snapshot em tempo real) pra
-  // conseguir checar, na hora de enviar, se essa mesma pessoa já colocou algo aqui antes.
+  // guarda TODAS as entradas atuais dessa categoria (atualizadas a cada snapshot em tempo real),
+  // mesmo sendo de outras pessoas — precisa da lista inteira pra checar, na hora de enviar, se
+  // essa mesma pessoa já colocou algo aqui antes (duplicidade é checada na categoria inteira, não
+  // só no que é exibido). O que é EXIBIDO, por sua vez, é só o que pertence a quem está vendo a
+  // página agora (ver usuarioAtual/reRenderizar abaixo).
   let entradasAtuais = [];
+
+  function reRenderizar() {
+    const minhas = usuarioAtual
+      ? entradasAtuais.filter((it) => it.telefoneDigits && it.telefoneDigits === usuarioAtual.telefoneDigits)
+      : [];
+    renderizarEntradasNaLista(listaEl, minhas, {
+      categoria,
+      onSalvar: (id, dadosParciais) => atualizarIntencao(id, dadosParciais),
+      onApagar: (id) => excluirIntencao(id).catch((err) => {
+        console.error(err);
+        mostrarToast("Não foi possível apagar. Verifique sua conexão.");
+      })
+    });
+  }
+  blocosAtivos.push(reRenderizar);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -166,7 +294,7 @@ function criarBlocoCategoria(categoria, rotulo, iso, hora) {
     bloco,
     atualizarEntradas(entradas) {
       entradasAtuais = entradas;
-      renderizarEntradasNaLista(listaEl, entradas);
+      reRenderizar();
     }
   };
 }

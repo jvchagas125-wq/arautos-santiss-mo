@@ -511,6 +511,21 @@ function salvarCacheVisual(campo, url) {
   }
 }
 
+// dá uma dica ao navegador pra baixar essa imagem o quanto antes, com prioridade alta — o fundo
+// de tela em cache é aplicado via CSS (background-image), que historicamente o navegador
+// costuma baixar com prioridade mais baixa do que uma <img> normal, o que atrasava a troca.
+function precarregarImagem(url) {
+  try {
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "image";
+    link.href = url;
+    document.head.appendChild(link);
+  } catch {
+    // sem problema, é só uma otimização
+  }
+}
+
 // Chamada bem no início de cada página (dentro de inicializarNavegacao), antes de qualquer
 // resposta do Firestore, pra já pintar o logo/fundo vistos da última vez.
 export function aplicarConfigVisualEmCache() {
@@ -521,6 +536,7 @@ export function aplicarConfigVisualEmCache() {
   }
   if (cache.fundoUrl) {
     document.documentElement.style.setProperty("--fundo-img", `url('${cache.fundoUrl}')`);
+    precarregarImagem(cache.fundoUrl);
   }
 }
 
