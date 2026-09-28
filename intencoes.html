@@ -97,8 +97,29 @@
       <p><strong>Como funciona:</strong> escolha no calendário o dia da missa que deseja. Cada horário de missa daquele dia tem sua própria lista de intenções, aberta para preenchimento até algumas horas antes do horário da missa; depois disso ela fecha.</p>
     </div>
 
+    <div class="aviso-info" style="margin-top:8px;">
+      <span class="aviso-info__icone">ℹ️</span>
+      <p><strong>Dica:</strong> sempre escreva o nome completo de quem a intenção é para (por exemplo, quem está de aniversário ou a alma pela qual está pedindo orações) — isso ajuda o padre a mencionar corretamente durante a missa. Seu próprio nome já é identificado automaticamente pelo seu cadastro, não precisa repeti-lo no texto.</p>
+    </div>
+
     <p class="rodape-simples">Arautos do Evangelho Campos - RJ</p>
   </main>
+
+  <!-- Modal de confirmação: mostrado quando a pessoa já tem uma intenção enviada nessa mesma
+       categoria, para essa mesma missa, e tenta enviar outra (ver js/intencoes.js). -->
+  <div class="modal-overlay" id="modalIntencaoRepetida">
+    <div class="modal">
+      <div class="modal__icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v5M12 16.5h.01"/></svg>
+      </div>
+      <h3>Intenção já enviada</h3>
+      <p>Você já colocou uma intenção em <strong id="categoriaIntencaoRepetida">—</strong> para esta missa. Deseja enviar mais uma mesmo assim?</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno" id="btnCancelarIntencaoRepetida">Cancelar</button>
+        <button class="btn btn-dourado" id="btnConfirmarIntencaoRepetida">Confirmar</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/intencoes.js"></script>
   <script type="module" src="js/instalar-app.js"></script>

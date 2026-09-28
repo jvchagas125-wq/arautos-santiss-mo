@@ -1,7 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso,
-  horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
+  horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana, reduzirNomeParaExibicao,
   MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
 import { obterConfiguracoesGerais, obterDiasHorarios, ouvirAgendamentosDaData, ouvirTodosAgendamentos, criarAgendamento } from "./dados.js";
 
@@ -185,7 +185,10 @@ function renderizarGradeSemanal() {
         td.className = "grade-semanal__cel--bloqueado";
       } else if (pessoas.length > 0) {
         const algumExtra = pessoas.some((p) => p.extra);
-        td.textContent = pessoas.map((p) => p.nome || "—").join(" / ");
+        // reduz pra "nome + sobrenome" na hora de exibir (mesma regra do cadastro), mesmo que o
+        // agendamento tenha guardado um nome mais longo de antes dessa padronização existir —
+        // assim a planilha fica sempre legível sem precisar corrigir os dados antigos.
+        td.textContent = pessoas.map((p) => reduzirNomeParaExibicao(p.nome || "") || "—").join(" / ");
         td.className = `${algumExtra ? "grade-semanal__cel--extra" : classeCorPorHora(hora)} grade-semanal__cel--com-gente`;
         td.dataset.iso = iso;
         td.dataset.hora = String(hora);
@@ -254,7 +257,7 @@ function criarItemPessoaOcupado(o) {
   const info = document.createElement("div");
   const nome = document.createElement("div");
   nome.className = "pessoa-ocupado-item__nome";
-  nome.textContent = o.nome || "—";
+  nome.textContent = reduzirNomeParaExibicao(o.nome || "") || "—";
   info.appendChild(nome);
 
   item.appendChild(info);

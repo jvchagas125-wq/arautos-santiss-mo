@@ -1,6 +1,6 @@
 import { exigirCadastro } from "./auth.js";
 import {
-  inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast,
+  inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   formatarDataBR, dataParaIso, hojeIso, criarCalendario,
   horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO
 } from "./utils.js";
@@ -9,7 +9,9 @@ import {
 } from "./dados.js";
 
 inicializarNavegacao("intencoes");
-exigirCadastro(); // apenas identificação padrão do site — as intenções em si são anônimas
+// identificação padrão do site (mesmo telefone/nome usado em agendamentos etc.) — agora cada
+// intenção guarda o nome de quem enviou (ver dados.js), pra aparecer no PDF extraído pelo padre.
+const usuarioPromise = exigirCadastro();
 
 obterConfiguracoesGerais().then((config) => {
   aplicarLogo(config.logoUrl);
@@ -25,6 +27,32 @@ const avisoSelecioneData = document.getElementById("avisoSelecioneData");
 function formatarHoraSimples(hora) {
   return `${String(hora).padStart(2, "0")}:00`;
 }
+
+/* ---------- Confirmação de intenção repetida ----------
+   Quando a pessoa já tem uma intenção enviada nessa mesma categoria, para essa mesma missa,
+   pergunta se ela quer mesmo enviar de novo (em vez de simplesmente bloquear) — evita repetições
+   sem querer (ex.: duplo clique) sem impedir quem realmente quer adicionar mais de uma. */
+const modalIntencaoRepetida = document.getElementById("modalIntencaoRepetida");
+const categoriaRepetidaEl = document.getElementById("categoriaIntencaoRepetida");
+const btnCancelarIntencaoRepetida = document.getElementById("btnCancelarIntencaoRepetida");
+const btnConfirmarIntencaoRepetida = document.getElementById("btnConfirmarIntencaoRepetida");
+let resolverConfirmacaoRepetida = null;
+
+function confirmarEnvioRepetido(rotuloCategoria) {
+  categoriaRepetidaEl.textContent = rotuloCategoria;
+  abrirModal(modalIntencaoRepetida);
+  return new Promise((resolve) => { resolverConfirmacaoRepetida = resolve; });
+}
+btnCancelarIntencaoRepetida.addEventListener("click", () => {
+  fecharModal(modalIntencaoRepetida);
+  resolverConfirmacaoRepetida?.(false);
+  resolverConfirmacaoRepetida = null;
+});
+btnConfirmarIntencaoRepetida.addEventListener("click", () => {
+  fecharModal(modalIntencaoRepetida);
+  resolverConfirmacaoRepetida?.(true);
+  resolverConfirmacaoRepetida = null;
+});
 
 let configAtual = null;
 let diaSelecionado = null; // nada selecionado até a pessoa escolher no calendário
@@ -68,10 +96,19 @@ function renderizarEntradasNaLista(listaEl, entradas) {
 }
 
 const PLACEHOLDERS = {
-  gracas: "Escreva aqui sua intenção de agradecimento...",
+  gracas: "Escreva aqui sua intenção...",
   alma: "Escreva aqui o nome de quem deseja lembrar...",
   aniversarios: "Escreva aqui o nome de quem está de aniversário..."
 };
+
+// Só a categoria "gracas" pede pra pessoa escolher entre pedido e agradecimento — isso decide
+// o verbo usado na frase montada pro PDF extraído pelo padre ("pede pela" ou "agradece por").
+const CAMPO_TIPO_GRACA = `
+  <div class="tipo-graca-campo">
+    <label><input type="radio" name="tipoGraca" value="pedido" required /> Pedido de graça</label>
+    <label><input type="radio" name="tipoGraca" value="agradecimento" /> Agradecimento</label>
+  </div>
+`;
 
 function criarBlocoCategoria(categoria, rotulo, iso, hora) {
   const bloco = document.createElement("div");
@@ -80,23 +117,41 @@ function criarBlocoCategoria(categoria, rotulo, iso, hora) {
     <h3 class="categoria-intencao__titulo">${rotulo}</h3>
     <div class="categoria-intencao__lista"></div>
     <form class="categoria-intencao__form">
+      ${categoria === "gracas" ? CAMPO_TIPO_GRACA : ""}
       <textarea rows="2" placeholder="${PLACEHOLDERS[categoria] || ""}" required></textarea>
       <button type="submit" class="btn btn-contorno btn-pequeno">Adicionar</button>
     </form>
   `;
   const listaEl = bloco.querySelector(".categoria-intencao__lista");
   const form = bloco.querySelector("form");
+
+  // guarda as entradas atuais dessa categoria (atualizadas a cada snapshot em tempo real) pra
+  // conseguir checar, na hora de enviar, se essa mesma pessoa já colocou algo aqui antes.
+  let entradasAtuais = [];
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const textarea = form.querySelector("textarea");
     const texto = textarea.value.trim();
     if (!texto) return;
+    const tipoGraca = categoria === "gracas" ? form.querySelector("input[name=tipoGraca]:checked")?.value : undefined;
+
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
     btn.textContent = "Enviando...";
     try {
-      await criarIntencao({ dataMissa: iso, horaMissa: hora, categoria, texto });
+      const usuario = await usuarioPromise;
+      const jaTem = entradasAtuais.some((it) => it.telefoneDigits && it.telefoneDigits === usuario.telefoneDigits);
+      if (jaTem) {
+        const confirmar = await confirmarEnvioRepetido(rotulo);
+        if (!confirmar) return;
+      }
+      await criarIntencao({
+        dataMissa: iso, horaMissa: hora, categoria, texto,
+        nome: usuario.nome, telefoneDigits: usuario.telefoneDigits, tipoGraca
+      });
       textarea.value = "";
+      form.querySelectorAll("input[name=tipoGraca]").forEach((r) => { r.checked = false; });
       mostrarToast("Intenção adicionada!");
     } catch (err) {
       console.error(err);
@@ -106,7 +161,14 @@ function criarBlocoCategoria(categoria, rotulo, iso, hora) {
       btn.textContent = "Adicionar";
     }
   });
-  return { bloco, listaEl };
+
+  return {
+    bloco,
+    atualizarEntradas(entradas) {
+      entradasAtuais = entradas;
+      renderizarEntradasNaLista(listaEl, entradas);
+    }
+  };
 }
 
 function criarCardMissaAberta(iso, hora, status) {
@@ -118,10 +180,10 @@ function criarCardMissaAberta(iso, hora, status) {
     `${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.</p>
   `;
 
-  const listasPorCategoria = {};
+  const blocosPorCategoria = {};
   CATEGORIAS_INTENCAO.forEach(({ chave, rotulo }) => {
-    const { bloco, listaEl } = criarBlocoCategoria(chave, rotulo, iso, hora);
-    listasPorCategoria[chave] = listaEl;
+    const { bloco, atualizarEntradas } = criarBlocoCategoria(chave, rotulo, iso, hora);
+    blocosPorCategoria[chave] = atualizarEntradas;
     card.appendChild(bloco);
   });
 
@@ -129,7 +191,7 @@ function criarCardMissaAberta(iso, hora, status) {
     const porCategoria = { gracas: [], alma: [], aniversarios: [] };
     entradas.forEach((it) => { if (porCategoria[it.categoria]) porCategoria[it.categoria].push(it); });
     Object.entries(porCategoria).forEach(([categoria, itens]) => {
-      renderizarEntradasNaLista(listasPorCategoria[categoria], itens);
+      blocosPorCategoria[categoria](itens);
     });
   });
   pararEscutas.push(parar);

@@ -616,15 +616,12 @@ img{ max-width: 100%; display:block; }
 
 /* ---------- Agendamento: planilha de agendamentos (igual ao "Acompanhamento" do painel
    administrativo) ----------
-   Fora do modo tela cheia, no celular fica dentro de um modal comum, aberto pelo botão "Ver
-   planilha de agendamento". A partir de 900px (computador) o CSS "desmonta" esse modal — vira uma
-   segunda coluna resumida, sempre visível ao lado dos horários, atualizando em tempo real conforme
-   as pessoas agendam (ver media query mais abaixo, junto com ".agendamento-colunas"). O mesmo botão
-   "Ver planilha de agendamento" também funciona no computador: ao ser clicado, o JS adiciona a
-   classe .tela-cheia (ver bloco mais abaixo), que tira a planilha desse modo "encaixado" e mostra
-   ela como um overlay ocupando quase a tela toda — em qualquer tamanho de tela — pra nenhuma coluna
-   ficar cortada. Dias com agendamento ficam em destaque com um selo de quantidade; tocar num dia
-   abre os detalhes de quem reservou em cada horário. */
+   Em qualquer tamanho de tela (celular ou computador), fica escondida até a pessoa tocar no botão
+   "Ver planilha de agendamento" — nunca mais fica encaixada permanentemente ao lado dos horários.
+   Ao clicar, o JS adiciona a classe .tela-cheia (ver bloco abaixo) e abre como um overlay quase do
+   tamanho da tela inteira, atualizando em tempo real conforme as pessoas agendam. Dias com
+   agendamento ficam em destaque com um selo de quantidade; tocar num dia abre os detalhes de quem
+   reservou em cada horário. */
 .agendamento-colunas{ display:flex; flex-direction:column; width:100%; }
 .agendamento-colunas__principal{ display:flex; flex-direction:column; width:100%; }
 .btn-ver-planilha{ display:flex; align-items:center; justify-content:center; gap:8px; }
@@ -634,10 +631,8 @@ img{ max-width: 100%; display:block; }
 .calendario-agendamentos__titulo{ justify-content:center; flex-shrink:0; }
 
 /* ---------- Versão "tela cheia" da planilha (botão "Ver planilha de agendamento", computador e
-   celular): tira o elemento do modo "encaixado" (normal no celular / 2ª coluna no computador,
-   ver acima e a media query de 900px) e mostra como overlay quase do tamanho da tela inteira,
-   em qualquer largura — a especificidade de "#id.tela-cheia" garante que isso vence as regras
-   acima, sem precisar de !important. */
+   celular): mostra como overlay quase do tamanho da tela inteira, em qualquer largura, pra nenhuma
+   coluna ficar cortada. ---------- */
 #modalCalendarioAgendamentos.tela-cheia{
   position:fixed; inset:0; background: rgba(15,3,5,.6); backdrop-filter: blur(3px);
   display:flex; align-items:center; justify-content:center; padding:14px;
@@ -732,21 +727,11 @@ img{ max-width: 100%; display:block; }
   background: rgba(122,12,30,.07); border-radius:999px; padding:2px 9px; margin-left:2px;
 }
 
-@media (min-width: 900px){
-  .conteudo:has(#painelData){ max-width: 1100px; }
-  .agendamento-colunas{ flex-direction:row; align-items:flex-start; gap:30px; }
-  .agendamento-colunas__principal{ flex:0 0 480px; width:480px; }
-  #modalCalendarioAgendamentos{
-    position:static; inset:auto; background:none; backdrop-filter:none;
-    opacity:1; pointer-events:auto; padding:0; z-index:auto; display:block;
-    flex:1 1 0; min-width:0;
-  }
-  #modalCalendarioAgendamentos .modal{
-    max-width:none; width:100%; transform:none; box-shadow:0 14px 36px rgba(74,7,17,.12);
-    max-height: min(760px, 80vh);
-  }
-  #modalCalendarioAgendamentos .modal--fechar{ display:none; }
-}
+/* A planilha de agendamentos não fica mais encaixada como 2ª coluna no computador — em
+   qualquer tamanho de tela agora ela só aparece em tela cheia, pelo botão "Ver planilha de
+   agendamento" (ver .btn-ver-planilha e #modalCalendarioAgendamentos.tela-cheia acima). Por
+   isso ".agendamento-colunas" e ".agendamento-colunas__principal" seguem em coluna única
+   (mesmo layout do celular) em qualquer largura — sem media query de 900px pra elas. */
 
 /* ---------- Avisos (acordeão: só o título fica visível até a pessoa tocar) ---------- */
 .cartao-aviso{
@@ -809,6 +794,15 @@ img{ max-width: 100%; display:block; }
 }
 .categoria-intencao__form textarea:focus{ outline:none; border-color: var(--dourado); }
 .categoria-intencao__form .btn{ flex-shrink:0; }
+
+/* só a categoria "Agradecem graças" mostra isto — decide o verbo da frase no PDF (pede pela /
+   agradece por), ver js/intencoes.js e js/admin.js */
+.tipo-graca-campo{
+  flex:0 0 100%; display:flex; gap:18px; flex-wrap:wrap;
+  font-size:.84rem; color: var(--texto-suave); margin-bottom:2px;
+}
+.tipo-graca-campo label{ display:flex; align-items:center; gap:6px; cursor:pointer; }
+.tipo-graca-campo input[type=radio]{ accent-color: var(--vermelho-escuro); width:15px; height:15px; cursor:pointer; }
 
 .link-whatsapp{
   flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;

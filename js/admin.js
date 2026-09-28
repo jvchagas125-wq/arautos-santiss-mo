@@ -396,6 +396,34 @@ function configurarIntencoes() {
     return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2,"0")}:00`;
   }
 
+  // Monta a frase de uma intenção (usada tanto na lista da tela quanto no PDF, pra ficar sempre
+  // igual): "Fulano de Tal pede pela cura..." / "Fulana agradece por todas as graças..." /
+  // "Fulano pede orações pela alma de..." / "Fulana deseja feliz aniversário para...". Sem nome
+  // guardado (intenções antigas, de antes dessa identificação existir), mostra só o texto puro,
+  // como sempre foi.
+  function minusculaInicial(texto) {
+    return texto ? texto.charAt(0).toLowerCase() + texto.slice(1) : texto;
+  }
+  function montarFraseIntencao(it) {
+    const nome = reduzirNomeParaExibicao((it.nome || "").trim());
+    const texto = (it.texto || "").trim().replace(/[.,;:]+$/, "");
+    if (!nome) return texto;
+
+    if (it.categoria === "gracas") {
+      const verbo = it.tipoGraca === "pedido" ? "pede pela" : "agradece por";
+      return `${nome} ${verbo} ${minusculaInicial(texto)}`;
+    }
+    // "por alma" e "aniversários" costumam ser nome(s) de pessoa — não coloca em minúscula
+    // (diferente de "gracas", onde o texto é uma frase comum, tipo "cura, conversão...").
+    if (it.categoria === "alma") {
+      return `${nome} pede orações pela alma de ${texto}`;
+    }
+    if (it.categoria === "aniversarios") {
+      return `${nome} deseja feliz aniversário para ${texto}`;
+    }
+    return `${nome}: ${texto}`;
+  }
+
   // Gera um PDF com as intenções de uma lista específica, organizadas por categoria
   // (mesma ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa.
   function gerarPdfIntencoes(rotulo, itens) {
@@ -455,7 +483,7 @@ function configurarIntencoes() {
       docPdf.setTextColor(40, 24, 16);
 
       doGrupo.forEach((it, indice) => {
-        const linhas = docPdf.splitTextToSize(`${indice + 1}. ${it.texto}`, larguraUtil - 12);
+        const linhas = docPdf.splitTextToSize(`${indice + 1}. ${montarFraseIntencao(it)}.`, larguraUtil - 12);
         quebrarPaginaSeNecessario(linhas.length * 15 + 6);
         docPdf.text(linhas, margem + 12, y);
         y += linhas.length * 15 + 6;
@@ -531,7 +559,7 @@ function configurarIntencoes() {
         doGrupo.forEach((it) => {
           const item = document.createElement("div");
           item.className = "intencao-item";
-          item.textContent = it.texto;
+          item.textContent = `${montarFraseIntencao(it)}.`;
           bloco.appendChild(item);
         });
         corpo.appendChild(bloco);

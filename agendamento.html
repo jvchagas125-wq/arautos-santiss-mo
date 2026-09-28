@@ -127,13 +127,12 @@
         </div>
       </div>
 
-      <!-- No celular e no computador, o botão "Ver planilha de agendamento" abre isto em tela cheia
-           (classe .tela-cheia, aplicada via JS — ver js/agendamento.js), sem cortar nenhuma coluna.
-           Enquanto não está em tela cheia, a partir de 900px de largura o CSS "desmonta" o modal e
-           ele passa a aparecer sempre, como uma segunda coluna (resumida) ao lado dos horários.
-           Mesmo layout/cores da planilha (Excel) exportada em "Acompanhamento" no painel
-           administrativo, só que ao vivo: uma semana por vez, células coloridas por grupo/Missa/
-           horário livre; ao tocar numa célula com gente, mostra os detalhes de quem reservou. -->
+      <!-- No celular e no computador, fica escondida até a pessoa tocar no botão "Ver planilha de
+           agendamento", que abre isto em tela cheia (classe .tela-cheia, aplicada via JS — ver
+           js/agendamento.js), sem cortar nenhuma coluna. Mesmo layout/cores da planilha (Excel)
+           exportada em "Acompanhamento" no painel administrativo, só que ao vivo: uma semana por
+           vez, células coloridas por grupo/Missa/horário livre; ao tocar numa célula com gente,
+           mostra os detalhes de quem reservou. -->
       <div class="modal-overlay" id="modalCalendarioAgendamentos">
         <div class="modal modal--calendario-agendamentos modal--largo">
           <button class="modal--fechar" id="fecharModalCalendarioAgendamentos" aria-label="Fechar">&times;</button>
