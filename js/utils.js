@@ -37,21 +37,63 @@ export function capitalizarNome(nome) {
    Usado no cadastro (novo ou existente) para os nomes não ficarem grandes demais nos
    quadrados da grade de agendamentos. Preserva um conector minúsculo (de/da/do/das/dos)
    que vier imediatamente antes do sobrenome, ex: "Maria Eduarda da Silva Santos" -> "Maria da Silva".
-   Nomes de uma palavra só voltam como estão (não há sobrenome pra pegar). */
+   Nomes de uma palavra só voltam como estão (não há sobrenome pra pegar).
+
+   Trata dois casos especiais, para não "comer" parte do nome ou do sobrenome de verdade:
+   - Título/tratamento antes do nome (Pe., Padre, Dom, Frei, Dr., Sr. etc.): é mantido como
+     prefixo e não é confundido com o primeiro nome da pessoa, ex: "Pe. João Silva" -> "Pe. João Silva".
+   - Primeiro nome composto (João Victor, Maria Eduarda, Carlos Eduardo etc.): quando a 2ª
+     palavra é um nome próprio comum de segunda parte, ela é mantida junto ao primeiro nome
+     em vez de "roubar" o lugar do sobrenome, ex: "João Victor Pereira Gomes" -> "João Victor Pereira"
+     (e não "João Victor", que perderia o sobrenome de verdade). */
+const TITULOS_NOME = [
+  "pe", "padre", "dom", "frei", "monsenhor", "diacono", "diácono", "irmao", "irmão", "irma", "irmã",
+  "dr", "dra", "sr", "sra", "srta"
+];
+const SEGUNDO_NOME_COMPOSTO = [
+  "victor", "vitor", "carlos", "pedro", "paulo", "eduardo", "eduarda", "henrique", "augusto",
+  "antonio", "antônio", "luiz", "luís", "luis", "cesar", "césar", "vinicius", "vinícius",
+  "guilherme", "rafael", "daniel", "fernando", "ricardo", "andre", "andré", "otavio", "otávio",
+  "gabriel", "miguel", "felipe", "emanuel", "manuel", "manoel", "lucas", "gustavo", "leonardo",
+  "alexandre", "roberto", "sergio", "sérgio", "marcelo", "thiago", "tiago",
+  "beatriz", "clara", "cristina", "fernanda", "vitoria", "vitória", "sophia", "sofia", "luiza",
+  "alice", "helena", "julia", "júlia", "gabriela", "manuela", "isabela", "isabella", "valentina",
+  "giovanna", "livia", "lívia", "rosa", "aparecida", "conceicao", "conceição", "cecilia", "cecília",
+  "carolina", "paula", "isabel", "antonia", "antônia", "raimunda", "terezinha", "teresa", "rita"
+];
 export function reduzirNomeParaExibicao(nomeCompleto) {
   const partes = (nomeCompleto || "").trim().split(/\s+/).filter(Boolean);
   if (partes.length <= 1) return partes.join(" ");
 
-  const primeiroNome = partes[0];
-  let i = 1;
+  // título/tratamento no início (ex.: "Pe.", "Padre", "Dr.") — mantém, nunca conta como nome
+  let i = 0;
+  const prefixos = [];
+  while (i < partes.length - 1 && TITULOS_NOME.includes(partes[i].toLowerCase().replace(/\.$/, ""))) {
+    prefixos.push(partes[i]);
+    i++;
+  }
+  if (i >= partes.length) return partes.join(" ");
+
+  const primeiroNome = partes[i];
+  i++;
+
+  // 2ª parte de um primeiro nome composto (ex.: "João Victor") — só conta se ainda sobrar
+  // pelo menos uma palavra depois pra servir de sobrenome de verdade
+  const nomeCompostoExtra = [];
+  if (i < partes.length - 1 && SEGUNDO_NOME_COMPOSTO.includes((partes[i] || "").toLowerCase())) {
+    nomeCompostoExtra.push(partes[i]);
+    i++;
+  }
+  if (i >= partes.length) return [...prefixos, primeiroNome, ...nomeCompostoExtra].join(" ");
+
   const conectores = [];
   while (i < partes.length && MINUSCULAS.includes(partes[i].toLowerCase())) {
     conectores.push(partes[i]);
     i++;
   }
-  if (i >= partes.length) return partes.join(" "); // só tinha conectores depois do 1º nome (raro)
+  if (i >= partes.length) return [...prefixos, primeiroNome, ...nomeCompostoExtra].join(" "); // só tinha conectores depois (raro)
 
-  return [primeiroNome, ...conectores, partes[i]].join(" ");
+  return [...prefixos, primeiroNome, ...nomeCompostoExtra, ...conectores, partes[i]].join(" ");
 }
 
 /* ---------- Telefone: máscara (XX) XXXXX-XXXX ---------- */
