@@ -207,8 +207,8 @@ function renderizarEntradasNaLista(listaEl, entradas, { categoria, onSalvar, onA
 
 const PLACEHOLDERS = {
   gracas: "Escreva aqui sua intenção...",
-  alma: "Escreva aqui o nome de quem deseja lembrar...",
-  aniversarios: "Escreva aqui o nome de quem está de aniversário..."
+  alma: "Nome de quem deseja lembrar (pode colocar entre parênteses há quantos meses ou anos faleceu, se quiser)...",
+  aniversarios: "Nome de quem está de aniversário (pode colocar entre parênteses quantos anos completa, se quiser)..."
 };
 
 // Só a categoria "gracas" pede pra pessoa escolher entre pedido e agradecimento — isso decide

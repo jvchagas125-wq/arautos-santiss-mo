@@ -824,7 +824,28 @@ img{ max-width: 100%; display:block; }
   background:#fffefb; resize:vertical;
 }
 .categoria-intencao__form textarea:focus{ outline:none; border-color: var(--dourado); }
+.categoria-intencao__form input[type="text"]{
+  flex:1; min-width:180px; border:1px solid rgba(157,122,31,.35); border-radius:10px;
+  padding:9px 11px; font-family:'EB Garamond', serif; font-size:.92rem; color: var(--texto);
+  background:#fffefb;
+}
+.categoria-intencao__form input[type="text"]:focus{ outline:none; border-color: var(--dourado); }
 .categoria-intencao__form .btn{ flex-shrink:0; }
+
+/* painel administrativo: lista de intenções — "Por alma"/"Aniversários" mostradas como um
+   parágrafo único (só os nomes, separados por vírgula) em vez de uma caixa por pessoa — ver
+   js/admin.js. O lápis ao lado do título alterna pra uma lista editável (um campo por nome). */
+.intencao-nomes-paragrafo{
+  margin:0 0 10px; font-size:.88rem; color: var(--texto); line-height:1.7;
+  background: rgba(122,12,30,.05); border:1px solid rgba(157,122,31,.2); border-radius:10px; padding:10px 13px;
+}
+.grupo-horario-dia__titulo-texto{ flex:1; }
+.intencao-nome-input{
+  flex:1; min-width:120px; border:1px solid rgba(157,122,31,.35); border-radius:10px;
+  padding:8px 11px; font-family:'EB Garamond', serif; font-size:.88rem; color: var(--texto);
+  background:#fffefb;
+}
+.intencao-nome-input:focus{ outline:none; border-color: var(--dourado); }
 
 /* só a categoria "Agradecem graças" mostra isto — decide o verbo da frase no PDF (pede pela /
    agradece por), ver js/intencoes.js e js/admin.js */

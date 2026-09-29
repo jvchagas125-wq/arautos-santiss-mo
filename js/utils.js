@@ -262,7 +262,7 @@ export function escolherFraseDoDia(lista, agora = new Date()) {
 
 /* ---------- Intenções da missa: categorias fixas ---------- */
 export const CATEGORIAS_INTENCAO = [
-  { chave: "gracas", rotulo: "Agradecem graças" },
+  { chave: "gracas", rotulo: "Pedem e agradecem graças" },
   { chave: "alma", rotulo: "Por alma" },
   { chave: "aniversarios", rotulo: "Aniversários" }
 ];

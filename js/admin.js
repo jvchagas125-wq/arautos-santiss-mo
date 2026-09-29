@@ -13,6 +13,7 @@ import {
   excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
   marcarAgendamentoExtra,
   obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
+  criarIntencao, atualizarIntencao, excluirIntencao,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
@@ -292,6 +293,17 @@ function configurarIntencoes() {
   const nomeExcluirLista = document.getElementById("nomeExcluirLista");
   let listaParaExcluir = null; // { dataMissa, horaMissa, rotulo }
 
+  const modalApagarIntencaoAdmin = document.getElementById("modalApagarIntencaoAdmin");
+  let intencaoParaExcluir = null; // id da intenção individual a apagar
+
+  // Guarda o último conjunto de intenções recebido do Firestore (pra poder re-renderizar na
+  // hora, sem esperar outro evento, quando só o ESTADO da tela muda — ex.: abrir/fechar um
+  // quadro, entrar/sair do modo de editar a lista de nomes de "Por alma"/"Aniversários").
+  let ultimasEntradas = [];
+  const quadrosAbertos = new Set(); // chaves "data|hora" dos quadros expandidos no momento
+  const categoriasEmEdicaoDeLista = new Set(); // chaves "data|hora|categoria" (alma/aniversários) em edição
+  const intencoesEmEdicao = new Set(); // ids de intenções (gracas) com o formulário de editar aberto
+
   // um "quadro" colapsável por dia da semana (índice = Date.getDay(): 0=domingo ... 6=sábado),
   // exibidos na ordem segunda...domingo para ficar mais natural de ler
   const ORDEM_EXIBICAO = [1, 2, 3, 4, 5, 6, 0];
@@ -396,11 +408,10 @@ function configurarIntencoes() {
     return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2,"0")}:00`;
   }
 
-  // Monta a frase de uma intenção (usada tanto na lista da tela quanto no PDF, pra ficar sempre
-  // igual): "Fulano de Tal pede pela cura..." / "Fulana agradece por todas as graças..." /
-  // "Fulano pede orações pela alma de..." / "Fulana deseja feliz aniversário para...". Sem nome
-  // guardado (intenções antigas, de antes dessa identificação existir), mostra só o texto puro,
-  // como sempre foi.
+  // Monta a frase de uma intenção "gracas" (usada tanto na lista da tela quanto no PDF, pra
+  // ficar sempre igual): "Fulano de Tal pede pela cura..." / "Fulana agradece por todas as
+  // graças...". Sem nome guardado (intenções antigas, ou incluídas aqui mesmo no painel sem
+  // nome, ex.: recebidas por telefone), mostra só o texto puro, como sempre foi.
   function minusculaInicial(texto) {
     return texto ? texto.charAt(0).toLowerCase() + texto.slice(1) : texto;
   }
@@ -408,20 +419,23 @@ function configurarIntencoes() {
     const nome = reduzirNomeParaExibicao((it.nome || "").trim());
     const texto = (it.texto || "").trim().replace(/[.,;:]+$/, "");
     if (!nome) return texto;
+    const verbo = it.tipoGraca === "pedido" ? "pede pela" : "agradece por";
+    return `${nome} ${verbo} ${minusculaInicial(texto)}`;
+  }
 
-    if (it.categoria === "gracas") {
-      const verbo = it.tipoGraca === "pedido" ? "pede pela" : "agradece por";
-      return `${nome} ${verbo} ${minusculaInicial(texto)}`;
-    }
-    // "por alma" e "aniversários" costumam ser nome(s) de pessoa — não coloca em minúscula
-    // (diferente de "gracas", onde o texto é uma frase comum, tipo "cura, conversão...").
-    if (it.categoria === "alma") {
-      return `${nome} pede orações pela alma de ${texto}`;
-    }
-    if (it.categoria === "aniversarios") {
-      return `${nome} deseja feliz aniversário para ${texto}`;
-    }
-    return `${nome}: ${texto}`;
+  // "Por alma" e "Aniversários" não mostram frase nenhuma — só os nomes que as pessoas
+  // escreveram, todos juntos numa lista corrida separada por vírgula (com um "e" antes do
+  // último), do jeito que fica melhor pro padre ler na missa. Ex.: "Fulano, Beltrano e Cicrano."
+  function extrairNomesCategoria(doGrupo) {
+    const nomes = doGrupo
+      .map((it) => (it.texto || "").trim().replace(/[.,;:]+$/, ""))
+      .filter(Boolean);
+    if (nomes.length === 0) return "";
+    if (nomes.length === 1) return `${nomes[0]}.`;
+    return `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}.`;
+  }
+  function ehCategoriaDeNomes(chaveCategoria) {
+    return chaveCategoria === "alma" || chaveCategoria === "aniversarios";
   }
 
   // Gera um PDF com as intenções de uma lista específica, organizadas por categoria
@@ -482,12 +496,19 @@ function configurarIntencoes() {
       docPdf.setFontSize(11);
       docPdf.setTextColor(40, 24, 16);
 
-      doGrupo.forEach((it, indice) => {
-        const linhas = docPdf.splitTextToSize(`${indice + 1}. ${montarFraseIntencao(it)}.`, larguraUtil - 12);
+      if (ehCategoriaDeNomes(chave)) {
+        const linhas = docPdf.splitTextToSize(extrairNomesCategoria(doGrupo), larguraUtil - 12);
         quebrarPaginaSeNecessario(linhas.length * 15 + 6);
         docPdf.text(linhas, margem + 12, y);
         y += linhas.length * 15 + 6;
-      });
+      } else {
+        doGrupo.forEach((it, indice) => {
+          const linhas = docPdf.splitTextToSize(`${indice + 1}. ${montarFraseIntencao(it)}.`, larguraUtil - 12);
+          quebrarPaginaSeNecessario(linhas.length * 15 + 6);
+          docPdf.text(linhas, margem + 12, y);
+          y += linhas.length * 15 + 6;
+        });
+      }
       y += 12;
     });
 
@@ -511,7 +532,267 @@ function configurarIntencoes() {
     docPdf.save(`${nomeArquivo}.pdf`);
   }
 
+  const ICONE_LAPIS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>`;
+  const ICONE_LIXEIRA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>`;
+
+  function criarBotaoIcone(classeExtra, titulo, iconeSvg) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `intencao-item__btn ${classeExtra || ""}`.trim();
+    btn.title = titulo;
+    btn.innerHTML = iconeSvg;
+    return btn;
+  }
+
+  function pedirExclusaoIntencao(id) {
+    intencaoParaExcluir = id;
+    abrirModal(modalApagarIntencaoAdmin);
+  }
+
+  function rerenderizar() {
+    renderizarQuadros(ultimasEntradas);
+  }
+
+  // ---- categoria "gracas": uma caixa por intenção, com editar/apagar (igual ao site público) ----
+  function criarItemGracas(it) {
+    const item = document.createElement("div");
+    item.className = "intencao-item";
+
+    if (intencoesEmEdicao.has(it.id)) {
+      item.classList.add("intencao-item--editando");
+      const form = document.createElement("form");
+      form.className = "intencao-item__editar-form";
+
+      const campoTipo = document.createElement("div");
+      campoTipo.className = "tipo-graca-campo";
+      campoTipo.innerHTML = `
+        <label><input type="radio" name="tipoGracaEdit-${it.id}" value="pedido" ${it.tipoGraca !== "agradecimento" ? "checked" : ""} /> Pedido de graça</label>
+        <label><input type="radio" name="tipoGracaEdit-${it.id}" value="agradecimento" ${it.tipoGraca === "agradecimento" ? "checked" : ""} /> Agradecimento</label>
+      `;
+      form.appendChild(campoTipo);
+
+      const textarea = document.createElement("textarea");
+      textarea.rows = 2;
+      textarea.required = true;
+      textarea.value = it.texto || "";
+      form.appendChild(textarea);
+
+      const acoes = document.createElement("span");
+      acoes.className = "intencao-item__editar-acoes";
+      const btnSalvar = document.createElement("button");
+      btnSalvar.type = "submit";
+      btnSalvar.className = "btn btn-dourado btn-pequeno";
+      btnSalvar.textContent = "Salvar";
+      const btnCancelar = document.createElement("button");
+      btnCancelar.type = "button";
+      btnCancelar.className = "btn btn-contorno btn-pequeno";
+      btnCancelar.textContent = "Cancelar";
+      btnCancelar.addEventListener("click", () => {
+        intencoesEmEdicao.delete(it.id);
+        rerenderizar();
+      });
+      acoes.appendChild(btnSalvar);
+      acoes.appendChild(btnCancelar);
+      form.appendChild(acoes);
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const texto = textarea.value.trim();
+        if (!texto) return;
+        const tipoGraca = form.querySelector("input[type=radio]:checked")?.value || "pedido";
+        btnSalvar.disabled = true;
+        btnSalvar.textContent = "Salvando...";
+        try {
+          await atualizarIntencao(it.id, { texto, tipoGraca });
+          intencoesEmEdicao.delete(it.id);
+          rerenderizar();
+          mostrarToast("Intenção atualizada!");
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível salvar. Tente novamente.");
+          btnSalvar.disabled = false;
+          btnSalvar.textContent = "Salvar";
+        }
+      });
+
+      item.appendChild(form);
+      return item;
+    }
+
+    const texto = document.createElement("span");
+    texto.className = "intencao-item__texto";
+    texto.textContent = `${montarFraseIntencao(it)}.`;
+    item.appendChild(texto);
+
+    const acoes = document.createElement("span");
+    acoes.className = "intencao-item__acoes";
+    const btnEditar = criarBotaoIcone("intencao-item__btn--editar", "Editar", ICONE_LAPIS);
+    btnEditar.addEventListener("click", () => {
+      intencoesEmEdicao.add(it.id);
+      rerenderizar();
+    });
+    const btnApagar = criarBotaoIcone("intencao-item__btn--apagar", "Apagar", ICONE_LIXEIRA);
+    btnApagar.addEventListener("click", () => pedirExclusaoIntencao(it.id));
+    acoes.appendChild(btnEditar);
+    acoes.appendChild(btnApagar);
+    item.appendChild(acoes);
+    return item;
+  }
+
+  // ---- categorias "alma"/"aniversarios": uma linha por nome, só quando em modo de edição ----
+  function criarLinhaNome(it) {
+    const item = document.createElement("div");
+    item.className = "intencao-item";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "intencao-nome-input";
+    input.value = it.texto || "";
+    let valorOriginal = input.value;
+    input.addEventListener("change", async () => {
+      const novoValor = input.value.trim();
+      if (!novoValor) { input.value = valorOriginal; return; }
+      if (novoValor === valorOriginal) return;
+      try {
+        await atualizarIntencao(it.id, { texto: novoValor });
+        valorOriginal = novoValor;
+        mostrarToast("Nome atualizado!");
+      } catch (err) {
+        console.error(err);
+        mostrarToast("Não foi possível salvar. Tente novamente.");
+        input.value = valorOriginal;
+      }
+    });
+    item.appendChild(input);
+
+    const acoes = document.createElement("span");
+    acoes.className = "intencao-item__acoes";
+    const btnApagar = criarBotaoIcone("intencao-item__btn--apagar", "Apagar", ICONE_LIXEIRA);
+    btnApagar.addEventListener("click", () => pedirExclusaoIntencao(it.id));
+    acoes.appendChild(btnApagar);
+    item.appendChild(acoes);
+    return item;
+  }
+
+  // ---- formulário de incluir uma nova intenção (o padre recebeu por telefone, por exemplo) ----
+  function criarFormAdicionar(chaveCategoria, dataMissa, horaMissa) {
+    const form = document.createElement("form");
+    form.className = "categoria-intencao__form";
+
+    let campoTipo = null;
+    let campoTexto;
+    if (chaveCategoria === "gracas") {
+      campoTipo = document.createElement("div");
+      campoTipo.className = "tipo-graca-campo";
+      campoTipo.innerHTML = `
+        <label><input type="radio" name="tipoGracaNovo-${dataMissa}-${horaMissa}" value="pedido" checked /> Pedido de graça</label>
+        <label><input type="radio" name="tipoGracaNovo-${dataMissa}-${horaMissa}" value="agradecimento" /> Agradecimento</label>
+      `;
+      form.appendChild(campoTipo);
+
+      campoTexto = document.createElement("textarea");
+      campoTexto.rows = 2;
+      campoTexto.required = true;
+      campoTexto.placeholder = "Nova intenção (ex: recebida por telefone)...";
+      form.appendChild(campoTexto);
+    } else {
+      campoTexto = document.createElement("input");
+      campoTexto.type = "text";
+      campoTexto.required = true;
+      campoTexto.placeholder = chaveCategoria === "alma"
+        ? "Nome (pode colocar entre parênteses há quantos meses/anos faleceu)"
+        : "Nome (pode colocar entre parênteses quantos anos completa)";
+      form.appendChild(campoTexto);
+    }
+
+    const btn = document.createElement("button");
+    btn.type = "submit";
+    btn.className = "btn btn-contorno btn-pequeno";
+    btn.textContent = "Adicionar";
+    form.appendChild(btn);
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const texto = campoTexto.value.trim();
+      if (!texto) return;
+      const tipoGraca = campoTipo ? campoTipo.querySelector("input[type=radio]:checked")?.value : undefined;
+      btn.disabled = true;
+      btn.textContent = "Adicionando...";
+      try {
+        await criarIntencao({
+          dataMissa, horaMissa, categoria: chaveCategoria, texto,
+          nome: "", telefoneDigits: "", tipoGraca
+        });
+        campoTexto.value = "";
+        mostrarToast("Intenção adicionada!");
+      } catch (err) {
+        console.error(err);
+        mostrarToast("Não foi possível adicionar. Tente novamente.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Adicionar";
+      }
+    });
+
+    return form;
+  }
+
+  function criarBlocoCategoria(chaveCategoria, rotuloCategoria, doGrupo, dataMissa, horaMissa, chaveQuadro) {
+    const bloco = document.createElement("div");
+    bloco.className = "grupo-horario-dia";
+    const chaveCompleta = `${chaveQuadro}|${chaveCategoria}`;
+
+    const linhaTitulo = document.createElement("div");
+    linhaTitulo.className = "grupo-horario-dia__titulo";
+    const spanTitulo = document.createElement("span");
+    spanTitulo.className = "grupo-horario-dia__titulo-texto";
+    spanTitulo.textContent = `${rotuloCategoria} (${doGrupo.length})`;
+    linhaTitulo.appendChild(spanTitulo);
+
+    if (ehCategoriaDeNomes(chaveCategoria) && doGrupo.length > 0) {
+      const btnEditarLista = criarBotaoIcone("intencao-item__btn--editar", "Editar nomes desta lista", ICONE_LAPIS);
+      btnEditarLista.addEventListener("click", () => {
+        if (categoriasEmEdicaoDeLista.has(chaveCompleta)) categoriasEmEdicaoDeLista.delete(chaveCompleta);
+        else categoriasEmEdicaoDeLista.add(chaveCompleta);
+        rerenderizar();
+      });
+      linhaTitulo.appendChild(btnEditarLista);
+    }
+    bloco.appendChild(linhaTitulo);
+
+    const lista = document.createElement("div");
+    lista.className = "categoria-intencao__lista";
+
+    if (ehCategoriaDeNomes(chaveCategoria)) {
+      if (doGrupo.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "categoria-intencao__vazio";
+        vazio.textContent = "Nenhum nome adicionado ainda.";
+        lista.appendChild(vazio);
+      } else if (categoriasEmEdicaoDeLista.has(chaveCompleta)) {
+        doGrupo.forEach((it) => lista.appendChild(criarLinhaNome(it)));
+      } else {
+        const paragrafo = document.createElement("p");
+        paragrafo.className = "intencao-nomes-paragrafo";
+        paragrafo.textContent = extrairNomesCategoria(doGrupo);
+        lista.appendChild(paragrafo);
+      }
+    } else if (doGrupo.length === 0) {
+      const vazio = document.createElement("p");
+      vazio.className = "categoria-intencao__vazio";
+      vazio.textContent = "Nenhuma intenção nesta categoria ainda.";
+      lista.appendChild(vazio);
+    } else {
+      doGrupo.forEach((it) => lista.appendChild(criarItemGracas(it)));
+    }
+    bloco.appendChild(lista);
+    bloco.appendChild(criarFormAdicionar(chaveCategoria, dataMissa, horaMissa));
+
+    return bloco;
+  }
+
   function renderizarQuadros(entradas) {
+    ultimasEntradas = entradas;
     const grupos = new Map(); // "data|hora" -> [entradas]
     entradas.forEach((it) => {
       const chave = `${it.dataMissa}|${it.horaMissa}`;
@@ -528,9 +809,11 @@ function configurarIntencoes() {
       const horaMissa = Number(horaMissaStr);
       const itens = grupos.get(chave);
       const rotulo = tituloLista(dataMissa, horaMissa);
+      const estaAberto = quadrosAbertos.has(chave);
 
       const quadro = document.createElement("div");
       quadro.className = "quadro-intencao";
+      quadro.classList.toggle("aberto", estaAberto);
 
       const cabecalho = document.createElement("div");
       cabecalho.className = "quadro-intencao__cabecalho";
@@ -546,26 +829,16 @@ function configurarIntencoes() {
       `;
 
       const corpo = document.createElement("div");
-      corpo.className = "quadro-intencao__corpo oculto";
+      corpo.className = "quadro-intencao__corpo";
+      corpo.classList.toggle("oculto", !estaAberto);
       CATEGORIAS_INTENCAO.forEach(({ chave: chaveCategoria, rotulo: rotuloCategoria }) => {
         const doGrupo = itens.filter((it) => it.categoria === chaveCategoria);
-        if (doGrupo.length === 0) return;
-        const bloco = document.createElement("div");
-        bloco.className = "grupo-horario-dia";
-        const titulo = document.createElement("div");
-        titulo.className = "grupo-horario-dia__titulo";
-        titulo.textContent = `${rotuloCategoria} (${doGrupo.length})`;
-        bloco.appendChild(titulo);
-        doGrupo.forEach((it) => {
-          const item = document.createElement("div");
-          item.className = "intencao-item";
-          item.textContent = `${montarFraseIntencao(it)}.`;
-          bloco.appendChild(item);
-        });
-        corpo.appendChild(bloco);
+        corpo.appendChild(criarBlocoCategoria(chaveCategoria, rotuloCategoria, doGrupo, dataMissa, horaMissa, chave));
       });
 
       cabecalho.addEventListener("click", () => {
+        if (quadrosAbertos.has(chave)) quadrosAbertos.delete(chave);
+        else quadrosAbertos.add(chave);
         quadro.classList.toggle("aberto");
         corpo.classList.toggle("oculto");
       });
@@ -614,6 +887,27 @@ function configurarIntencoes() {
     } finally {
       btn.disabled = false;
       btn.textContent = "Apagar lista";
+    }
+  });
+
+  document.getElementById("fecharModalApagarIntencaoAdmin").addEventListener("click", () => fecharModal(modalApagarIntencaoAdmin));
+  document.getElementById("btnVoltarApagarIntencaoAdmin").addEventListener("click", () => fecharModal(modalApagarIntencaoAdmin));
+  document.getElementById("btnConfirmarApagarIntencaoAdmin").addEventListener("click", async (e) => {
+    if (!intencaoParaExcluir) return;
+    const idParaApagar = intencaoParaExcluir;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = "Apagando...";
+    try {
+      await excluirIntencao(idParaApagar);
+      mostrarToast("Intenção apagada.");
+      fecharModal(modalApagarIntencaoAdmin);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível apagar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Apagar";
     }
   });
 }
