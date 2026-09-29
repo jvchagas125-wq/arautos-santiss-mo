@@ -641,18 +641,20 @@ img{ max-width: 100%; display:block; }
    coluna ficar cortada. ---------- */
 #modalCalendarioAgendamentos.tela-cheia{
   position:fixed; inset:0; background: rgba(15,3,5,.6); backdrop-filter: blur(3px);
-  display:flex; align-items:center; justify-content:center; padding:14px;
+  display:flex; align-items:center; justify-content:center; padding:10px;
   opacity:0; pointer-events:none; transition: opacity var(--transicao); z-index:400;
 }
 #modalCalendarioAgendamentos.tela-cheia.aberto{ opacity:1; pointer-events:auto; }
 #modalCalendarioAgendamentos.tela-cheia .modal{
-  /* de propósito NÃO ocupa a tela inteira (isso ficava apertado/estranho no celular) — fica um
-     pouco menor, com uma margem visível ao redor, e quem quiser ver os detalhes maior pode dar
-     zoom com os dedos normalmente (o site não trava o zoom em nenhuma página). */
-  max-width:min(92vw, 1200px); width:100%; max-height:min(85vh, 800px); height:85vh;
+  /* quase do tamanho da tela inteira, pra mostrar o máximo possível da planilha de uma vez —
+     a legenda de cores, a observação e o texto do período já foram removidos daqui, então o
+     espaço que sobra vai praticamente todo pra própria tabela. Zoom por toque continua liberado
+     em todas as páginas do site, pra quem quiser ver um trecho maior/mais de perto. */
+  max-width:min(99vw, 1700px); width:100%; max-height:min(97vh, 1100px); height:97vh;
   /* ver explicação do "dvh" acima em .modal--largo — aqui é o que mais importa, porque é
      essa altura que decide quanto sobra pra tabela rolar dentro do modal no celular */
-  max-height:min(85dvh, 800px); height:85dvh;
+  max-height:min(97dvh, 1100px); height:97dvh;
+  padding:16px 14px;
   transform: scale(.94) translateY(8px); transition: transform var(--transicao);
 }
 #modalCalendarioAgendamentos.tela-cheia.aberto .modal{ transform: scale(1) translateY(0); }
@@ -662,30 +664,33 @@ img{ max-width: 100%; display:block; }
    em Acompanhamento no painel admin, ao vivo no site público (ver js/agendamento.js). ---------- */
 .grade-semanal{ display:flex; flex-direction:column; min-height:0; flex:1 1 auto; }
 .grade-semanal__cabecalho{
-  display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:12px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:6px; flex-shrink:0;
   font-family:'Cinzel'; color: var(--vermelho-escuro); font-weight:600; font-size:.92rem;
 }
 .grade-semanal__scroll{
   overflow:auto; border:1.5px solid var(--dourado); border-radius:12px; -webkit-overflow-scrolling:touch;
   flex:1 1 auto; min-height:220px;
 }
-.grade-semanal__tabela{ border-collapse:collapse; width:100%; min-width:600px; }
+/* Tela cheia: tabela mais compacta (linhas e fontes menores) pra caber mais horas na tela de
+   uma vez, sem precisar rolar tanto — quem precisar ver um trecho mais de perto pode dar zoom
+   com os dedos (o site não bloqueia isso em nenhuma página). */
+.grade-semanal__tabela{ border-collapse:collapse; width:100%; min-width:560px; }
 .grade-semanal__tabela th, .grade-semanal__tabela td{
   border:1px solid rgba(74,7,17,.15); text-align:center; vertical-align:middle;
-  padding:6px 5px; font-size:.7rem; line-height:1.3;
+  padding:3px 4px; font-size:.64rem; line-height:1.2;
 }
 .grade-semanal__tabela thead th{
   position:sticky; top:0; z-index:2;
   background: var(--dourado); color: var(--vermelho-escuro);
-  font-family:'Cinzel'; font-weight:700; font-size:.66rem; padding:8px 5px;
+  font-family:'Cinzel'; font-weight:700; font-size:.62rem; padding:6px 4px;
 }
 .grade-semanal__tabela thead th:first-child{ z-index:3; }
 .grade-semanal__tabela tbody th{
   position:sticky; left:0; z-index:1;
   background: var(--creme); color: var(--vermelho-escuro); font-weight:700;
-  min-width:40px; font-size:.68rem;
+  min-width:36px; font-size:.64rem;
 }
-.grade-semanal__tabela td{ min-width:104px; height:48px; }
+.grade-semanal__tabela td{ min-width:92px; height:32px; }
 .grade-semanal__tabela td.grade-semanal__cel--com-gente{ cursor:pointer; font-weight:600; }
 .grade-semanal__tabela td.grade-semanal__cel--com-gente:hover{ filter:brightness(.94); }
 .grade-semanal__cel--nicodemos{ background:#BDD7EE; }

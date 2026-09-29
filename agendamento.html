@@ -141,7 +141,12 @@
           <div class="grade-semanal" id="gradeSemanalAgendamentos">
             <div class="grade-semanal__cabecalho">
               <button type="button" class="calendario__nav" id="semanaAnterior" aria-label="Semana anterior">‹</button>
-              <strong id="semanaTitulo">—</strong>
+              <!-- o texto com o período ("19/09 a 26/09") foi removido a pedido, pra sobrar mais
+                   espaço pra tabela em si — cada coluna já mostra seu próprio dia no cabeçalho.
+                   O elemento continua aqui (só oculto) porque js/agendamento.js ainda escreve
+                   nele; nada quebra ao manter, e evita mexer no JS por causa de um texto que
+                   nem aparece. -->
+              <strong id="semanaTitulo" class="oculto">—</strong>
               <button type="button" class="calendario__nav" id="semanaProxima" aria-label="Próxima semana">›</button>
             </div>
             <div class="grade-semanal__scroll">
@@ -149,11 +154,6 @@
             </div>
           </div>
           <p class="mensagem-vazia oculto" id="calGrandeVazia">Nenhum período de adoração está configurado no momento.</p>
-
-          <div class="aviso-info">
-            <span class="aviso-info__icone">ℹ️</span>
-            <p><strong>Observação:</strong> cada quadrado mostra quem já reservou aquele horário — toque num quadrado com nomes para ver os detalhes. Use as setas para navegar entre as semanas.</p>
-          </div>
         </div>
       </div>
     </div>
