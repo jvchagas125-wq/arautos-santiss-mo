@@ -635,7 +635,7 @@ function configurarIntencoes() {
       campoTexto = document.createElement("textarea");
       campoTexto.rows = 2;
       campoTexto.required = true;
-      campoTexto.placeholder = "Nova intenção, do jeito que preferir (ex: recebida por telefone)...";
+      campoTexto.placeholder = "Digite um nome, família ou grupo e clique adicionar";
     } else {
       campoTexto = document.createElement("input");
       campoTexto.type = "text";
