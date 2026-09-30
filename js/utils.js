@@ -264,9 +264,19 @@ export function escolherFraseDoDia(lista, agora = new Date()) {
 export const CATEGORIAS_INTENCAO = [
   { chave: "gracas", rotulo: "Pedem e agradecem graças" },
   { chave: "saude", rotulo: "Pela Recuperação e Saúde de" },
-  { chave: "alma", rotulo: "Por alma de" },
+  { chave: "alma", rotulo: "Por alma" },
   { chave: "aniversarios", rotulo: "Aniversários de" }
 ];
+
+/* ---------- Intenções da missa: placeholder do campo de adicionar, por categoria ----------
+   Centralizado aqui (em vez de duplicado em intencoes.js e admin.js) pra nunca ficar um texto
+   diferente no site público e no painel administrativo. */
+export const PLACEHOLDERS_INTENCAO = {
+  gracas: "Digite um nome, família ou grupo e clique em adicionar",
+  saude: "Digite um nome da pessoa e clique em adicionar",
+  alma: "Digite um nome da pessoa (Dias, meses ou anos se quiser) e clique em adicionar",
+  aniversarios: "Digite um nome completo e clique em adicionar"
+};
 
 /* ---------- Intenções da missa: horários de missa de um dia específico ----------
    config: { horariosPorDia: [ [domingo], [segunda], [terça], [quarta], [quinta], [sexta], [sábado] ], horasAntes: 3 }

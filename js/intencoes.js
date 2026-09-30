@@ -2,7 +2,7 @@ import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   formatarDataBR, dataParaIso, hojeIso, criarCalendario,
-  horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO
+  horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO, PLACEHOLDERS_INTENCAO
 } from "./utils.js";
 import {
   obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao,
@@ -167,13 +167,6 @@ function renderizarEntradasNaLista(listaEl, entradas, { categoria, onSalvar, onA
   });
 }
 
-const PLACEHOLDERS = {
-  gracas: "Digite um nome, família ou grupo e clique adicionar",
-  saude: "Digite um nome e toque em Adicionar",
-  alma: "Digite um nome e toque em Adicionar (pode colocar entre parênteses há quantos meses ou anos faleceu, se quiser)",
-  aniversarios: "Digite um nome e toque em Adicionar (pode colocar entre parênteses quantos anos completa, se quiser)"
-};
-
 // "Pela Recuperação e Saúde de", "Por alma" e "Aniversários" são preenchidos um nome de cada vez
 // (a pessoa digita, toca em "Adicionar", o campo limpa e ela pode digitar o próximo) — fica mais
 // fácil de usar do que um texto só com vários nomes juntos, e cada nome vira uma intenção
@@ -187,14 +180,28 @@ function criarBlocoCategoria(categoria, rotulo, iso, hora) {
     <h3 class="categoria-intencao__titulo">${rotulo}</h3>
     <div class="categoria-intencao__lista"></div>
     <form class="categoria-intencao__form">
-      ${ehNome
-        ? `<input type="text" placeholder="${PLACEHOLDERS[categoria] || ""}" required />`
-        : `<textarea rows="2" placeholder="${PLACEHOLDERS[categoria] || ""}" required></textarea>`}
+      <textarea rows="${ehNome ? 3 : 2}" placeholder="${PLACEHOLDERS_INTENCAO[categoria] || ""}" required></textarea>
       <button type="submit" class="btn btn-contorno btn-pequeno">Adicionar</button>
     </form>
   `;
   const listaEl = bloco.querySelector(".categoria-intencao__lista");
   const form = bloco.querySelector("form");
+
+  // Sempre <textarea> (mesmo pras categorias de "um nome por vez") — com um <input> de uma
+  // linha só, o placeholder é cortado quando não cabe no campo, e a pessoa nunca vê a frase
+  // inteira. Numa textarea o placeholder quebra em várias linhas, então sempre aparece completo,
+  // mesmo em telas estreitas. Como a pessoa está acostumada a apertar Enter pra adicionar (era o
+  // comportamento do <input>), o Enter (sem Shift) continua enviando o formulário nessas
+  // categorias — só quebra linha com Shift+Enter. Em "gracas" (texto livre) o Enter continua
+  // quebrando linha normalmente, sem enviar.
+  if (ehNome) {
+    form.querySelector("textarea").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+  }
 
   // guarda TODAS as entradas atuais dessa categoria (atualizadas a cada snapshot em tempo real),
   // mesmo sendo de outras pessoas — precisa da lista inteira pra checar, na hora de enviar, se

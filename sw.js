@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v22";
+const CACHE_NAME = "arautos-shell-v23";
 
 const ARQUIVOS_APP_SHELL = [
   "./",
@@ -33,12 +33,12 @@ const ARQUIVOS_APP_SHELL = [
   "./js/instalar-app.js",
   "./js/sw-registro.js",
   "./assets/logo.png",
-  "./assets/favicon.png",
+  "./assets/favicon.png?v=2",
   "./assets/selo-adoracao.png",
   "./assets/cruz-ornamento.png",
-  "./assets/icone-app-192.png",
-  "./assets/icone-app-512.png",
-  "./assets/icone-app-180.png"
+  "./assets/icone-app-192.png?v=2",
+  "./assets/icone-app-512.png?v=2",
+  "./assets/icone-app-180.png?v=2"
 ];
 
 self.addEventListener("install", (evento) => {

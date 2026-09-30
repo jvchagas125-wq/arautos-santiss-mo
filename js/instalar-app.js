@@ -29,7 +29,7 @@ function criarBotao() {
   btn.id = "btnInstalarApp";
   btn.className = "btn-instalar-app";
   btn.setAttribute("aria-label", "Instalar App Arautos");
-  btn.innerHTML = `<img src="assets/icone-app-192.png" alt="" /><span>Instalar app</span>`;
+  btn.innerHTML = `<img src="assets/icone-app-192.png?v=2" alt="" /><span>Instalar app</span>`;
   document.body.appendChild(btn);
   botaoInstalar = btn;
   return btn;

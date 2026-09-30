@@ -1,7 +1,7 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
-  MESES, CATEGORIAS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto, ORDEM_PAGINAS,
+  MESES, CATEGORIAS_INTENCAO, PLACEHOLDERS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto, ORDEM_PAGINAS,
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -619,29 +619,22 @@ function configurarIntencoes() {
     return linha;
   }
 
-  const PLACEHOLDERS_NOVA_INTENCAO = {
-    saude: "Nome",
-    alma: "Nome (pode colocar entre parênteses há quantos meses/anos faleceu)",
-    aniversarios: "Nome (pode colocar entre parênteses quantos anos completa)"
-  };
-
   // ---- formulário de incluir uma nova intenção (o padre recebeu por telefone, por exemplo) ----
   function criarFormAdicionar(chaveCategoria, dataMissa, horaMissa) {
     const form = document.createElement("form");
     form.className = "categoria-intencao__form";
 
-    let campoTexto;
-    if (chaveCategoria === "gracas") {
-      campoTexto = document.createElement("textarea");
-      campoTexto.rows = 2;
-      campoTexto.required = true;
-      campoTexto.placeholder = "Digite um nome, família ou grupo e clique adicionar";
-    } else {
-      campoTexto = document.createElement("input");
-      campoTexto.type = "text";
-      campoTexto.required = true;
-      campoTexto.placeholder = PLACEHOLDERS_NOVA_INTENCAO[chaveCategoria] || "Nome";
-    }
+    // Sempre <textarea> (mesmo pras categorias de "um nome por vez") — com um <input> de uma
+    // linha só, o placeholder é cortado quando não cabe no campo, e a pessoa nunca vê a frase
+    // inteira. Numa textarea o placeholder quebra em várias linhas, então sempre aparece
+    // completo, mesmo em telas estreitas. Como a pessoa está acostumada a apertar Enter pra
+    // adicionar (era o comportamento do <input>), o Enter (sem Shift) continua enviando o
+    // formulário — só quebra linha com Shift+Enter.
+    const ehGracas = chaveCategoria === "gracas";
+    const campoTexto = document.createElement("textarea");
+    campoTexto.rows = ehGracas ? 2 : 3;
+    campoTexto.required = true;
+    campoTexto.placeholder = PLACEHOLDERS_INTENCAO[chaveCategoria] || "";
     form.appendChild(campoTexto);
 
     const btn = document.createElement("button");
@@ -649,6 +642,15 @@ function configurarIntencoes() {
     btn.className = "btn btn-contorno btn-pequeno";
     btn.textContent = "Adicionar";
     form.appendChild(btn);
+
+    if (!ehGracas) {
+      campoTexto.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      });
+    }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
