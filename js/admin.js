@@ -1,7 +1,7 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
-  MESES, CATEGORIAS_INTENCAO, PLACEHOLDERS_INTENCAO, DIAS_SEMANA_COMPLETO, linkificarTexto, ORDEM_PAGINAS,
+  MESES, CATEGORIAS_INTENCAO, PLACEHOLDERS_INTENCAO, INTENCAO_FIXA_ALMA, DIAS_SEMANA_COMPLETO, linkificarTexto, ORDEM_PAGINAS,
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -590,7 +590,11 @@ function configurarIntencoes() {
     const lista = document.createElement("div");
     lista.className = "categoria-intencao__lista";
 
-    if (doGrupo.length === 0) {
+    // "Por alma" sempre tem pelo menos a intenção fixa (ver INTENCAO_FIXA_ALMA em utils.js) —
+    // nunca mostra o estado "vazio", mesmo sem ninguém ter colocado nome nenhum ainda.
+    const ehAlma = chaveCategoria === "alma";
+
+    if (doGrupo.length === 0 && !ehAlma) {
       const vazio = document.createElement("p");
       vazio.className = "categoria-intencao__vazio";
       vazio.textContent = "Nenhuma intenção nesta categoria ainda.";
@@ -600,7 +604,10 @@ function configurarIntencoes() {
     } else {
       const paragrafo = document.createElement("p");
       paragrafo.className = "intencao-nomes-paragrafo";
-      paragrafo.textContent = extrairTextosCategoria(doGrupo);
+      const textoReal = extrairTextosCategoria(doGrupo);
+      // a intenção fixa nunca se mistura com o "e" dos nomes reais — entra como uma frase à
+      // parte, sempre por último, pra não parecer que alguém "escreveu" ela.
+      paragrafo.textContent = ehAlma ? [textoReal, INTENCAO_FIXA_ALMA].filter(Boolean).join(" ") : textoReal;
       lista.appendChild(paragrafo);
     }
     bloco.appendChild(lista);

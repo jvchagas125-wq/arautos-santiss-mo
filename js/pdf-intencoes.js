@@ -1,7 +1,7 @@
 // Geração do PDF de intenções — compartilhado entre o painel administrativo (baixa o arquivo,
 // ver js/admin.js) e o site público (abre numa aba nova só pra visualizar, ver js/intencoes.js).
 // Centralizado aqui pra nunca ficar um PDF com aparência diferente dependendo de quem gerou.
-import { CATEGORIAS_INTENCAO } from "./utils.js";
+import { CATEGORIAS_INTENCAO, INTENCAO_FIXA_ALMA } from "./utils.js";
 
 // Nenhuma categoria monta frase nenhuma — cada intenção aparece exatamente do jeito que a
 // pessoa escreveu, e todas as de uma mesma categoria/missa ficam juntas numa lista corrida,
@@ -59,14 +59,15 @@ export function construirPdfIntencoes(rotulo, itens) {
   docPdf.text(rotulo, margem, y);
   y += 26;
 
-  let totalItens = 0;
   const LINHAS_EXTRAS_POR_TOPICO = 2; // linhas em branco pro padre acrescentar à mão um nome de última hora
+  // "Por alma" sempre entra, mesmo sem ninguém ter colocado nome nenhum — ela sempre termina com
+  // a intenção fixa (INTENCAO_FIXA_ALMA), então nunca fica realmente "vazia" no PDF.
   const categoriasComItens = CATEGORIAS_INTENCAO.filter(
-    ({ chave }) => itens.filter((it) => it.categoria === chave).length > 0
+    ({ chave }) => chave === "alma" || itens.filter((it) => it.categoria === chave).length > 0
   );
   categoriasComItens.forEach(({ chave, rotulo: rotuloCategoria }, indice) => {
     const doGrupo = itens.filter((it) => it.categoria === chave);
-    totalItens += doGrupo.length;
+    const ehAlma = chave === "alma";
 
     quebrarPaginaSeNecessario(28);
     docPdf.setFont("times", "bold");
@@ -79,21 +80,45 @@ export function construirPdfIntencoes(rotulo, itens) {
     docPdf.setFontSize(11);
     docPdf.setTextColor(40, 24, 16);
 
-    const linhas = docPdf.splitTextToSize(extrairTextosCategoria(doGrupo), larguraUtil - 12);
-    quebrarPaginaSeNecessario(linhas.length * 15 + 6);
-    docPdf.text(linhas, margem + 12, y);
-    y += linhas.length * 15 + 6;
-    y += 10;
+    // em "Por alma" a intenção fixa NÃO entra misturada com o "e" dos nomes reais (só entra se
+    // tiver algum nome real) — ela ganha sua própria linha reservada mais abaixo, pra ser a
+    // última coisa lida.
+    const textoReal = extrairTextosCategoria(doGrupo);
+    if (textoReal) {
+      const linhas = docPdf.splitTextToSize(textoReal, larguraUtil - 12);
+      quebrarPaginaSeNecessario(linhas.length * 15 + 6);
+      docPdf.text(linhas, margem + 12, y);
+      y += linhas.length * 15 + 6;
+      y += 10;
+    }
 
-    // linhas em branco extras, pra dar espaço de acrescentar nomes à mão depois de impresso
-    quebrarPaginaSeNecessario(LINHAS_EXTRAS_POR_TOPICO * 20);
-    docPdf.setDrawColor(196, 178, 158);
-    docPdf.setLineWidth(0.6);
-    for (let i = 0; i < LINHAS_EXTRAS_POR_TOPICO; i++) {
+    if (ehAlma) {
+      // 1ª linha reservada: fica em branco, pra escreverem à mão na hora da missa, se precisar.
+      // 2ª linha reservada: já vem com a intenção fixa impressa, pra ser a última intenção falada.
+      quebrarPaginaSeNecessario(40);
+      docPdf.setDrawColor(196, 178, 158);
+      docPdf.setLineWidth(0.6);
       docPdf.line(margem + 12, y, larguraPagina - margem, y);
       y += 20;
+
+      docPdf.setFont("times", "italic");
+      docPdf.setFontSize(11);
+      docPdf.setTextColor(40, 24, 16);
+      const linhaFixa = docPdf.splitTextToSize(INTENCAO_FIXA_ALMA, larguraUtil - 12);
+      docPdf.text(linhaFixa, margem + 12, y - 6);
+      y += 20;
+      y += 4;
+    } else {
+      // linhas em branco extras, pra dar espaço de acrescentar nomes à mão depois de impresso
+      quebrarPaginaSeNecessario(LINHAS_EXTRAS_POR_TOPICO * 20);
+      docPdf.setDrawColor(196, 178, 158);
+      docPdf.setLineWidth(0.6);
+      for (let i = 0; i < LINHAS_EXTRAS_POR_TOPICO; i++) {
+        docPdf.line(margem + 12, y, larguraPagina - margem, y);
+        y += 20;
+      }
+      y += 4;
     }
-    y += 4;
 
     // linha separadora entre um tópico e o próximo (não desenha depois do último)
     if (indice < categoriasComItens.length - 1) {
@@ -105,7 +130,9 @@ export function construirPdfIntencoes(rotulo, itens) {
     }
   });
 
-  if (totalItens === 0) {
+  // "Por alma" sempre aparece (com a intenção fixa), então a lista nunca fica realmente vazia —
+  // esse aviso só entraria se um dia não houvesse categoria nenhuma pra mostrar.
+  if (categoriasComItens.length === 0) {
     docPdf.setFont("times", "italic");
     docPdf.setFontSize(11);
     docPdf.setTextColor(90, 70, 54);

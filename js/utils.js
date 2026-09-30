@@ -278,6 +278,12 @@ export const PLACEHOLDERS_INTENCAO = {
   aniversarios: "Digite o nome completo e clique em adicionar"
 };
 
+/* ---------- Intenções da missa: intenção fixa de "Por alma" ----------
+   Sempre entra automaticamente como a última intenção de "Por alma" — no parágrafo mesclado do
+   painel administrativo e no PDF (ver js/admin.js e js/pdf-intencoes.js). Não é uma intenção
+   enviada por ninguém (não existe no Firestore), por isso nunca aparece editável/apagável. */
+export const INTENCAO_FIXA_ALMA = "Pelas almas do purgatório, falecidas e mais necessitadas.";
+
 /* ---------- Intenções da missa: horários de missa de um dia específico ----------
    config: { horariosPorDia: [ [domingo], [segunda], [terça], [quarta], [quinta], [sexta], [sábado] ], horasAntes: 3 }
    (índice de horariosPorDia = Date.getDay(): 0=domingo ... 6=sábado; um dia sem horários fica com array vazio)
