@@ -42,32 +42,6 @@ function formatarHoraSimples(hora) {
   return `${String(hora).padStart(2, "0")}:00`;
 }
 
-/* ---------- Confirmação de intenção repetida ----------
-   Quando a pessoa já tem uma intenção enviada nessa mesma categoria, para essa mesma missa,
-   pergunta se ela quer mesmo enviar de novo (em vez de simplesmente bloquear) — evita repetições
-   sem querer (ex.: duplo clique) sem impedir quem realmente quer adicionar mais de uma. */
-const modalIntencaoRepetida = document.getElementById("modalIntencaoRepetida");
-const categoriaRepetidaEl = document.getElementById("categoriaIntencaoRepetida");
-const btnCancelarIntencaoRepetida = document.getElementById("btnCancelarIntencaoRepetida");
-const btnConfirmarIntencaoRepetida = document.getElementById("btnConfirmarIntencaoRepetida");
-let resolverConfirmacaoRepetida = null;
-
-function confirmarEnvioRepetido(rotuloCategoria) {
-  categoriaRepetidaEl.textContent = rotuloCategoria;
-  abrirModal(modalIntencaoRepetida);
-  return new Promise((resolve) => { resolverConfirmacaoRepetida = resolve; });
-}
-btnCancelarIntencaoRepetida.addEventListener("click", () => {
-  fecharModal(modalIntencaoRepetida);
-  resolverConfirmacaoRepetida?.(false);
-  resolverConfirmacaoRepetida = null;
-});
-btnConfirmarIntencaoRepetida.addEventListener("click", () => {
-  fecharModal(modalIntencaoRepetida);
-  resolverConfirmacaoRepetida?.(true);
-  resolverConfirmacaoRepetida = null;
-});
-
 /* ---------- Confirmação de exclusão (apagar uma intenção que eu mesmo coloquei) ---------- */
 const modalApagarIntencao = document.getElementById("modalApagarIntencao");
 const btnCancelarApagarIntencao = document.getElementById("btnCancelarApagarIntencao");
@@ -194,7 +168,7 @@ function renderizarEntradasNaLista(listaEl, entradas, { categoria, onSalvar, onA
 }
 
 const PLACEHOLDERS = {
-  gracas: "Escreva aqui sua intenção, do jeito que preferir...",
+  gracas: "Digite um nome, família ou grupo e clique adicionar",
   saude: "Digite um nome e toque em Adicionar",
   alma: "Digite um nome e toque em Adicionar (pode colocar entre parênteses há quantos meses ou anos faleceu, se quiser)",
   aniversarios: "Digite um nome e toque em Adicionar (pode colocar entre parênteses quantos anos completa, se quiser)"
@@ -255,15 +229,6 @@ function criarBlocoCategoria(categoria, rotulo, iso, hora) {
     btn.textContent = "Enviando...";
     try {
       const usuario = await usuarioPromise;
-      // "por alma"/"aniversários" são vários nomes, um por intenção — não faz sentido avisar de
-      // duplicidade a cada nome novo que a pessoa acrescenta, então só pergunta pra "gracas".
-      if (!ehNome) {
-        const jaTem = entradasAtuais.some((it) => it.telefoneDigits && it.telefoneDigits === usuario.telefoneDigits);
-        if (jaTem) {
-          const confirmar = await confirmarEnvioRepetido(rotulo);
-          if (!confirmar) return;
-        }
-      }
       await criarIntencao({
         dataMissa: iso, horaMissa: hora, categoria, texto,
         nome: usuario.nome, telefoneDigits: usuario.telefoneDigits

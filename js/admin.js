@@ -462,9 +462,12 @@ function configurarIntencoes() {
     y += 26;
 
     let totalItens = 0;
-    CATEGORIAS_INTENCAO.forEach(({ chave, rotulo: rotuloCategoria }) => {
+    const LINHAS_EXTRAS_POR_TOPICO = 2; // linhas em branco pro padre acrescentar à mão um nome de última hora
+    const categoriasComItens = CATEGORIAS_INTENCAO.filter(
+      ({ chave }) => itens.filter((it) => it.categoria === chave).length > 0
+    );
+    categoriasComItens.forEach(({ chave, rotulo: rotuloCategoria }, indice) => {
       const doGrupo = itens.filter((it) => it.categoria === chave);
-      if (doGrupo.length === 0) return;
       totalItens += doGrupo.length;
 
       quebrarPaginaSeNecessario(28);
@@ -482,7 +485,26 @@ function configurarIntencoes() {
       quebrarPaginaSeNecessario(linhas.length * 15 + 6);
       docPdf.text(linhas, margem + 12, y);
       y += linhas.length * 15 + 6;
-      y += 12;
+      y += 10;
+
+      // linhas em branco extras, pra dar espaço de acrescentar nomes à mão depois de impresso
+      quebrarPaginaSeNecessario(LINHAS_EXTRAS_POR_TOPICO * 20);
+      docPdf.setDrawColor(196, 178, 158);
+      docPdf.setLineWidth(0.6);
+      for (let i = 0; i < LINHAS_EXTRAS_POR_TOPICO; i++) {
+        docPdf.line(margem + 12, y, larguraPagina - margem, y);
+        y += 20;
+      }
+      y += 4;
+
+      // linha separadora entre um tópico e o próximo (não desenha depois do último)
+      if (indice < categoriasComItens.length - 1) {
+        quebrarPaginaSeNecessario(20);
+        docPdf.setDrawColor(205, 164, 52);
+        docPdf.setLineWidth(0.7);
+        docPdf.line(margem, y, larguraPagina - margem, y);
+        y += 20;
+      }
     });
 
     if (totalItens === 0) {
