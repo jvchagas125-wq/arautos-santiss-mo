@@ -18,6 +18,7 @@ import {
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
+import { extrairTextosCategoria, construirPdfIntencoes, nomeArquivoPdf } from "./pdf-intencoes.js";
 
 // Guarda a própria senha (não apenas um sinalizador) para que o acesso automático
 // só continue válido enquanto essa for a senha atual do painel — se o padre trocar
@@ -407,124 +408,13 @@ function configurarIntencoes() {
     return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2,"0")}:00`;
   }
 
-  // Nenhuma categoria monta frase nenhuma — cada intenção aparece exatamente do jeito que a
-  // pessoa escreveu, e todas as de uma mesma categoria/missa ficam juntas numa lista corrida,
-  // separadas por vírgula (com um "e" antes da última), do jeito que fica bom pro padre ler na
-  // missa. Ex.: "Fulano, Beltrano e Cicrano."
-  function extrairTextosCategoria(doGrupo) {
-    const textos = doGrupo
-      .map((it) => (it.texto || "").trim().replace(/[.,;:]+$/, ""))
-      .filter(Boolean);
-    if (textos.length === 0) return "";
-    if (textos.length === 1) return `${textos[0]}.`;
-    return `${textos.slice(0, -1).join(", ")} e ${textos[textos.length - 1]}.`;
-  }
-
-  // Gera um PDF com as intenções de uma lista específica, organizadas por categoria
-  // (mesma ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa.
+  // Gera um PDF com as intenções de uma lista específica, organizadas por categoria (mesma
+  // ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa. A montagem em si
+  // (o desenho do PDF) é compartilhada com o botão "Ver PDF da lista" do site público — ver
+  // js/pdf-intencoes.js — só o destino final muda: aqui baixa o arquivo, lá abre numa aba nova.
   function gerarPdfIntencoes(rotulo, itens) {
-    const { jsPDF } = window.jspdf;
-    const docPdf = new jsPDF({ unit: "pt", format: "a4" });
-    const larguraPagina = docPdf.internal.pageSize.getWidth();
-    const alturaPagina = docPdf.internal.pageSize.getHeight();
-    const margem = 50;
-    const larguraUtil = larguraPagina - margem * 2;
-    let y = margem;
-
-    function quebrarPaginaSeNecessario(alturaNecessaria) {
-      if (y + alturaNecessaria > alturaPagina - margem) {
-        docPdf.addPage();
-        y = margem;
-      }
-    }
-
-    docPdf.setFont("times", "bold");
-    docPdf.setFontSize(16);
-    docPdf.setTextColor(122, 12, 30);
-    docPdf.text("Arautos do Evangelho Campos", larguraPagina / 2, y, { align: "center" });
-    y += 20;
-
-    docPdf.setFont("times", "normal");
-    docPdf.setFontSize(11);
-    docPdf.setTextColor(90, 70, 54);
-    docPdf.text("Intenções da Santa Missa", larguraPagina / 2, y, { align: "center" });
-    y += 24;
-
-    docPdf.setDrawColor(205, 164, 52);
-    docPdf.setLineWidth(1);
-    docPdf.line(margem, y, larguraPagina - margem, y);
-    y += 26;
-
-    docPdf.setFont("times", "bold");
-    docPdf.setFontSize(13);
-    docPdf.setTextColor(40, 24, 16);
-    docPdf.text(rotulo, margem, y);
-    y += 26;
-
-    let totalItens = 0;
-    const LINHAS_EXTRAS_POR_TOPICO = 2; // linhas em branco pro padre acrescentar à mão um nome de última hora
-    const categoriasComItens = CATEGORIAS_INTENCAO.filter(
-      ({ chave }) => itens.filter((it) => it.categoria === chave).length > 0
-    );
-    categoriasComItens.forEach(({ chave, rotulo: rotuloCategoria }, indice) => {
-      const doGrupo = itens.filter((it) => it.categoria === chave);
-      totalItens += doGrupo.length;
-
-      quebrarPaginaSeNecessario(28);
-      docPdf.setFont("times", "bold");
-      docPdf.setFontSize(12);
-      docPdf.setTextColor(122, 12, 30);
-      docPdf.text(rotuloCategoria, margem, y);
-      y += 20;
-
-      docPdf.setFont("times", "normal");
-      docPdf.setFontSize(11);
-      docPdf.setTextColor(40, 24, 16);
-
-      const linhas = docPdf.splitTextToSize(extrairTextosCategoria(doGrupo), larguraUtil - 12);
-      quebrarPaginaSeNecessario(linhas.length * 15 + 6);
-      docPdf.text(linhas, margem + 12, y);
-      y += linhas.length * 15 + 6;
-      y += 10;
-
-      // linhas em branco extras, pra dar espaço de acrescentar nomes à mão depois de impresso
-      quebrarPaginaSeNecessario(LINHAS_EXTRAS_POR_TOPICO * 20);
-      docPdf.setDrawColor(196, 178, 158);
-      docPdf.setLineWidth(0.6);
-      for (let i = 0; i < LINHAS_EXTRAS_POR_TOPICO; i++) {
-        docPdf.line(margem + 12, y, larguraPagina - margem, y);
-        y += 20;
-      }
-      y += 4;
-
-      // linha separadora entre um tópico e o próximo (não desenha depois do último)
-      if (indice < categoriasComItens.length - 1) {
-        quebrarPaginaSeNecessario(20);
-        docPdf.setDrawColor(205, 164, 52);
-        docPdf.setLineWidth(0.7);
-        docPdf.line(margem, y, larguraPagina - margem, y);
-        y += 20;
-      }
-    });
-
-    if (totalItens === 0) {
-      docPdf.setFont("times", "italic");
-      docPdf.setFontSize(11);
-      docPdf.setTextColor(90, 70, 54);
-      docPdf.text("Nenhuma intenção foi adicionada a esta lista.", margem, y);
-    }
-
-    const carimbo = new Date().toLocaleString("pt-BR");
-    docPdf.setFontSize(8);
-    docPdf.setTextColor(140, 120, 100);
-    docPdf.text(`Gerado em ${carimbo}`, margem, alturaPagina - 24);
-
-    const nomeArquivo = `intencoes-${rotulo}`
-      .toLowerCase()
-      .normalize("NFD").replace(/[̀-ͯ]/g, "") // remove acentos
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-    docPdf.save(`${nomeArquivo}.pdf`);
+    const docPdf = construirPdfIntencoes(rotulo, itens);
+    docPdf.save(nomeArquivoPdf(rotulo));
   }
 
   const ICONE_LAPIS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>`;
@@ -632,7 +522,7 @@ function configurarIntencoes() {
     // formulário — só quebra linha com Shift+Enter.
     const ehGracas = chaveCategoria === "gracas";
     const campoTexto = document.createElement("textarea");
-    campoTexto.rows = ehGracas ? 2 : 3;
+    campoTexto.rows = ehGracas ? 2 : 4;
     campoTexto.required = true;
     campoTexto.placeholder = PLACEHOLDERS_INTENCAO[chaveCategoria] || "";
     form.appendChild(campoTexto);
