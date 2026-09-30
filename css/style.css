@@ -815,7 +815,14 @@ img{ max-width: 100%; display:block; }
   background:#fffefb; resize:vertical;
 }
 .intencao-item__editar-form textarea:focus{ outline:none; border-color: var(--dourado); }
+.intencao-item__editar-form input[type="text"]{
+  flex:1; min-width:180px; border:1px solid rgba(157,122,31,.35); border-radius:10px;
+  padding:9px 11px; font-family:'EB Garamond', serif; font-size:.92rem; color: var(--texto);
+  background:#fffefb;
+}
+.intencao-item__editar-form input[type="text"]:focus{ outline:none; border-color: var(--dourado); }
 .intencao-item__editar-acoes{ display:flex; gap:8px; flex-shrink:0; }
+.intencao-item__editar-acoes--lista{ margin:-2px 0 10px; }
 .categoria-intencao__vazio{ margin:0 0 10px; font-size:.82rem; color: var(--texto-suave); font-style:italic; }
 .categoria-intencao__form{ display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
 .categoria-intencao__form textarea{
@@ -843,18 +850,9 @@ img{ max-width: 100%; display:block; }
 .intencao-nome-input{
   flex:1; min-width:120px; border:1px solid rgba(157,122,31,.35); border-radius:10px;
   padding:8px 11px; font-family:'EB Garamond', serif; font-size:.88rem; color: var(--texto);
-  background:#fffefb;
+  background:#fffefb; resize:vertical;
 }
 .intencao-nome-input:focus{ outline:none; border-color: var(--dourado); }
-
-/* só a categoria "Agradecem graças" mostra isto — decide o verbo da frase no PDF (pede pela /
-   agradece por), ver js/intencoes.js e js/admin.js */
-.tipo-graca-campo{
-  flex:0 0 100%; display:flex; gap:18px; flex-wrap:wrap;
-  font-size:.84rem; color: var(--texto-suave); margin-bottom:2px;
-}
-.tipo-graca-campo label{ display:flex; align-items:center; gap:6px; cursor:pointer; }
-.tipo-graca-campo input[type=radio]{ accent-color: var(--vermelho-escuro); width:15px; height:15px; cursor:pointer; }
 
 .link-whatsapp{
   flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;

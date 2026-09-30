@@ -114,14 +114,6 @@ function textoStatusFechado(status) {
     `${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.`;
 }
 
-// Usado só pra colocar o texto atual dentro do <textarea> de edição via innerHTML sem correr o
-// risco de um caractere como "<" ou "&" quebrar o HTML (ou, pior, virar uma tag de verdade).
-function escaparHtml(texto) {
-  const div = document.createElement("div");
-  div.textContent = texto;
-  return div.innerHTML;
-}
-
 const ICONE_LAPIS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>`;
 const ICONE_LIXEIRA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>`;
 
@@ -164,32 +156,28 @@ function renderizarEntradasNaLista(listaEl, entradas, { categoria, onSalvar, onA
       item.className = "intencao-item intencao-item--editando";
       item.innerHTML = `
         <form class="intencao-item__editar-form">
-          ${categoria === "gracas" ? CAMPO_TIPO_GRACA : ""}
-          <textarea rows="2" required>${escaparHtml(it.texto)}</textarea>
+          ${categoria === "gracas" ? `<textarea rows="2" required></textarea>` : `<input type="text" required />`}
           <span class="intencao-item__editar-acoes">
             <button type="submit" class="btn btn-dourado btn-pequeno">Salvar</button>
             <button type="button" class="btn btn-contorno btn-pequeno intencao-item__cancelar">Cancelar</button>
           </span>
         </form>
       `;
-      if (categoria === "gracas") {
-        const radio = item.querySelector(`input[name=tipoGraca][value="${it.tipoGraca || "pedido"}"]`);
-        if (radio) radio.checked = true;
-      }
+      // valor preenchido via propriedade (não interpolado no HTML) — assim nomes com aspas,
+      // "&" etc. nunca correm risco de quebrar o atributo/tag.
+      item.querySelector("textarea, input").value = it.texto || "";
       item.querySelector(".intencao-item__cancelar").addEventListener("click", mostrarVisualizacao);
       item.querySelector("form").addEventListener("submit", async (e) => {
         e.preventDefault();
         const form = e.target;
-        const texto = form.querySelector("textarea").value.trim();
+        const campoTexto = form.querySelector("textarea, input");
+        const texto = campoTexto.value.trim();
         if (!texto) return;
-        const tipoGraca = categoria === "gracas" ? form.querySelector("input[name=tipoGraca]:checked")?.value : undefined;
         const btn = form.querySelector("button[type=submit]");
         btn.disabled = true;
         btn.textContent = "Salvando...";
         try {
-          const dadosParciais = { texto };
-          if (categoria === "gracas" && tipoGraca) dadosParciais.tipoGraca = tipoGraca;
-          await onSalvar(it.id, dadosParciais);
+          await onSalvar(it.id, { texto });
           mostrarToast("Intenção atualizada!");
         } catch (err) {
           console.error(err);
@@ -206,29 +194,26 @@ function renderizarEntradasNaLista(listaEl, entradas, { categoria, onSalvar, onA
 }
 
 const PLACEHOLDERS = {
-  gracas: "Escreva aqui sua intenção...",
-  alma: "Nome de quem deseja lembrar (pode colocar entre parênteses há quantos meses ou anos faleceu, se quiser)...",
-  aniversarios: "Nome de quem está de aniversário (pode colocar entre parênteses quantos anos completa, se quiser)..."
+  gracas: "Escreva aqui sua intenção, do jeito que preferir...",
+  alma: "Digite um nome e toque em Adicionar (pode colocar entre parênteses há quantos meses ou anos faleceu, se quiser)",
+  aniversarios: "Digite um nome e toque em Adicionar (pode colocar entre parênteses quantos anos completa, se quiser)"
 };
 
-// Só a categoria "gracas" pede pra pessoa escolher entre pedido e agradecimento — isso decide
-// o verbo usado na frase montada pro PDF extraído pelo padre ("pede pela" ou "agradece por").
-const CAMPO_TIPO_GRACA = `
-  <div class="tipo-graca-campo">
-    <label><input type="radio" name="tipoGraca" value="pedido" required /> Pedido de graça</label>
-    <label><input type="radio" name="tipoGraca" value="agradecimento" /> Agradecimento</label>
-  </div>
-`;
-
+// "Por alma" e "Aniversários" são preenchidos um nome de cada vez (a pessoa digita, toca em
+// "Adicionar", o campo limpa e ela pode digitar o próximo) — fica mais fácil de usar do que um
+// texto só com vários nomes juntos, e cada nome vira uma intenção separada no banco. "gracas"
+// continua sendo um texto livre (pode ser uma frase mais longa), sem nenhuma opção fixa de tipo.
 function criarBlocoCategoria(categoria, rotulo, iso, hora) {
+  const ehNome = categoria === "alma" || categoria === "aniversarios";
   const bloco = document.createElement("div");
   bloco.className = "categoria-intencao";
   bloco.innerHTML = `
     <h3 class="categoria-intencao__titulo">${rotulo}</h3>
     <div class="categoria-intencao__lista"></div>
     <form class="categoria-intencao__form">
-      ${categoria === "gracas" ? CAMPO_TIPO_GRACA : ""}
-      <textarea rows="2" placeholder="${PLACEHOLDERS[categoria] || ""}" required></textarea>
+      ${ehNome
+        ? `<input type="text" placeholder="${PLACEHOLDERS[categoria] || ""}" required />`
+        : `<textarea rows="2" placeholder="${PLACEHOLDERS[categoria] || ""}" required></textarea>`}
       <button type="submit" class="btn btn-contorno btn-pequeno">Adicionar</button>
     </form>
   `;
@@ -259,27 +244,30 @@ function criarBlocoCategoria(categoria, rotulo, iso, hora) {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const textarea = form.querySelector("textarea");
-    const texto = textarea.value.trim();
+    const campoTexto = form.querySelector("textarea, input");
+    const texto = campoTexto.value.trim();
     if (!texto) return;
-    const tipoGraca = categoria === "gracas" ? form.querySelector("input[name=tipoGraca]:checked")?.value : undefined;
 
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
     btn.textContent = "Enviando...";
     try {
       const usuario = await usuarioPromise;
-      const jaTem = entradasAtuais.some((it) => it.telefoneDigits && it.telefoneDigits === usuario.telefoneDigits);
-      if (jaTem) {
-        const confirmar = await confirmarEnvioRepetido(rotulo);
-        if (!confirmar) return;
+      // "por alma"/"aniversários" são vários nomes, um por intenção — não faz sentido avisar de
+      // duplicidade a cada nome novo que a pessoa acrescenta, então só pergunta pra "gracas".
+      if (!ehNome) {
+        const jaTem = entradasAtuais.some((it) => it.telefoneDigits && it.telefoneDigits === usuario.telefoneDigits);
+        if (jaTem) {
+          const confirmar = await confirmarEnvioRepetido(rotulo);
+          if (!confirmar) return;
+        }
       }
       await criarIntencao({
         dataMissa: iso, horaMissa: hora, categoria, texto,
-        nome: usuario.nome, telefoneDigits: usuario.telefoneDigits, tipoGraca
+        nome: usuario.nome, telefoneDigits: usuario.telefoneDigits
       });
-      textarea.value = "";
-      form.querySelectorAll("input[name=tipoGraca]").forEach((r) => { r.checked = false; });
+      campoTexto.value = "";
+      campoTexto.focus();
       mostrarToast("Intenção adicionada!");
     } catch (err) {
       console.error(err);

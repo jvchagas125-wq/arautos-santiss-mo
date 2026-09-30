@@ -324,12 +324,12 @@ export async function salvarConfigIntencoes(dados) {
 }
 
 // Envia uma intenção para a lista da missa indicada. Guarda nome e telefoneDigits de quem
-// enviou (identificação padrão do site, já feita em toda página) — usados para montar a frase
-// no PDF extraído pelo padre e para avisar a própria pessoa se ela já tiver enviado outra
-// intenção nessa mesma categoria, nessa mesma missa (ver js/intencoes.js). "tipoGraca" só se
-// aplica à categoria "gracas" ("pedido" ou "agradecimento") — decide o verbo usado na frase do
-// PDF ("pede pela" ou "agradece por").
-export async function criarIntencao({ dataMissa, horaMissa, categoria, texto, nome, telefoneDigits, tipoGraca }) {
+// enviou (identificação padrão do site, já feita em toda página) — usado só pra avisar a
+// própria pessoa se ela já tiver enviado outra intenção nessa mesma categoria, nessa mesma
+// missa (ver js/intencoes.js). O texto é sempre livre, do jeito que a pessoa escrever — tanto
+// no painel administrativo (ver js/admin.js) quanto no PDF extraído pelo padre, as intenções de
+// uma mesma categoria/missa aparecem juntas, separadas por vírgula.
+export async function criarIntencao({ dataMissa, horaMissa, categoria, texto, nome, telefoneDigits }) {
   const ref = doc(collection(db, "intencoes"));
   const dados = {
     dataMissa, horaMissa, categoria, texto,
@@ -337,7 +337,6 @@ export async function criarIntencao({ dataMissa, horaMissa, categoria, texto, no
     telefoneDigits: telefoneDigits || "",
     criadoEm: serverTimestamp()
   };
-  if (categoria === "gracas" && tipoGraca) dados.tipoGraca = tipoGraca;
   await setDoc(ref, dados);
   return ref.id;
 }

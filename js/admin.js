@@ -301,8 +301,7 @@ function configurarIntencoes() {
   // quadro, entrar/sair do modo de editar a lista de nomes de "Por alma"/"Aniversários").
   let ultimasEntradas = [];
   const quadrosAbertos = new Set(); // chaves "data|hora" dos quadros expandidos no momento
-  const categoriasEmEdicaoDeLista = new Set(); // chaves "data|hora|categoria" (alma/aniversários) em edição
-  const intencoesEmEdicao = new Set(); // ids de intenções (gracas) com o formulário de editar aberto
+  const categoriasEmEdicaoDeLista = new Set(); // chaves "data|hora|categoria" com a lista em modo de edição
 
   // um "quadro" colapsável por dia da semana (índice = Date.getDay(): 0=domingo ... 6=sábado),
   // exibidos na ordem segunda...domingo para ficar mais natural de ler
@@ -408,34 +407,17 @@ function configurarIntencoes() {
     return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2,"0")}:00`;
   }
 
-  // Monta a frase de uma intenção "gracas" (usada tanto na lista da tela quanto no PDF, pra
-  // ficar sempre igual): "Fulano de Tal pede pela cura..." / "Fulana agradece por todas as
-  // graças...". Sem nome guardado (intenções antigas, ou incluídas aqui mesmo no painel sem
-  // nome, ex.: recebidas por telefone), mostra só o texto puro, como sempre foi.
-  function minusculaInicial(texto) {
-    return texto ? texto.charAt(0).toLowerCase() + texto.slice(1) : texto;
-  }
-  function montarFraseIntencao(it) {
-    const nome = reduzirNomeParaExibicao((it.nome || "").trim());
-    const texto = (it.texto || "").trim().replace(/[.,;:]+$/, "");
-    if (!nome) return texto;
-    const verbo = it.tipoGraca === "pedido" ? "pede pela" : "agradece por";
-    return `${nome} ${verbo} ${minusculaInicial(texto)}`;
-  }
-
-  // "Por alma" e "Aniversários" não mostram frase nenhuma — só os nomes que as pessoas
-  // escreveram, todos juntos numa lista corrida separada por vírgula (com um "e" antes do
-  // último), do jeito que fica melhor pro padre ler na missa. Ex.: "Fulano, Beltrano e Cicrano."
-  function extrairNomesCategoria(doGrupo) {
-    const nomes = doGrupo
+  // Nenhuma categoria monta frase nenhuma — cada intenção aparece exatamente do jeito que a
+  // pessoa escreveu, e todas as de uma mesma categoria/missa ficam juntas numa lista corrida,
+  // separadas por vírgula (com um "e" antes da última), do jeito que fica bom pro padre ler na
+  // missa. Ex.: "Fulano, Beltrano e Cicrano."
+  function extrairTextosCategoria(doGrupo) {
+    const textos = doGrupo
       .map((it) => (it.texto || "").trim().replace(/[.,;:]+$/, ""))
       .filter(Boolean);
-    if (nomes.length === 0) return "";
-    if (nomes.length === 1) return `${nomes[0]}.`;
-    return `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}.`;
-  }
-  function ehCategoriaDeNomes(chaveCategoria) {
-    return chaveCategoria === "alma" || chaveCategoria === "aniversarios";
+    if (textos.length === 0) return "";
+    if (textos.length === 1) return `${textos[0]}.`;
+    return `${textos.slice(0, -1).join(", ")} e ${textos[textos.length - 1]}.`;
   }
 
   // Gera um PDF com as intenções de uma lista específica, organizadas por categoria
@@ -496,19 +478,10 @@ function configurarIntencoes() {
       docPdf.setFontSize(11);
       docPdf.setTextColor(40, 24, 16);
 
-      if (ehCategoriaDeNomes(chave)) {
-        const linhas = docPdf.splitTextToSize(extrairNomesCategoria(doGrupo), larguraUtil - 12);
-        quebrarPaginaSeNecessario(linhas.length * 15 + 6);
-        docPdf.text(linhas, margem + 12, y);
-        y += linhas.length * 15 + 6;
-      } else {
-        doGrupo.forEach((it, indice) => {
-          const linhas = docPdf.splitTextToSize(`${indice + 1}. ${montarFraseIntencao(it)}.`, larguraUtil - 12);
-          quebrarPaginaSeNecessario(linhas.length * 15 + 6);
-          docPdf.text(linhas, margem + 12, y);
-          y += linhas.length * 15 + 6;
-        });
-      }
+      const linhas = docPdf.splitTextToSize(extrairTextosCategoria(doGrupo), larguraUtil - 12);
+      quebrarPaginaSeNecessario(linhas.length * 15 + 6);
+      docPdf.text(linhas, margem + 12, y);
+      y += linhas.length * 15 + 6;
       y += 12;
     });
 
@@ -553,125 +526,75 @@ function configurarIntencoes() {
     renderizarQuadros(ultimasEntradas);
   }
 
-  // ---- categoria "gracas": uma caixa por intenção, com editar/apagar (igual ao site público) ----
-  function criarItemGracas(it) {
+  // ---- uma linha editável por intenção, usada dentro do modo "editar esta lista" ----
+  function criarLinhaEdicao(chaveCategoria, it) {
     const item = document.createElement("div");
     item.className = "intencao-item";
 
-    if (intencoesEmEdicao.has(it.id)) {
-      item.classList.add("intencao-item--editando");
-      const form = document.createElement("form");
-      form.className = "intencao-item__editar-form";
-
-      const campoTipo = document.createElement("div");
-      campoTipo.className = "tipo-graca-campo";
-      campoTipo.innerHTML = `
-        <label><input type="radio" name="tipoGracaEdit-${it.id}" value="pedido" ${it.tipoGraca !== "agradecimento" ? "checked" : ""} /> Pedido de graça</label>
-        <label><input type="radio" name="tipoGracaEdit-${it.id}" value="agradecimento" ${it.tipoGraca === "agradecimento" ? "checked" : ""} /> Agradecimento</label>
-      `;
-      form.appendChild(campoTipo);
-
-      const textarea = document.createElement("textarea");
-      textarea.rows = 2;
-      textarea.required = true;
-      textarea.value = it.texto || "";
-      form.appendChild(textarea);
-
-      const acoes = document.createElement("span");
-      acoes.className = "intencao-item__editar-acoes";
-      const btnSalvar = document.createElement("button");
-      btnSalvar.type = "submit";
-      btnSalvar.className = "btn btn-dourado btn-pequeno";
-      btnSalvar.textContent = "Salvar";
-      const btnCancelar = document.createElement("button");
-      btnCancelar.type = "button";
-      btnCancelar.className = "btn btn-contorno btn-pequeno";
-      btnCancelar.textContent = "Cancelar";
-      btnCancelar.addEventListener("click", () => {
-        intencoesEmEdicao.delete(it.id);
-        rerenderizar();
-      });
-      acoes.appendChild(btnSalvar);
-      acoes.appendChild(btnCancelar);
-      form.appendChild(acoes);
-
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const texto = textarea.value.trim();
-        if (!texto) return;
-        const tipoGraca = form.querySelector("input[type=radio]:checked")?.value || "pedido";
-        btnSalvar.disabled = true;
-        btnSalvar.textContent = "Salvando...";
-        try {
-          await atualizarIntencao(it.id, { texto, tipoGraca });
-          intencoesEmEdicao.delete(it.id);
-          rerenderizar();
-          mostrarToast("Intenção atualizada!");
-        } catch (err) {
-          console.error(err);
-          mostrarToast("Não foi possível salvar. Tente novamente.");
-          btnSalvar.disabled = false;
-          btnSalvar.textContent = "Salvar";
-        }
-      });
-
-      item.appendChild(form);
-      return item;
-    }
-
-    const texto = document.createElement("span");
-    texto.className = "intencao-item__texto";
-    texto.textContent = `${montarFraseIntencao(it)}.`;
-    item.appendChild(texto);
+    const campo = chaveCategoria === "gracas" ? document.createElement("textarea") : document.createElement("input");
+    if (chaveCategoria === "gracas") campo.rows = 2;
+    else campo.type = "text";
+    campo.className = "intencao-nome-input";
+    campo.value = it.texto || "";
+    campo.dataset.id = it.id;
+    item.appendChild(campo);
 
     const acoes = document.createElement("span");
     acoes.className = "intencao-item__acoes";
-    const btnEditar = criarBotaoIcone("intencao-item__btn--editar", "Editar", ICONE_LAPIS);
-    btnEditar.addEventListener("click", () => {
-      intencoesEmEdicao.add(it.id);
-      rerenderizar();
-    });
     const btnApagar = criarBotaoIcone("intencao-item__btn--apagar", "Apagar", ICONE_LIXEIRA);
     btnApagar.addEventListener("click", () => pedirExclusaoIntencao(it.id));
-    acoes.appendChild(btnEditar);
     acoes.appendChild(btnApagar);
     item.appendChild(acoes);
     return item;
   }
 
-  // ---- categorias "alma"/"aniversarios": uma linha por nome, só quando em modo de edição ----
-  function criarLinhaNome(it) {
-    const item = document.createElement("div");
-    item.className = "intencao-item";
+  // ---- botões "Salvar"/"Cancelar" do modo de edição — um só salvamento pra lista inteira,
+  // e a tela atualiza na hora assim que salva (o onSnapshot do Firestore cuida disso). ----
+  function criarAcoesSalvarLista(chaveCompleta, doGrupo, listaEl) {
+    const linha = document.createElement("div");
+    linha.className = "intencao-item__editar-acoes intencao-item__editar-acoes--lista";
 
-    const input = document.createElement("input");
-    input.type = "text";
-    input.className = "intencao-nome-input";
-    input.value = it.texto || "";
-    let valorOriginal = input.value;
-    input.addEventListener("change", async () => {
-      const novoValor = input.value.trim();
-      if (!novoValor) { input.value = valorOriginal; return; }
-      if (novoValor === valorOriginal) return;
+    const btnSalvar = document.createElement("button");
+    btnSalvar.type = "button";
+    btnSalvar.className = "btn btn-dourado btn-pequeno";
+    btnSalvar.textContent = "Salvar";
+    btnSalvar.addEventListener("click", async () => {
+      btnSalvar.disabled = true;
+      btnSalvar.textContent = "Salvando...";
+      const alteracoes = [];
+      listaEl.querySelectorAll("[data-id]").forEach((campo) => {
+        const id = campo.dataset.id;
+        const original = doGrupo.find((it) => it.id === id);
+        const novoValor = campo.value.trim();
+        if (novoValor && original && novoValor !== (original.texto || "")) {
+          alteracoes.push(atualizarIntencao(id, { texto: novoValor }));
+        }
+      });
       try {
-        await atualizarIntencao(it.id, { texto: novoValor });
-        valorOriginal = novoValor;
-        mostrarToast("Nome atualizado!");
+        await Promise.all(alteracoes);
+        categoriasEmEdicaoDeLista.delete(chaveCompleta);
+        rerenderizar();
+        mostrarToast(alteracoes.length ? "Lista atualizada!" : "Nenhuma alteração para salvar.");
       } catch (err) {
         console.error(err);
         mostrarToast("Não foi possível salvar. Tente novamente.");
-        input.value = valorOriginal;
+        btnSalvar.disabled = false;
+        btnSalvar.textContent = "Salvar";
       }
     });
-    item.appendChild(input);
 
-    const acoes = document.createElement("span");
-    acoes.className = "intencao-item__acoes";
-    const btnApagar = criarBotaoIcone("intencao-item__btn--apagar", "Apagar", ICONE_LIXEIRA);
-    btnApagar.addEventListener("click", () => pedirExclusaoIntencao(it.id));
-    acoes.appendChild(btnApagar);
-    item.appendChild(acoes);
-    return item;
+    const btnCancelar = document.createElement("button");
+    btnCancelar.type = "button";
+    btnCancelar.className = "btn btn-contorno btn-pequeno";
+    btnCancelar.textContent = "Cancelar";
+    btnCancelar.addEventListener("click", () => {
+      categoriasEmEdicaoDeLista.delete(chaveCompleta);
+      rerenderizar();
+    });
+
+    linha.appendChild(btnSalvar);
+    linha.appendChild(btnCancelar);
+    return linha;
   }
 
   // ---- formulário de incluir uma nova intenção (o padre recebeu por telefone, por exemplo) ----
@@ -679,22 +602,12 @@ function configurarIntencoes() {
     const form = document.createElement("form");
     form.className = "categoria-intencao__form";
 
-    let campoTipo = null;
     let campoTexto;
     if (chaveCategoria === "gracas") {
-      campoTipo = document.createElement("div");
-      campoTipo.className = "tipo-graca-campo";
-      campoTipo.innerHTML = `
-        <label><input type="radio" name="tipoGracaNovo-${dataMissa}-${horaMissa}" value="pedido" checked /> Pedido de graça</label>
-        <label><input type="radio" name="tipoGracaNovo-${dataMissa}-${horaMissa}" value="agradecimento" /> Agradecimento</label>
-      `;
-      form.appendChild(campoTipo);
-
       campoTexto = document.createElement("textarea");
       campoTexto.rows = 2;
       campoTexto.required = true;
-      campoTexto.placeholder = "Nova intenção (ex: recebida por telefone)...";
-      form.appendChild(campoTexto);
+      campoTexto.placeholder = "Nova intenção, do jeito que preferir (ex: recebida por telefone)...";
     } else {
       campoTexto = document.createElement("input");
       campoTexto.type = "text";
@@ -702,8 +615,8 @@ function configurarIntencoes() {
       campoTexto.placeholder = chaveCategoria === "alma"
         ? "Nome (pode colocar entre parênteses há quantos meses/anos faleceu)"
         : "Nome (pode colocar entre parênteses quantos anos completa)";
-      form.appendChild(campoTexto);
     }
+    form.appendChild(campoTexto);
 
     const btn = document.createElement("button");
     btn.type = "submit";
@@ -715,14 +628,10 @@ function configurarIntencoes() {
       e.preventDefault();
       const texto = campoTexto.value.trim();
       if (!texto) return;
-      const tipoGraca = campoTipo ? campoTipo.querySelector("input[type=radio]:checked")?.value : undefined;
       btn.disabled = true;
       btn.textContent = "Adicionando...";
       try {
-        await criarIntencao({
-          dataMissa, horaMissa, categoria: chaveCategoria, texto,
-          nome: "", telefoneDigits: "", tipoGraca
-        });
+        await criarIntencao({ dataMissa, horaMissa, categoria: chaveCategoria, texto, nome: "", telefoneDigits: "" });
         campoTexto.value = "";
         mostrarToast("Intenção adicionada!");
       } catch (err) {
@@ -741,6 +650,7 @@ function configurarIntencoes() {
     const bloco = document.createElement("div");
     bloco.className = "grupo-horario-dia";
     const chaveCompleta = `${chaveQuadro}|${chaveCategoria}`;
+    const emEdicao = categoriasEmEdicaoDeLista.has(chaveCompleta);
 
     const linhaTitulo = document.createElement("div");
     linhaTitulo.className = "grupo-horario-dia__titulo";
@@ -749,11 +659,10 @@ function configurarIntencoes() {
     spanTitulo.textContent = `${rotuloCategoria} (${doGrupo.length})`;
     linhaTitulo.appendChild(spanTitulo);
 
-    if (ehCategoriaDeNomes(chaveCategoria) && doGrupo.length > 0) {
-      const btnEditarLista = criarBotaoIcone("intencao-item__btn--editar", "Editar nomes desta lista", ICONE_LAPIS);
+    if (doGrupo.length > 0 && !emEdicao) {
+      const btnEditarLista = criarBotaoIcone("intencao-item__btn--editar", "Editar esta lista", ICONE_LAPIS);
       btnEditarLista.addEventListener("click", () => {
-        if (categoriasEmEdicaoDeLista.has(chaveCompleta)) categoriasEmEdicaoDeLista.delete(chaveCompleta);
-        else categoriasEmEdicaoDeLista.add(chaveCompleta);
+        categoriasEmEdicaoDeLista.add(chaveCompleta);
         rerenderizar();
       });
       linhaTitulo.appendChild(btnEditarLista);
@@ -763,29 +672,21 @@ function configurarIntencoes() {
     const lista = document.createElement("div");
     lista.className = "categoria-intencao__lista";
 
-    if (ehCategoriaDeNomes(chaveCategoria)) {
-      if (doGrupo.length === 0) {
-        const vazio = document.createElement("p");
-        vazio.className = "categoria-intencao__vazio";
-        vazio.textContent = "Nenhum nome adicionado ainda.";
-        lista.appendChild(vazio);
-      } else if (categoriasEmEdicaoDeLista.has(chaveCompleta)) {
-        doGrupo.forEach((it) => lista.appendChild(criarLinhaNome(it)));
-      } else {
-        const paragrafo = document.createElement("p");
-        paragrafo.className = "intencao-nomes-paragrafo";
-        paragrafo.textContent = extrairNomesCategoria(doGrupo);
-        lista.appendChild(paragrafo);
-      }
-    } else if (doGrupo.length === 0) {
+    if (doGrupo.length === 0) {
       const vazio = document.createElement("p");
       vazio.className = "categoria-intencao__vazio";
       vazio.textContent = "Nenhuma intenção nesta categoria ainda.";
       lista.appendChild(vazio);
+    } else if (emEdicao) {
+      doGrupo.forEach((it) => lista.appendChild(criarLinhaEdicao(chaveCategoria, it)));
     } else {
-      doGrupo.forEach((it) => lista.appendChild(criarItemGracas(it)));
+      const paragrafo = document.createElement("p");
+      paragrafo.className = "intencao-nomes-paragrafo";
+      paragrafo.textContent = extrairTextosCategoria(doGrupo);
+      lista.appendChild(paragrafo);
     }
     bloco.appendChild(lista);
+    if (emEdicao) bloco.appendChild(criarAcoesSalvarLista(chaveCompleta, doGrupo, lista));
     bloco.appendChild(criarFormAdicionar(chaveCategoria, dataMissa, horaMissa));
 
     return bloco;
