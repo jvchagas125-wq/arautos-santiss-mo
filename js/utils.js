@@ -273,9 +273,9 @@ export const CATEGORIAS_INTENCAO = [
    diferente no site público e no painel administrativo. */
 export const PLACEHOLDERS_INTENCAO = {
   gracas: "Digite um nome, família ou grupo e clique em adicionar",
-  saude: "Digite um nome da pessoa e clique em adicionar",
-  alma: "Digite um nome da pessoa (Dias, meses ou anos se quiser) e clique em adicionar",
-  aniversarios: "Digite um nome completo e clique em adicionar"
+  saude: "Digite o nome completo da pessoa e clique em adicionar",
+  alma: "Digite o nome completo da pessoa + (Dias, meses ou anos se quiser) e clique em adicionar",
+  aniversarios: "Digite o nome completo e clique em adicionar"
 };
 
 /* ---------- Intenções da missa: horários de missa de um dia específico ----------
