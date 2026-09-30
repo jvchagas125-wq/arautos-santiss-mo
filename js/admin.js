@@ -597,6 +597,12 @@ function configurarIntencoes() {
     return linha;
   }
 
+  const PLACEHOLDERS_NOVA_INTENCAO = {
+    saude: "Nome",
+    alma: "Nome (pode colocar entre parênteses há quantos meses/anos faleceu)",
+    aniversarios: "Nome (pode colocar entre parênteses quantos anos completa)"
+  };
+
   // ---- formulário de incluir uma nova intenção (o padre recebeu por telefone, por exemplo) ----
   function criarFormAdicionar(chaveCategoria, dataMissa, horaMissa) {
     const form = document.createElement("form");
@@ -612,9 +618,7 @@ function configurarIntencoes() {
       campoTexto = document.createElement("input");
       campoTexto.type = "text";
       campoTexto.required = true;
-      campoTexto.placeholder = chaveCategoria === "alma"
-        ? "Nome (pode colocar entre parênteses há quantos meses/anos faleceu)"
-        : "Nome (pode colocar entre parênteses quantos anos completa)";
+      campoTexto.placeholder = PLACEHOLDERS_NOVA_INTENCAO[chaveCategoria] || "Nome";
     }
     form.appendChild(campoTexto);
 

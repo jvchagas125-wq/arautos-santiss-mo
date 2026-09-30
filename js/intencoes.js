@@ -195,16 +195,18 @@ function renderizarEntradasNaLista(listaEl, entradas, { categoria, onSalvar, onA
 
 const PLACEHOLDERS = {
   gracas: "Escreva aqui sua intenção, do jeito que preferir...",
+  saude: "Digite um nome e toque em Adicionar",
   alma: "Digite um nome e toque em Adicionar (pode colocar entre parênteses há quantos meses ou anos faleceu, se quiser)",
   aniversarios: "Digite um nome e toque em Adicionar (pode colocar entre parênteses quantos anos completa, se quiser)"
 };
 
-// "Por alma" e "Aniversários" são preenchidos um nome de cada vez (a pessoa digita, toca em
-// "Adicionar", o campo limpa e ela pode digitar o próximo) — fica mais fácil de usar do que um
-// texto só com vários nomes juntos, e cada nome vira uma intenção separada no banco. "gracas"
-// continua sendo um texto livre (pode ser uma frase mais longa), sem nenhuma opção fixa de tipo.
+// "Pela Recuperação e Saúde de", "Por alma" e "Aniversários" são preenchidos um nome de cada vez
+// (a pessoa digita, toca em "Adicionar", o campo limpa e ela pode digitar o próximo) — fica mais
+// fácil de usar do que um texto só com vários nomes juntos, e cada nome vira uma intenção
+// separada no banco. "gracas" continua sendo um texto livre (pode ser uma frase mais longa),
+// sem nenhuma opção fixa de tipo.
 function criarBlocoCategoria(categoria, rotulo, iso, hora) {
-  const ehNome = categoria === "alma" || categoria === "aniversarios";
+  const ehNome = categoria !== "gracas";
   const bloco = document.createElement("div");
   bloco.className = "categoria-intencao";
   bloco.innerHTML = `
@@ -304,7 +306,10 @@ function criarCardMissaAberta(iso, hora, status) {
   });
 
   const parar = ouvirIntencoesDaLista(iso, hora, (entradas) => {
-    const porCategoria = { gracas: [], alma: [], aniversarios: [] };
+    // monta a partir de CATEGORIAS_INTENCAO (em vez de uma lista fixa aqui) pra uma categoria
+    // nova adicionada ali já funcionar aqui também, sem precisar lembrar de mexer nos dois lugares.
+    const porCategoria = {};
+    CATEGORIAS_INTENCAO.forEach(({ chave }) => { porCategoria[chave] = []; });
     entradas.forEach((it) => { if (porCategoria[it.categoria]) porCategoria[it.categoria].push(it); });
     Object.entries(porCategoria).forEach(([categoria, itens]) => {
       blocosPorCategoria[categoria](itens);

@@ -360,8 +360,8 @@ export function ouvirTodasIntencoes(callback) {
   });
 }
 
-// Atualiza o texto (e o tipo, se for "gracas") de uma intenção já enviada — usado quando a
-// própria pessoa edita algo que ela escreveu (ver js/intencoes.js).
+// Atualiza o texto de uma intenção já enviada — usado quando a própria pessoa edita algo que
+// ela escreveu (ver js/intencoes.js), ou quando o painel administrativo edita uma intenção.
 export async function atualizarIntencao(id, dadosParciais) {
   await updateDoc(doc(db, "intencoes", id), dadosParciais);
 }
