@@ -102,7 +102,7 @@ async function abrirPdfDaLista(rotulo, itens) {
   const novaAba = window.open("", "_blank");
   try {
     await carregarJsPDF();
-    const docPdf = construirPdfIntencoes(rotulo, itens);
+    const docPdf = await construirPdfIntencoes(rotulo, itens);
     const blobUrl = docPdf.output("bloburl");
     if (novaAba) {
       novaAba.location.href = blobUrl;

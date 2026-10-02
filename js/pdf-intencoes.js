@@ -3,6 +3,57 @@
 // Centralizado aqui pra nunca ficar um PDF com aparência diferente dependendo de quem gerou.
 import { CATEGORIAS_INTENCAO, INTENCAO_FIXA_ALMA } from "./utils.js";
 
+// O PDF usa uma fonte PRÓPRIA (embutida no arquivo) em vez da fonte "times" padrão do jsPDF.
+// Motivo: a fonte "times" padrão não vem embutida no PDF — cada leitor de PDF (navegador,
+// celular, impressora...) usa a sua própria versão/substituta de "Times", e descobrimos que
+// vários leitores erram justamente nos nomes com acento (ã, õ, ç...): letras somem, e o texto
+// aparece "esticado"/com espaçamento estranho. Embutindo a fonte, o texto fica garantido
+// idêntico em qualquer lugar que o PDF for aberto. A Liberation Serif foi desenhada pra ter as
+// mesmas larguras de letra da Times New Roman, então o visual do PDF não muda.
+const NOME_FONTE_PDF = "LiberationSerif";
+const CAMINHOS_FONTE_PDF = {
+  normal: "assets/fonts/LiberationSerif-Regular.ttf",
+  bold: "assets/fonts/LiberationSerif-Bold.ttf",
+  italic: "assets/fonts/LiberationSerif-Italic.ttf",
+  bolditalic: "assets/fonts/LiberationSerif-BoldItalic.ttf",
+};
+
+// Busca os 4 arquivos da fonte e devolve cada um já em base64 (formato que o jsPDF espera pra
+// embutir no PDF). Só busca uma vez por carregamento de página — as próximas chamadas (gerar
+// outro PDF, baixar de novo etc.) reaproveitam o mesmo resultado.
+let promessaBase64DaFonte = null;
+function carregarBase64DaFonte() {
+  if (!promessaBase64DaFonte) {
+    promessaBase64DaFonte = Promise.all(
+      Object.entries(CAMINHOS_FONTE_PDF).map(async ([estilo, caminho]) => {
+        const resposta = await fetch(caminho);
+        if (!resposta.ok) throw new Error(`Não foi possível carregar a fonte do PDF (${caminho}).`);
+        const bytes = new Uint8Array(await resposta.arrayBuffer());
+        // ArrayBuffer -> base64, em pedaços, pra não estourar a pilha com arquivos grandes
+        let binario = "";
+        const TAMANHO_PEDACO = 0x8000;
+        for (let i = 0; i < bytes.length; i += TAMANHO_PEDACO) {
+          binario += String.fromCharCode.apply(null, bytes.subarray(i, i + TAMANHO_PEDACO));
+        }
+        return [estilo, btoa(binario)];
+      })
+    ).then((pares) => Object.fromEntries(pares));
+  }
+  return promessaBase64DaFonte;
+}
+
+// Registra a fonte embutida nesse documento jsPDF específico (o registro é por documento, não
+// é algo global — cada novo PDF gerado precisa registrar de novo, mas reaproveita os arquivos já
+// baixados/convertidos por carregarBase64DaFonte acima).
+async function registrarFontePdf(docPdf) {
+  const base64PorEstilo = await carregarBase64DaFonte();
+  Object.entries(base64PorEstilo).forEach(([estilo, base64]) => {
+    const arquivo = `LiberationSerif-${estilo}.ttf`;
+    docPdf.addFileToVFS(arquivo, base64);
+    docPdf.addFont(arquivo, NOME_FONTE_PDF, estilo);
+  });
+}
+
 // Nenhuma categoria monta frase nenhuma — cada intenção aparece exatamente do jeito que a
 // pessoa escreveu, e todas as de uma mesma categoria/missa ficam juntas numa lista corrida,
 // separadas por vírgula (com um "e" antes da última), do jeito que fica bom pro padre ler na
@@ -20,9 +71,12 @@ export function extrairTextosCategoria(doGrupo) {
 // ordem/agrupamento exibido na tela) — pronto pra imprimir e levar pra missa. Devolve o objeto
 // jsPDF já pronto; quem chamou decide o que fazer com ele (salvar como arquivo, abrir numa aba
 // nova etc.) — ver construirPdfIntencoes() sendo usado em js/admin.js e js/intencoes.js.
-export function construirPdfIntencoes(rotulo, itens) {
+// É assíncrona porque precisa buscar e embutir a fonte (ver registrarFontePdf acima) antes de
+// desenhar qualquer texto.
+export async function construirPdfIntencoes(rotulo, itens) {
   const { jsPDF } = window.jspdf;
   const docPdf = new jsPDF({ unit: "pt", format: "a4" });
+  await registrarFontePdf(docPdf);
   const larguraPagina = docPdf.internal.pageSize.getWidth();
   const alturaPagina = docPdf.internal.pageSize.getHeight();
   const margem = 50;
@@ -37,13 +91,13 @@ export function construirPdfIntencoes(rotulo, itens) {
     }
   }
 
-  docPdf.setFont("times", "bold");
+  docPdf.setFont(NOME_FONTE_PDF, "bold");
   docPdf.setFontSize(16);
   docPdf.setTextColor(122, 12, 30);
   docPdf.text("Arautos do Evangelho Campos", larguraPagina / 2, y, { align: "center" });
   y += 20;
 
-  docPdf.setFont("times", "normal");
+  docPdf.setFont(NOME_FONTE_PDF, "normal");
   docPdf.setFontSize(11);
   docPdf.setTextColor(90, 70, 54);
   docPdf.text("Intenções da Santa Missa", larguraPagina / 2, y, { align: "center" });
@@ -54,7 +108,7 @@ export function construirPdfIntencoes(rotulo, itens) {
   docPdf.line(margem, y, larguraPagina - margem, y);
   y += 26;
 
-  docPdf.setFont("times", "bold");
+  docPdf.setFont(NOME_FONTE_PDF, "bold");
   docPdf.setFontSize(13);
   docPdf.setTextColor(40, 24, 16);
   docPdf.text(rotulo, margem, y);
@@ -73,7 +127,7 @@ export function construirPdfIntencoes(rotulo, itens) {
     // em "Por alma" a intenção fixa NÃO entra misturada com o "e" dos nomes reais (só entra se
     // tiver algum nome real) — ela ganha sua própria linha reservada mais abaixo, pra ser a
     // última coisa lida.
-    docPdf.setFont("times", "normal");
+    docPdf.setFont(NOME_FONTE_PDF, "normal");
     docPdf.setFontSize(11);
     const textoReal = extrairTextosCategoria(doGrupo);
     const linhas = textoReal ? docPdf.splitTextToSize(textoReal, larguraUtil - 12) : [];
@@ -84,13 +138,13 @@ export function construirPdfIntencoes(rotulo, itens) {
     const alturaDoComeco = linhas.length > 0 ? ALTURA_LINHA_TEXTO : 20;
     quebrarPaginaSeNecessario(28 + alturaDoComeco);
 
-    docPdf.setFont("times", "bold");
+    docPdf.setFont(NOME_FONTE_PDF, "bold");
     docPdf.setFontSize(12);
     docPdf.setTextColor(122, 12, 30);
     docPdf.text(rotuloCategoria, margem, y);
     y += 20;
 
-    docPdf.setFont("times", "normal");
+    docPdf.setFont(NOME_FONTE_PDF, "normal");
     docPdf.setFontSize(11);
     docPdf.setTextColor(40, 24, 16);
 
@@ -114,7 +168,7 @@ export function construirPdfIntencoes(rotulo, itens) {
 
       // 2ª linha reservada: já vem com a intenção fixa impressa, pra ser a última intenção falada.
       quebrarPaginaSeNecessario(20);
-      docPdf.setFont("times", "italic");
+      docPdf.setFont(NOME_FONTE_PDF, "italic");
       docPdf.setFontSize(11);
       docPdf.setTextColor(40, 24, 16);
       docPdf.text(INTENCAO_FIXA_ALMA, margem + 12, y - 6);
@@ -144,7 +198,7 @@ export function construirPdfIntencoes(rotulo, itens) {
   // "Por alma" sempre aparece (com a intenção fixa), então a lista nunca fica realmente vazia —
   // esse aviso só entraria se um dia não houvesse categoria nenhuma pra mostrar.
   if (categoriasComItens.length === 0) {
-    docPdf.setFont("times", "italic");
+    docPdf.setFont(NOME_FONTE_PDF, "italic");
     docPdf.setFontSize(11);
     docPdf.setTextColor(90, 70, 54);
     docPdf.text("Nenhuma intenção foi adicionada a esta lista.", margem, y);

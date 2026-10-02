@@ -1,0 +1,9 @@
+Liberation Serif (Regular, Bold, Italic, BoldItalic)
+
+Copyright © 2012 Red Hat, Inc. All rights reserved.
+Licensed under the SIL Open Font License, Version 1.1 (OFL-1.1).
+https://scripts.sil.org/OFL
+
+Usado aqui incorporado nos PDFs de intenções (ver js/pdf-intencoes.js) pra garantir que o
+texto (nomes com acentos, ã, õ, ç etc.) apareça sempre do mesmo jeito em qualquer leitor de
+PDF, em vez de depender da fonte "Times" padrão de cada visualizador.

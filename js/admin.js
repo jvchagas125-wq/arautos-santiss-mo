@@ -412,8 +412,8 @@ function configurarIntencoes() {
   // ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa. A montagem em si
   // (o desenho do PDF) é compartilhada com o botão "Ver PDF da lista" do site público — ver
   // js/pdf-intencoes.js — só o destino final muda: aqui baixa o arquivo, lá abre numa aba nova.
-  function gerarPdfIntencoes(rotulo, itens) {
-    const docPdf = construirPdfIntencoes(rotulo, itens);
+  async function gerarPdfIntencoes(rotulo, itens) {
+    const docPdf = await construirPdfIntencoes(rotulo, itens);
     docPdf.save(nomeArquivoPdf(rotulo));
   }
 
@@ -668,14 +668,14 @@ function configurarIntencoes() {
         quadro.classList.toggle("aberto");
         corpo.classList.toggle("oculto");
       });
-      cabecalho.querySelector(".quadro-intencao__pdf").addEventListener("click", (e) => {
+      cabecalho.querySelector(".quadro-intencao__pdf").addEventListener("click", async (e) => {
         e.stopPropagation();
         if (typeof window.jspdf === "undefined") {
           mostrarToast("Não foi possível carregar o gerador de PDF. Verifique sua conexão.");
           return;
         }
         try {
-          gerarPdfIntencoes(rotulo, itens);
+          await gerarPdfIntencoes(rotulo, itens);
         } catch (err) {
           console.error(err);
           mostrarToast("Não foi possível gerar o PDF. Tente novamente.");
