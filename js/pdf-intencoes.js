@@ -27,6 +27,7 @@ export function construirPdfIntencoes(rotulo, itens) {
   const alturaPagina = docPdf.internal.pageSize.getHeight();
   const margem = 50;
   const larguraUtil = larguraPagina - margem * 2;
+  const ALTURA_LINHA_TEXTO = 15;
   let y = margem;
 
   function quebrarPaginaSeNecessario(alturaNecessaria) {
@@ -69,7 +70,20 @@ export function construirPdfIntencoes(rotulo, itens) {
     const doGrupo = itens.filter((it) => it.categoria === chave);
     const ehAlma = chave === "alma";
 
-    quebrarPaginaSeNecessario(28);
+    // em "Por alma" a intenção fixa NÃO entra misturada com o "e" dos nomes reais (só entra se
+    // tiver algum nome real) — ela ganha sua própria linha reservada mais abaixo, pra ser a
+    // última coisa lida.
+    docPdf.setFont("times", "normal");
+    docPdf.setFontSize(11);
+    const textoReal = extrairTextosCategoria(doGrupo);
+    const linhas = textoReal ? docPdf.splitTextToSize(textoReal, larguraUtil - 12) : [];
+
+    // o título de uma categoria nunca fica sozinho no fim de uma página — exige espaço pra ele
+    // junto de pelo menos o começo do que vem logo depois (uma linha do parágrafo, ou a primeira
+    // linha reservada em branco, se a categoria não tiver nenhum nome real)
+    const alturaDoComeco = linhas.length > 0 ? ALTURA_LINHA_TEXTO : 20;
+    quebrarPaginaSeNecessario(28 + alturaDoComeco);
+
     docPdf.setFont("times", "bold");
     docPdf.setFontSize(12);
     docPdf.setTextColor(122, 12, 30);
@@ -80,34 +94,31 @@ export function construirPdfIntencoes(rotulo, itens) {
     docPdf.setFontSize(11);
     docPdf.setTextColor(40, 24, 16);
 
-    // em "Por alma" a intenção fixa NÃO entra misturada com o "e" dos nomes reais (só entra se
-    // tiver algum nome real) — ela ganha sua própria linha reservada mais abaixo, pra ser a
-    // última coisa lida.
-    const textoReal = extrairTextosCategoria(doGrupo);
-    if (textoReal) {
-      const linhas = docPdf.splitTextToSize(textoReal, larguraUtil - 12);
-      quebrarPaginaSeNecessario(linhas.length * 15 + 6);
-      docPdf.text(linhas, margem + 12, y);
-      y += linhas.length * 15 + 6;
-      y += 10;
-    }
+    // desenha uma linha de cada vez (em vez do parágrafo inteiro de uma vez) — assim, numa lista
+    // comprida, dá pra pular de página exatamente onde o espaço acaba, aproveitando o que sobrou
+    // na página atual em vez de jogar a lista inteira pra página seguinte.
+    linhas.forEach((linha) => {
+      quebrarPaginaSeNecessario(ALTURA_LINHA_TEXTO);
+      docPdf.text(linha, margem + 12, y);
+      y += ALTURA_LINHA_TEXTO;
+    });
+    if (linhas.length > 0) y += 8;
 
     if (ehAlma) {
       // 1ª linha reservada: fica em branco, pra escreverem à mão na hora da missa, se precisar.
-      // 2ª linha reservada: já vem com a intenção fixa impressa, pra ser a última intenção falada.
-      quebrarPaginaSeNecessario(40);
+      quebrarPaginaSeNecessario(20);
       docPdf.setDrawColor(196, 178, 158);
       docPdf.setLineWidth(0.6);
       docPdf.line(margem + 12, y, larguraPagina - margem, y);
       y += 20;
 
+      // 2ª linha reservada: já vem com a intenção fixa impressa, pra ser a última intenção falada.
+      quebrarPaginaSeNecessario(20);
       docPdf.setFont("times", "italic");
       docPdf.setFontSize(11);
       docPdf.setTextColor(40, 24, 16);
-      const linhaFixa = docPdf.splitTextToSize(INTENCAO_FIXA_ALMA, larguraUtil - 12);
-      docPdf.text(linhaFixa, margem + 12, y - 6);
-      y += 20;
-      y += 4;
+      docPdf.text(INTENCAO_FIXA_ALMA, margem + 12, y - 6);
+      y += 20 + 4;
     } else {
       // linhas em branco extras, pra dar espaço de acrescentar nomes à mão depois de impresso
       quebrarPaginaSeNecessario(LINHAS_EXTRAS_POR_TOPICO * 20);
