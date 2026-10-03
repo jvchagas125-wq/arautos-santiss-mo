@@ -389,10 +389,10 @@ export function limparUsuarioSessao() {
    no painel admin, como lista de páginas de destino dos banners da Home) ---------- */
 export const ORDEM_PAGINAS = [
   { chave: "index", label: "Início", href: "/" },
-  { chave: "agendamento", label: "Agendar horário", href: "agendamento" },
-  { chave: "meus-agendamentos", label: "Meus agendamentos", href: "meus-agendamentos" },
-  { chave: "intencoes", label: "Intenções da missa", href: "intencoes" },
-  { chave: "avisos", label: "Avisos", href: "avisos" },
+  { chave: "agendamento", label: "Agendar Adoração", href: "agendamento" },
+  { chave: "meus-agendamentos", label: "Meus agendamentos da Adoração", href: "meus-agendamentos" },
+  { chave: "intencoes", label: "Intenções para a Santa Missa", href: "intencoes" },
+  { chave: "avisos", label: "Agenda da semana", href: "avisos" },
   { chave: "contatos", label: "Contatos", href: "contatos" },
   { chave: "sobre", label: "Sobre", href: "sobre" }
 ];
