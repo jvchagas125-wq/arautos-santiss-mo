@@ -1,7 +1,9 @@
 // Geração do PDF de intenções — compartilhado entre o painel administrativo (baixa o arquivo,
-// ver js/admin.js) e o site público (abre numa aba nova só pra visualizar, ver js/intencoes.js).
+// ver js/admin.js) e o envio automático por e-mail (roda no servidor, ver api/enviar-listas.js).
 // Centralizado aqui pra nunca ficar um PDF com aparência diferente dependendo de quem gerou.
-import { CATEGORIAS_INTENCAO, INTENCAO_FIXA_ALMA } from "./utils.js";
+// Este arquivo roda tanto no navegador quanto no Node (servidor) — por isso nada aqui pode
+// depender de "window"/"document" sem passar pelas opções de construirPdfIntencoes.
+import { CATEGORIAS_INTENCAO, INTENCAO_FIXA_ALMA, formatarDataComDiaSemana } from "./utils.js";
 
 // O PDF usa uma fonte PRÓPRIA (embutida no arquivo) em vez da fonte "times" padrão do jsPDF.
 // Motivo: a fonte "times" padrão não vem embutida no PDF — cada leitor de PDF (navegador,
@@ -45,8 +47,10 @@ function carregarBase64DaFonte() {
 // Registra a fonte embutida nesse documento jsPDF específico (o registro é por documento, não
 // é algo global — cada novo PDF gerado precisa registrar de novo, mas reaproveita os arquivos já
 // baixados/convertidos por carregarBase64DaFonte acima).
-async function registrarFontePdf(docPdf) {
-  const base64PorEstilo = await carregarBase64DaFonte();
+// No servidor não existe fetch de caminho relativo — quem chama passa "fontesBase64" já pronto
+// (lido do disco, ver api/enviar-listas.js); no navegador, busca os arquivos como sempre.
+async function registrarFontePdf(docPdf, fontesBase64) {
+  const base64PorEstilo = fontesBase64 || (await carregarBase64DaFonte());
   Object.entries(base64PorEstilo).forEach(([estilo, base64]) => {
     const arquivo = `LiberationSerif-${estilo}.ttf`;
     docPdf.addFileToVFS(arquivo, base64);
@@ -73,10 +77,12 @@ export function extrairTextosCategoria(doGrupo) {
 // nova etc.) — ver construirPdfIntencoes() sendo usado em js/admin.js e js/intencoes.js.
 // É assíncrona porque precisa buscar e embutir a fonte (ver registrarFontePdf acima) antes de
 // desenhar qualquer texto.
-export async function construirPdfIntencoes(rotulo, itens) {
-  const { jsPDF } = window.jspdf;
+// opcoes (só usadas no servidor): { jsPDF } = a classe jsPDF vinda do npm (no navegador vem de
+// window.jspdf), { fontesBase64 } = fontes já lidas do disco em base64 (ver CAMINHOS_FONTE_PDF).
+export async function construirPdfIntencoes(rotulo, itens, opcoes = {}) {
+  const jsPDF = opcoes.jsPDF || window.jspdf.jsPDF;
   const docPdf = new jsPDF({ unit: "pt", format: "a4" });
-  await registrarFontePdf(docPdf);
+  await registrarFontePdf(docPdf, opcoes.fontesBase64);
   const larguraPagina = docPdf.internal.pageSize.getWidth();
   const alturaPagina = docPdf.internal.pageSize.getHeight();
   const margem = 50;
@@ -204,13 +210,22 @@ export async function construirPdfIntencoes(rotulo, itens) {
     docPdf.text("Nenhuma intenção foi adicionada a esta lista.", margem, y);
   }
 
-  const carimbo = new Date().toLocaleString("pt-BR");
+  // sempre no horário de Brasília — no servidor (que roda em UTC) o carimbo sairia 3h adiantado
+  const carimbo = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
   docPdf.setFontSize(8);
   docPdf.setTextColor(140, 120, 100);
   docPdf.text(`Gerado em ${carimbo}`, margem, alturaPagina - 24);
 
   return docPdf;
 }
+
+// Título de uma lista (mesmo texto no painel admin, no PDF e no assunto do e-mail).
+export function rotuloListaIntencao(dataMissa, horaMissa) {
+  return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2, "0")}:00`;
+}
+
+// Caminhos das fontes (relativos à raiz do projeto) — o servidor lê estes arquivos do disco.
+export { CAMINHOS_FONTE_PDF };
 
 export function nomeArquivoPdf(rotulo) {
   const base = `intencoes-${rotulo}`
@@ -219,26 +234,4 @@ export function nomeArquivoPdf(rotulo) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   return `${base}.pdf`;
-}
-
-// Carrega a biblioteca jsPDF sob demanda — usado no site público, que não carrega ela de cara
-// (só quem realmente clicar em "Ver PDF da lista" paga esse custo). No painel administrativo a
-// biblioteca já vem carregada direto no admin.html, então essa função só confirma que já está
-// pronta e resolve na hora.
-let promessaJsPDF = null;
-export function carregarJsPDF() {
-  if (typeof window.jspdf !== "undefined") return Promise.resolve();
-  if (!promessaJsPDF) {
-    promessaJsPDF = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
-      script.onload = () => resolve();
-      script.onerror = () => {
-        promessaJsPDF = null; // permite tentar de novo numa próxima chamada
-        reject(new Error("Não foi possível carregar o gerador de PDF."));
-      };
-      document.head.appendChild(script);
-    });
-  }
-  return promessaJsPDF;
 }

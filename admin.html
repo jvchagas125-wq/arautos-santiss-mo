@@ -211,6 +211,42 @@
             <div id="listaQuadrosIntencoes"></div>
           </div>
         </div>
+
+        <div class="painel painel-envio-email" id="painelEnvioEmail">
+          <div class="painel__titulo"><span class="emoji">✉️</span> Envio automático por e-mail</div>
+          <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
+            Quando uma lista de intenções fecha, o site envia sozinho o PDF dela para os e-mails abaixo — já
+            organizado por categoria, pronto para imprimir. Você pode cadastrar mais de um e-mail.
+          </p>
+          <form id="formEnvioEmail" novalidate>
+            <div class="campo campo-checkbox-simples" style="margin-top:0;">
+              <label>
+                <input type="checkbox" id="envioAtivo" />
+                <span>Enviar automaticamente quando a lista fechar</span>
+              </label>
+            </div>
+            <p class="campo-legenda">E-mails que vão receber o PDF</p>
+            <div id="envioListaEmails" class="envio-emails campo"></div>
+            <button type="button" class="btn btn-contorno btn-pequeno" id="btnAdicionarEmail">+ Adicionar e-mail</button>
+            <div class="campo campo-checkbox-simples" style="margin-top:18px;">
+              <label>
+                <input type="checkbox" id="envioVazias" />
+                <span>Enviar também as listas sem nenhuma intenção <small>(por padrão, lista vazia não gera e-mail)</small></span>
+              </label>
+            </div>
+            <div class="envio-acoes">
+              <button type="submit" class="btn btn-dourado" id="btnSalvarEnvioEmail">Salvar</button>
+              <button type="button" class="btn btn-contorno" id="btnTesteEmail">Enviar e-mail de teste</button>
+            </div>
+          </form>
+          <p class="campo-legenda" style="margin-top:22px;">Últimos envios</p>
+          <p class="mensagem-vazia" id="avisoSemEnvios">Nenhum envio automático ainda.</p>
+          <div id="listaEnvios" class="envio-historico"></div>
+          <div class="aviso-info" style="margin-top:18px;">
+            <span class="aviso-info__icone">ℹ️</span>
+            <p><strong>Como funciona:</strong> o site confere a cada poucos minutos se alguma lista já fechou e, se ainda não tiver sido enviada, manda o PDF por e-mail — uma única vez por lista. Pode levar alguns minutos depois do horário de fechamento. O botão de envelope em cada lista (acima) envia aquela lista na hora.</p>
+          </div>
+        </div>
       </section>
 
       <!-- AVISOS -->

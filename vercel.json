@@ -1,4 +1,10 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "functions": {
+    "api/enviar-listas.js": {
+      "maxDuration": 30,
+      "includeFiles": "assets/fonts/**"
+    }
+  }
 }

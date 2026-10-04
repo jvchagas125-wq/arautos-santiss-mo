@@ -839,19 +839,6 @@ img{ max-width: 100%; display:block; }
 .categoria-intencao__form input[type="text"]:focus{ outline:none; border-color: var(--dourado); }
 .categoria-intencao__form .btn{ flex-shrink:0; }
 
-/* botão "Ver PDF da lista" no cabeçalho de cada missa aberta (site público, ver js/intencoes.js)
-   — .painel__titulo já é flex, então margin-left:auto empurra ele pra ponta direita; flex-wrap
-   deixa ele descer pra própria linha em telas bem estreitas em vez de espremer o texto. */
-.painel__titulo{ flex-wrap:wrap; row-gap:6px; }
-.btn-ver-pdf-lista{
-  margin-left:auto; display:flex; align-items:center; gap:5px; flex-shrink:0;
-  border:1px solid rgba(122,12,30,.3); background:rgba(122,12,30,.06); color: var(--vermelho-escuro);
-  font-family:'EB Garamond', serif; font-size:.76rem; font-weight:600;
-  padding:5px 11px; border-radius:20px; cursor:pointer; transition: background .2s ease;
-}
-.btn-ver-pdf-lista:hover{ background: rgba(122,12,30,.14); }
-.btn-ver-pdf-lista svg{ width:14px; height:14px; flex-shrink:0; }
-
 /* painel administrativo: lista de intenções — "Por alma"/"Aniversários" mostradas como um
    parágrafo único (só os nomes, separados por vírgula) em vez de uma caixa por pessoa — ver
    js/admin.js. O lápis ao lado do título alterna pra uma lista editável (um campo por nome). */

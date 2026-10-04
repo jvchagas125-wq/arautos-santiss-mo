@@ -1,0 +1,14 @@
+{
+  "name": "arautos-adoracao",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Site de agendamento da Adoração Eucarística — Arautos do Evangelho. O site em si não tem build; o package.json existe só para a função de envio automático de e-mails (api/enviar-listas.js).",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "jspdf": "^4.2.1",
+    "nodemailer": "^10.0.14"
+  }
+}

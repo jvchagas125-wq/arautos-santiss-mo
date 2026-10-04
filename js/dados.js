@@ -12,6 +12,7 @@ const REF_DIAS_HORARIOS = doc(db, "configuracoes", "diasHorarios");
 const REF_ADMIN = doc(db, "configuracoes", "admin");
 const REF_FRASES = doc(db, "configuracoes", "frases");
 const REF_INTENCOES_CONFIG = doc(db, "configuracoes", "intencoes");
+const REF_ENVIO_INTENCOES = doc(db, "configuracoes", "envioIntencoes");
 
 const PADRAO_CONFIG_GERAL = {
   tituloIgreja: "Arautos do Evangelho",
@@ -321,6 +322,41 @@ export function ouvirConfigIntencoes(callback) {
 
 export async function salvarConfigIntencoes(dados) {
   await setDoc(REF_INTENCOES_CONFIG, dados, { merge: true });
+}
+
+/* ---------- Envio automático das listas por e-mail ----------
+   Configuração (doc configuracoes/envioIntencoes): { ativo, emails: [..], enviarVazias }.
+   Quem de fato envia é o servidor (api/enviar-listas.js); aqui só se guarda pra quem enviar e se
+   está ligado. O servidor registra cada envio em configuracoes/envio_AAAA-MM-DD_HH, lido abaixo
+   só pra mostrar o histórico no painel. */
+function normalizarConfigEnvio(dados) {
+  return {
+    ativo: dados?.ativo === true,
+    emails: Array.isArray(dados?.emails) ? dados.emails.filter((e) => typeof e === "string") : [],
+    enviarVazias: dados?.enviarVazias === true
+  };
+}
+
+export async function obterConfigEnvioIntencoes() {
+  const snap = await getDoc(REF_ENVIO_INTENCOES);
+  return normalizarConfigEnvio(snap.exists() ? snap.data() : null);
+}
+
+export async function salvarConfigEnvioIntencoes({ ativo, emails, enviarVazias }) {
+  await setDoc(REF_ENVIO_INTENCOES, { ativo: !!ativo, emails, enviarVazias: !!enviarVazias }, { merge: true });
+}
+
+// Escuta o histórico de envios registrados pelo servidor. Devolve um objeto { "aaaa-mm-dd|hora": {...} }.
+export function ouvirEnviosIntencoes(callback) {
+  const q = query(collection(db, "configuracoes"), where("status", "in", ["enviando", "enviado", "erro"]));
+  return onSnapshot(q, (snap) => {
+    const envios = {};
+    snap.docs.forEach((d) => {
+      const dados = d.data();
+      if (dados.dataMissa && dados.horaMissa !== undefined) envios[`${dados.dataMissa}|${dados.horaMissa}`] = dados;
+    });
+    callback(envios);
+  });
 }
 
 // Envia uma intenção para a lista da missa indicada. Guarda nome e telefoneDigits de quem

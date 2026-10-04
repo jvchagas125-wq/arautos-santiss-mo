@@ -1,14 +1,13 @@
 import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
-  formatarDataBR, formatarDataComDiaSemana, dataParaIso, hojeIso, criarCalendario,
+  formatarDataBR, dataParaIso, hojeIso, criarCalendario,
   horariosDoDia, statusMissaEspecifica, CATEGORIAS_INTENCAO, PLACEHOLDERS_INTENCAO
 } from "./utils.js";
 import {
   obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirIntencoesDaLista, criarIntencao,
   atualizarIntencao, excluirIntencao
 } from "./dados.js";
-import { carregarJsPDF, construirPdfIntencoes } from "./pdf-intencoes.js";
 
 inicializarNavegacao("intencoes");
 // identificação padrão do site (mesmo telefone/nome usado em agendamentos etc.) — agora cada
@@ -91,30 +90,6 @@ function textoStatusFechado(status) {
 
 const ICONE_LAPIS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>`;
 const ICONE_LIXEIRA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>`;
-const ICONE_PDF = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>`;
-
-// Abre numa aba nova o PDF com a lista completa de intenções dessa missa (todas as categorias,
-// de todo mundo que já colocou algo) — só pra visualização, sem baixar nada. A aba é aberta
-// ANTES de carregar a biblioteca/montar o PDF (e só recebe o conteúdo depois, via location.href)
-// porque abrir a aba só depois de um "await" faz o navegador barrar como pop-up — só é permitido
-// abrir sem bloqueio se for direto na resposta ao clique.
-async function abrirPdfDaLista(rotulo, itens) {
-  const novaAba = window.open("", "_blank");
-  try {
-    await carregarJsPDF();
-    const docPdf = await construirPdfIntencoes(rotulo, itens);
-    const blobUrl = docPdf.output("bloburl");
-    if (novaAba) {
-      novaAba.location.href = blobUrl;
-    } else {
-      mostrarToast("Não foi possível abrir o PDF — verifique se o bloqueador de pop-ups está ativado.");
-    }
-  } catch (err) {
-    console.error(err);
-    novaAba?.close();
-    mostrarToast("Não foi possível gerar o PDF. Verifique sua conexão.");
-  }
-}
 
 // Renderiza a lista de intenções da pessoa nesta categoria — como agora cada pessoa só vê as
 // próprias (ver usuarioAtual acima), toda intenção aqui é dela, então todas recebem os botões
@@ -292,9 +267,6 @@ function criarCardMissaAberta(iso, hora, status) {
   card.innerHTML = `
     <div class="painel__titulo">
       <span class="emoji">🙏</span> Missa das ${formatarHoraSimples(hora)}
-      <button type="button" class="btn-ver-pdf-lista" title="Ver PDF com a lista completa desta missa">
-        ${ICONE_PDF}<span>Ver PDF da lista</span>
-      </button>
     </div>
     <p class="intencoes-aviso-fecha">Preenchimento aberto até ` +
     `${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.</p>
@@ -307,12 +279,7 @@ function criarCardMissaAberta(iso, hora, status) {
     card.appendChild(bloco);
   });
 
-  // guarda a última lista completa (todas as categorias, de todo mundo) recebida do Firestore —
-  // é o que o botão "Ver PDF da lista" usa; os blocos individuais só recebem o que é de cada
-  // categoria (ver acima), então precisa desse array à parte com tudo junto.
-  let entradasCompletas = [];
   const parar = ouvirIntencoesDaLista(iso, hora, (entradas) => {
-    entradasCompletas = entradas;
     // monta a partir de CATEGORIAS_INTENCAO (em vez de uma lista fixa aqui) pra uma categoria
     // nova adicionada ali já funcionar aqui também, sem precisar lembrar de mexer nos dois lugares.
     const porCategoria = {};
@@ -323,9 +290,6 @@ function criarCardMissaAberta(iso, hora, status) {
     });
   });
   pararEscutas.push(parar);
-
-  const rotuloMissa = `Missa de ${formatarDataComDiaSemana(iso)} às ${String(hora).padStart(2, "0")}:00`;
-  card.querySelector(".btn-ver-pdf-lista").addEventListener("click", () => abrirPdfDaLista(rotuloMissa, entradasCompletas));
 
   return card;
 }

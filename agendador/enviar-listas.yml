@@ -1,0 +1,57 @@
+# Agendador do envio automático das listas de intenção por e-mail.
+#
+# A cada ~10 minutos o GitHub "cutuca" a API do site (api/enviar-listas.js). A API confere quais
+# listas de intenção já fecharam e ainda não foram enviadas e manda o PDF de cada uma por e-mail.
+# Quem decide SE envia e PARA QUEM é o painel administrativo — este arquivo só faz o "cutucão".
+#
+# Configuração necessária no GitHub (Settings → Secrets and variables → Actions):
+#   Secret   CRON_SECRET  → a mesma senha que está em CRON_SECRET na Vercel
+#   Variable SITE_URL     → (opcional) endereço do site; se não existir, usa o padrão abaixo
+#
+# Se o repositório for PRIVADO, o GitHub dá 2.000 minutos grátis por mês e cada execução gasta
+# 1 minuto — ou seja, a cada 10 minutos estoura. Nesse caso, troque a linha do cron por:
+#   - cron: "7,37 * * * *"      (a cada 30 minutos: ~1.440 minutos/mês)
+name: Enviar listas de intenção
+
+on:
+  schedule:
+    - cron: "3,13,23,33,43,53 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: enviar-listas
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Chamar a API de envio
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://arautos-adoracao.vercel.app' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::O secret CRON_SECRET não foi criado no GitHub (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          resposta=$(curl -sS --max-time 100 --retry 2 --retry-delay 5 \
+            -w "\n%{http_code}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/enviar-listas")
+          codigo=$(echo "$resposta" | tail -n1)
+          corpo=$(echo "$resposta" | sed '$d')
+          echo "HTTP $codigo"
+          echo "$corpo"
+          if [ "$codigo" != "200" ]; then
+            echo "::error::A API respondeu HTTP $codigo."
+            exit 1
+          fi
+          # uma lista que falhou no envio (ex.: senha do e-mail errada) também avisa por aqui
+          if echo "$corpo" | grep -q '"resultado":"erro"'; then
+            echo "::error::Alguma lista não pôde ser enviada — veja o erro acima."
+            exit 1
+          fi

@@ -13,12 +13,13 @@ import {
   excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
   marcarAgendamentoExtra,
   obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
+  obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes,
   criarIntencao, atualizarIntencao, excluirIntencao,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
 import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
-import { extrairTextosCategoria, construirPdfIntencoes, nomeArquivoPdf } from "./pdf-intencoes.js";
+import { extrairTextosCategoria, construirPdfIntencoes, nomeArquivoPdf, rotuloListaIntencao } from "./pdf-intencoes.js";
 
 // Guarda a própria senha (não apenas um sinalizador) para que o acesso automático
 // só continue válido enquanto essa for a senha atual do painel — se o padre trocar
@@ -301,6 +302,7 @@ function configurarIntencoes() {
   // hora, sem esperar outro evento, quando só o ESTADO da tela muda — ex.: abrir/fechar um
   // quadro, entrar/sair do modo de editar a lista de nomes de "Por alma"/"Aniversários").
   let ultimasEntradas = [];
+  let enviosPorLista = {}; // histórico de envios por e-mail: "data|hora" -> { status, enviadoEm, ... }
   const quadrosAbertos = new Set(); // chaves "data|hora" dos quadros expandidos no momento
   const categoriasEmEdicaoDeLista = new Set(); // chaves "data|hora|categoria" com a lista em modo de edição
 
@@ -405,13 +407,12 @@ function configurarIntencoes() {
   });
 
   function tituloLista(dataMissa, horaMissa) {
-    return `Missa de ${formatarDataComDiaSemana(dataMissa)} às ${String(horaMissa).padStart(2,"0")}:00`;
+    return rotuloListaIntencao(dataMissa, horaMissa);
   }
 
   // Gera um PDF com as intenções de uma lista específica, organizadas por categoria (mesma
   // ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa. A montagem em si
-  // (o desenho do PDF) é compartilhada com o botão "Ver PDF da lista" do site público — ver
-  // js/pdf-intencoes.js — só o destino final muda: aqui baixa o arquivo, lá abre numa aba nova.
+  // (o desenho do PDF) é compartilhada com o envio automático por e-mail — ver js/pdf-intencoes.js.
   async function gerarPdfIntencoes(rotulo, itens) {
     const docPdf = await construirPdfIntencoes(rotulo, itens);
     docPdf.save(nomeArquivoPdf(rotulo));
@@ -646,6 +647,10 @@ function configurarIntencoes() {
       cabecalho.innerHTML = `
         <svg class="quadro-intencao__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
         <span class="quadro-intencao__titulo">${rotulo} — ${itens.length} ${itens.length === 1 ? "intenção" : "intenções"}</span>
+        ${seloDeEnvio(enviosPorLista[chave])}
+        <button type="button" class="quadro-intencao__enviar" title="Enviar esta lista por e-mail agora">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+        </button>
         <button type="button" class="quadro-intencao__pdf" title="Extrair PDF">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
         </button>
@@ -681,6 +686,20 @@ function configurarIntencoes() {
           mostrarToast("Não foi possível gerar o PDF. Tente novamente.");
         }
       });
+      cabecalho.querySelector(".quadro-intencao__enviar").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const btnEnviar = e.currentTarget;
+        btnEnviar.disabled = true;
+        try {
+          const r = await chamarApiEnvio({ acao: "enviar", dataMissa, horaMissa });
+          mostrarToast(`Lista enviada por e-mail para ${r.destinatarios.length} ${r.destinatarios.length === 1 ? "endereço" : "endereços"}.`);
+        } catch (err) {
+          console.error(err);
+          mostrarToast(err.message || "Não foi possível enviar o e-mail.");
+        } finally {
+          btnEnviar.disabled = false;
+        }
+      });
       cabecalho.querySelector(".quadro-intencao__lixeira").addEventListener("click", (e) => {
         e.stopPropagation();
         listaParaExcluir = { dataMissa, horaMissa, rotulo };
@@ -695,6 +714,168 @@ function configurarIntencoes() {
   }
 
   ouvirTodasIntencoes(renderizarQuadros);
+  ouvirEnviosIntencoes((envios) => {
+    enviosPorLista = envios;
+    renderizarQuadros(ultimasEntradas);
+    renderizarHistoricoEnvios(envios);
+  });
+
+  /* ---------- Envio automático por e-mail ---------- */
+  const formEnvioEmail = document.getElementById("formEnvioEmail");
+  const envioAtivo = document.getElementById("envioAtivo");
+  const envioVazias = document.getElementById("envioVazias");
+  const envioListaEmails = document.getElementById("envioListaEmails");
+  const REGEX_EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+
+  function seloDeEnvio(envio) {
+    if (!envio) return "";
+    if (envio.status === "enviado" && !envio.semEnvio) return `<span class="quadro-intencao__selo" title="Enviada por e-mail">✓ e-mail enviado</span>`;
+    if (envio.status === "erro") return `<span class="quadro-intencao__selo quadro-intencao__selo--erro" title="O envio automático falhou; o sistema tenta de novo sozinho.">falha no envio</span>`;
+    return "";
+  }
+
+  // Chama a função do servidor (api/enviar-listas.js) usando a senha do painel como prova de que é o admin.
+  async function chamarApiEnvio(corpo) {
+    let senha = "";
+    try { senha = localStorage.getItem(CHAVE_SENHA_ADMIN_LOCAL) || ""; } catch { /* sem acesso ao armazenamento */ }
+    let resposta;
+    try {
+      resposta = await fetch("/api/enviar-listas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...corpo, senha })
+      });
+    } catch {
+      throw new Error("Sem conexão com o servidor. Verifique a internet e tente de novo.");
+    }
+    let dados = null;
+    try { dados = await resposta.json(); } catch { /* resposta sem JSON */ }
+    if (!resposta.ok || !dados?.ok) {
+      if (resposta.status === 404) throw new Error("O envio por e-mail ainda não foi ativado no site (falta publicar a atualização).");
+      throw new Error(dados?.erro || "Não foi possível enviar o e-mail.");
+    }
+    return dados;
+  }
+
+  function criarLinhaEmail(valor = "") {
+    const linha = document.createElement("div");
+    linha.className = "envio-email-linha";
+    const input = document.createElement("input");
+    input.type = "email";
+    input.placeholder = "nome@exemplo.com";
+    input.autocomplete = "off";
+    input.value = valor;
+    input.addEventListener("input", () => input.classList.remove("invalido"));
+    const remover = document.createElement("button");
+    remover.type = "button";
+    remover.className = "envio-email-remover";
+    remover.title = "Remover e-mail";
+    remover.textContent = "×";
+    remover.addEventListener("click", () => linha.remove());
+    linha.appendChild(input);
+    linha.appendChild(remover);
+    envioListaEmails.appendChild(linha);
+    return input;
+  }
+  document.getElementById("btnAdicionarEmail").addEventListener("click", () => criarLinhaEmail().focus());
+
+  // lê os e-mails digitados; marca em vermelho os inválidos e devolve null se houver algum
+  function lerEmailsDoFormulario() {
+    const emails = [];
+    let todosValidos = true;
+    envioListaEmails.querySelectorAll("input").forEach((input) => {
+      const v = input.value.trim();
+      if (!v) return;
+      if (!REGEX_EMAIL.test(v)) { input.classList.add("invalido"); todosValidos = false; return; }
+      if (!emails.some((e) => e.toLowerCase() === v.toLowerCase())) emails.push(v);
+    });
+    return todosValidos ? emails : null;
+  }
+
+  obterConfigEnvioIntencoes().then((cfg) => {
+    envioAtivo.checked = cfg.ativo;
+    envioVazias.checked = cfg.enviarVazias;
+    envioListaEmails.innerHTML = "";
+    (cfg.emails.length ? cfg.emails : [""]).forEach((e) => criarLinhaEmail(e));
+  }).catch((err) => {
+    console.error(err);
+    criarLinhaEmail();
+  });
+
+  formEnvioEmail.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const emails = lerEmailsDoFormulario();
+    if (emails === null) { mostrarToast("Confira os e-mails marcados em vermelho."); return; }
+    if (envioAtivo.checked && emails.length === 0) { mostrarToast("Cadastre pelo menos um e-mail para ligar o envio automático."); return; }
+    const btn = document.getElementById("btnSalvarEnvioEmail");
+    btn.disabled = true;
+    btn.textContent = "Salvando...";
+    try {
+      await salvarConfigEnvioIntencoes({ ativo: envioAtivo.checked, emails, enviarVazias: envioVazias.checked });
+      envioListaEmails.innerHTML = "";
+      (emails.length ? emails : [""]).forEach((v) => criarLinhaEmail(v));
+      mostrarToast(envioAtivo.checked ? "Salvo! O envio automático está ligado." : "Salvo! O envio automático está desligado.");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Salvar";
+    }
+  });
+
+  document.getElementById("btnTesteEmail").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const emails = lerEmailsDoFormulario();
+    if (emails === null) { mostrarToast("Confira os e-mails marcados em vermelho."); return; }
+    if (emails.length === 0) { mostrarToast("Cadastre pelo menos um e-mail antes de testar."); return; }
+    btn.disabled = true;
+    btn.textContent = "Enviando teste...";
+    try {
+      // o teste usa os e-mails SALVOS no servidor — salva antes, pra testar exatamente o que está na tela
+      await salvarConfigEnvioIntencoes({ ativo: envioAtivo.checked, emails, enviarVazias: envioVazias.checked });
+      const r = await chamarApiEnvio({ acao: "teste" });
+      mostrarToast(`E-mail de teste enviado para ${r.destinatarios.join(", ")}.`);
+    } catch (err) {
+      console.error(err);
+      mostrarToast(err.message || "Não foi possível enviar o teste.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Enviar e-mail de teste";
+    }
+  });
+
+  function renderizarHistoricoEnvios(envios) {
+    const lista = document.getElementById("listaEnvios");
+    const aviso = document.getElementById("avisoSemEnvios");
+    const chaves = Object.keys(envios)
+      .filter((k) => !(envios[k].status === "enviado" && envios[k].semEnvio))
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, 8);
+    aviso.classList.toggle("oculto", chaves.length > 0);
+    lista.innerHTML = "";
+    chaves.forEach((chave) => {
+      const envio = envios[chave];
+      const item = document.createElement("div");
+      item.className = "envio-historico__item" + (envio.status === "erro" ? " envio-historico__item--erro" : "");
+      const nome = document.createElement("span");
+      nome.textContent = rotuloListaIntencao(envio.dataMissa, envio.horaMissa);
+      const estado = document.createElement("span");
+      estado.className = "envio-historico__estado";
+      if (envio.status === "enviado") {
+        const quando = envio.enviadoEm ? new Date(envio.enviadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "";
+        estado.textContent = `✓ enviado ${quando}${envio.manual ? " (manual)" : ""}`;
+      } else if (envio.status === "erro") {
+        estado.textContent = "falhou — tentando de novo";
+        item.title = envio.erro || "";
+      } else {
+        estado.textContent = "enviando…";
+      }
+      item.appendChild(nome);
+      item.appendChild(estado);
+      lista.appendChild(item);
+    });
+  }
 
   document.getElementById("fecharModalExcluirLista").addEventListener("click", () => fecharModal(modalExcluirLista));
   document.getElementById("btnVoltarExcluirLista").addEventListener("click", () => fecharModal(modalExcluirLista));
