@@ -239,9 +239,16 @@
               <button type="button" class="btn btn-contorno" id="btnTesteEmail">Enviar e-mail de teste</button>
             </div>
           </form>
-          <p class="campo-legenda" style="margin-top:22px;">Últimos envios</p>
-          <p class="mensagem-vazia" id="avisoSemEnvios">Nenhum envio automático ainda.</p>
-          <div id="listaEnvios" class="envio-historico"></div>
+          <div class="quadro-intencao quadro-envios" id="quadroEnvios">
+            <div class="quadro-intencao__cabecalho" id="cabecalhoEnvios" role="button" tabindex="0" aria-expanded="false">
+              <svg class="quadro-intencao__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              <span class="quadro-intencao__titulo">Últimos envios <span id="contagemEnvios"></span></span>
+            </div>
+            <div class="quadro-intencao__corpo oculto" id="corpoEnvios">
+              <p class="mensagem-vazia" id="avisoSemEnvios">Nenhum envio automático ainda.</p>
+              <div id="listaEnvios" class="envio-historico"></div>
+            </div>
+          </div>
           <div class="aviso-info" style="margin-top:18px;">
             <span class="aviso-info__icone">ℹ️</span>
             <p><strong>Como funciona:</strong> o site confere a cada poucos minutos se alguma lista já fechou e, se ainda não tiver sido enviada, manda o PDF por e-mail — uma única vez por lista. Pode levar alguns minutos depois do horário de fechamento. O botão de envelope em cada lista (acima) envia aquela lista na hora.</p>

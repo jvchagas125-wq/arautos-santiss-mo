@@ -349,3 +349,5 @@
 .envio-historico__item small{ color: var(--texto-suave); }
 .envio-historico__item--erro .envio-historico__estado{ color: var(--vermelho); }
 .envio-historico__estado{ font-family:'Cinzel'; font-size:.74rem; }
+.quadro-envios{ margin-top:22px; margin-bottom:0; }
+.quadro-envios .quadro-intencao__corpo{ padding-top:10px; }

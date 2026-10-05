@@ -845,6 +845,21 @@ function configurarIntencoes() {
     }
   });
 
+  // "Últimos envios" começa fechado — só abre quando a pessoa clicar
+  const quadroEnvios = document.getElementById("quadroEnvios");
+  const cabecalhoEnvios = document.getElementById("cabecalhoEnvios");
+  const corpoEnvios = document.getElementById("corpoEnvios");
+  function alternarEnvios() {
+    const abrir = !quadroEnvios.classList.contains("aberto");
+    quadroEnvios.classList.toggle("aberto", abrir);
+    corpoEnvios.classList.toggle("oculto", !abrir);
+    cabecalhoEnvios.setAttribute("aria-expanded", String(abrir));
+  }
+  cabecalhoEnvios.addEventListener("click", alternarEnvios);
+  cabecalhoEnvios.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarEnvios(); }
+  });
+
   function renderizarHistoricoEnvios(envios) {
     const lista = document.getElementById("listaEnvios");
     const aviso = document.getElementById("avisoSemEnvios");
@@ -853,6 +868,7 @@ function configurarIntencoes() {
       .sort((a, b) => b.localeCompare(a))
       .slice(0, 8);
     aviso.classList.toggle("oculto", chaves.length > 0);
+    document.getElementById("contagemEnvios").textContent = chaves.length ? `(${chaves.length})` : "";
     lista.innerHTML = "";
     chaves.forEach((chave) => {
       const envio = envios[chave];
