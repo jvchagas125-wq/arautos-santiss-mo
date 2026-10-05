@@ -63,6 +63,7 @@ const btnVoltarLogin = document.getElementById("btnVoltarLogin");
 
 vincularOlhoSenha(document.getElementById("olhoSenhaAdmin"), inputSenhaAdmin);
 vincularOlhoSenha(document.getElementById("olhoCadSenha"), document.getElementById("cadSenha"));
+vincularOlhoSenha(document.getElementById("olhoCadSenha2"), document.getElementById("cadSenha2"));
 
 function mostrarAvisoLogin(texto) {
   avisoLoginAdmin.textContent = texto;
@@ -2664,6 +2665,7 @@ function configurarMinhaConta() {
   const erroEl = document.getElementById("erroMinhaSenha");
   const btnSalvar = document.getElementById("btnSalvarMinhaSenha");
   vincularOlhoSenha(document.getElementById("olhoMinhaSenha"), campoNova);
+  vincularOlhoSenha(document.getElementById("olhoMinhaSenha2"), campoNova2);
 
   document.getElementById("btnMinhaConta").addEventListener("click", () => {
     document.getElementById("minhaContaNome").textContent = contaAtual?.nome || "—";
