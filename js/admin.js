@@ -288,6 +288,20 @@ function configurarIntencoes() {
   const form = document.getElementById("formHorariosMissas");
   const gradesPorDia = document.getElementById("gradesPorDia");
   const campoHorasAntes = document.getElementById("campoHorasAntes");
+
+  // "Horários das missas" começa fechado — só abre quando a pessoa clicar no título
+  const cabecalhoHorariosMissas = document.getElementById("cabecalhoHorariosMissas");
+  const corpoHorariosMissas = document.getElementById("corpoHorariosMissas");
+  function alternarHorariosMissas() {
+    const abrir = corpoHorariosMissas.classList.contains("oculto");
+    corpoHorariosMissas.classList.toggle("oculto", !abrir);
+    cabecalhoHorariosMissas.classList.toggle("recolhido", !abrir);
+    cabecalhoHorariosMissas.setAttribute("aria-expanded", String(abrir));
+  }
+  cabecalhoHorariosMissas.addEventListener("click", alternarHorariosMissas);
+  cabecalhoHorariosMissas.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarHorariosMissas(); }
+  });
   const listaQuadros = document.getElementById("listaQuadrosIntencoes");
   const avisoSemIntencoes = document.getElementById("avisoSemIntencoes");
 

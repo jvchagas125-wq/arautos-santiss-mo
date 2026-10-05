@@ -186,7 +186,11 @@
 
         <div class="intencoes-colunas">
           <div class="painel">
-            <div class="painel__titulo"><span class="emoji">⛪</span> Horários das missas</div>
+            <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoHorariosMissas" role="button" tabindex="0" aria-expanded="false">
+              <span class="emoji">⛪</span> Horários das missas
+              <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div id="corpoHorariosMissas" class="oculto">
             <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
               Toque em cada dia para marcar os horários de missa daquele dia. Um dia sem nenhum horário marcado
               fica sem lista de intenções — o site público pula direto para o próximo dia que tiver missa.
@@ -202,6 +206,7 @@
             <div class="aviso-info" style="margin-top:20px;">
               <span class="aviso-info__icone">ℹ️</span>
               <p><strong>Como funciona:</strong> a lista de intenções da próxima missa fica aberta até a quantidade de horas configurada acima antes do horário da missa. Depois disso ela fecha, e assim que a missa acontece a lista da missa seguinte já abre automaticamente no site público.</p>
+            </div>
             </div>
           </div>
 
