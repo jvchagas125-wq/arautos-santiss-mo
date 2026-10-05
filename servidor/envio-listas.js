@@ -1,15 +1,15 @@
 // Lógica do envio automático das listas de intenção por e-mail (roda no SERVIDOR, na Vercel —
 // quem chama é api/enviar-listas.js). Fica separada do "handler" pra poder ser testada sem
-// internet: tudo que fala com o mundo de fora (Firestore, geração do PDF, e-mail) entra por
+// internet: tudo que fala com o mundo de fora (Firestore, geração do documento, e-mail) entra por
 // parâmetro (veja "dependencias" em processarListasFechadas).
 //
 // Como funciona, resumindo: a cada ~10 minutos o GitHub Actions chama a API; a API olha os
 // horários de missa configurados no painel, descobre quais listas JÁ fecharam (horário da missa
-// menos "horas antes") e ainda não foram enviadas, gera o PDF de cada uma e manda por e-mail
+// menos "horas antes") e ainda não foram enviadas, gera o documento Word de cada uma e manda por e-mail
 // pros endereços cadastrados no painel administrativo. Cada lista é enviada uma única vez —
 // o "carimbo" de envio fica guardado no Firestore (coleção configuracoes, doc "envio_DATA_HORA").
 import { horariosDoDia } from "../js/utils.js";
-import { rotuloListaIntencao, nomeArquivoPdf } from "../js/pdf-intencoes.js";
+import { rotuloListaIntencao, nomeArquivoDocx } from "../js/docx-intencoes.js";
 
 // Brasil não tem mais horário de verão desde 2019: Brasília é sempre UTC-3.
 const DESLOCAMENTO_BRASILIA_HORAS = -3;
@@ -212,12 +212,12 @@ export function idDocEnvio(dataMissa, horaMissa) {
   return `envio_${dataMissa}_${doisDigitos(horaMissa)}`;
 }
 
-// Monta o PDF e o e-mail de uma lista e envia. "dependencias" = { firestore, gerarPdf, enviarEmail }.
+// Monta o documento Word e o e-mail de uma lista e envia. "dependencias" = { firestore, gerarDocumento, enviarEmail }.
 export async function montarEEnviarLista({ dataMissa, horaMissa, destinatarios, teste = false, itens: itensProntos = null }, dependencias) {
-  const { firestore, gerarPdf, enviarEmail } = dependencias;
+  const { firestore, gerarDocumento, enviarEmail } = dependencias;
   const itens = itensProntos || (await firestore.intencoesDaLista(dataMissa, horaMissa));
   const rotulo = rotuloListaIntencao(dataMissa, horaMissa);
-  const pdf = await gerarPdf(rotulo, itens);
+  const arquivo = await gerarDocumento(rotulo, itens);
   const total = itens.length;
   const assunto = `${teste ? "[TESTE] " : ""}Intenções da Santa Missa — ${rotulo}`;
   const texto = [
@@ -226,7 +226,7 @@ export async function montarEEnviarLista({ dataMissa, horaMissa, destinatarios, 
     `${rotulo}`,
     total === 0 ? "Ninguém enviou intenções para esta missa." : `${total} ${total === 1 ? "intenção enviada" : "intenções enviadas"}.`,
     "",
-    "O PDF com as intenções está em anexo, pronto para imprimir.",
+    "O documento Word com as intenções está em anexo — pode editar e imprimir.",
     "",
     "— Arautos do Evangelho Campos (envio automático)"
   ].join("\n");
@@ -234,7 +234,7 @@ export async function montarEEnviarLista({ dataMissa, horaMissa, destinatarios, 
     para: destinatarios,
     assunto,
     texto,
-    anexo: { nome: nomeArquivoPdf(rotulo), conteudo: pdf, tipo: "application/pdf" }
+    anexo: { nome: nomeArquivoDocx(rotulo), conteudo: arquivo, tipo: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }
   });
   return { rotulo, total };
 }
@@ -291,7 +291,7 @@ export async function processarListasFechadas({ agora = new Date() } = {}, depen
         continue;
       }
 
-      // 3) gera o PDF e envia
+      // 3) gera o documento e envia
       const { total } = await montarEEnviarLista(
         { dataMissa, horaMissa, destinatarios: configEnvio.emails, itens },
         dependencias

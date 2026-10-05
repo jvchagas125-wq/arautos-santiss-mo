@@ -7,7 +7,6 @@ import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterFrases, salvarFrases,
   obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios,
-  obterSenhaAdmin, salvarSenhaAdmin,
   ouvirTodosAgendamentos, ouvirTodosUsuarios, obterUsuario, cadastrarOuAtualizarUsuario, editarUsuario,
   atualizarNomeUsuario, atualizarNomeEmAgendamentosDoTelefone,
   excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
@@ -18,73 +17,304 @@ import {
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
-import { SENHA_ADMIN_PADRAO } from "./firebase-config.js";
-import { extrairTextosCategoria, construirPdfIntencoes, nomeArquivoPdf, rotuloListaIntencao } from "./pdf-intencoes.js";
+import {
+  listarAdministradores, ouvirAdministradores, ouvirAdministrador, obterAdministrador,
+  criarAdministrador, atualizarAdministrador, excluirAdministrador, removerSenhaAntigaDoPainel
+} from "./dados.js";
+import { criarCredenciais, conferirSenha, chaveConfere, TAMANHO_MINIMO_SENHA } from "./contas.js";
+import { CATALOGO_ACESSOS, PAGINA_ADMINISTRADORES, temAcesso, normalizarAcessos, resumoDeAcessos } from "./acessos.js";
+import { extrairTextosCategoria, construirDocxIntencoes, nomeArquivoDocx, rotuloListaIntencao } from "./docx-intencoes.js";
 
-// Guarda a própria senha (não apenas um sinalizador) para que o acesso automático
-// só continue válido enquanto essa for a senha atual do painel — se o padre trocar
-// a senha em "Configurações", todo mundo que tinha login automático precisa digitar
-// a nova senha uma vez.
-const CHAVE_SENHA_ADMIN_LOCAL = "arautos_admin_senha";
+/* ---------------- Contas e login do painel ----------------
+   Cada pessoa tem a própria conta (ver js/contas.js e js/acessos.js) e entra digitando só a
+   senha que criou. No aparelho fica guardada apenas a "chave" derivada da senha — nunca a senha. */
+const CHAVE_SESSAO_LOCAL = "arautos_admin_sessao";
+const CHAVE_AVISO_LOGIN = "arautos_admin_aviso";
 let painelJaIniciado = false;
+let contaAtual = null;        // conta de quem está logado agora (atualizada em tempo real)
+let chaveSessao = "";         // chave derivada da senha (prova de quem é, pro servidor e pra sessão)
+let pararOuvinteConta = null;
 
-/* ---------------- Login do admin ---------------- */
+// resto da versão antiga, que guardava a senha em texto no aparelho: apaga
+try { localStorage.removeItem("arautos_admin_senha"); } catch { /* sem armazenamento */ }
+
+function lerSessao() {
+  try { return JSON.parse(localStorage.getItem(CHAVE_SESSAO_LOCAL) || "null"); } catch { return null; }
+}
+function salvarSessao(id, chave) {
+  try { localStorage.setItem(CHAVE_SESSAO_LOCAL, JSON.stringify({ id, chave })); } catch { /* sem armazenamento */ }
+}
+function limparSessao() {
+  try { localStorage.removeItem(CHAVE_SESSAO_LOCAL); } catch { /* sem armazenamento */ }
+}
+
 const telaLoginAdmin = document.getElementById("telaLoginAdmin");
 const painelAdmin = document.getElementById("painelAdmin");
 const formLoginAdmin = document.getElementById("formLoginAdmin");
 const inputSenhaAdmin = document.getElementById("inputSenhaAdmin");
 const erroSenhaAdmin = document.getElementById("erroSenhaAdmin");
+const avisoLoginAdmin = document.getElementById("avisoLoginAdmin");
+const loginVisaoEntrar = document.getElementById("loginVisaoEntrar");
+const loginVisaoCadastro = document.getElementById("loginVisaoCadastro");
+const textoCadastroAdmin = document.getElementById("textoCadastroAdmin");
+const formCadastroAdmin = document.getElementById("formCadastroAdmin");
+const erroCadastroAdmin = document.getElementById("erroCadastroAdmin");
+const btnVoltarLogin = document.getElementById("btnVoltarLogin");
 
 vincularOlhoSenha(document.getElementById("olhoSenhaAdmin"), inputSenhaAdmin);
+vincularOlhoSenha(document.getElementById("olhoCadSenha"), document.getElementById("cadSenha"));
 
-function mostrarPainel() {
+function mostrarAvisoLogin(texto) {
+  avisoLoginAdmin.textContent = texto;
+  avisoLoginAdmin.classList.toggle("oculto", !texto);
+}
+
+function trocarVisaoLogin(visao) {
+  loginVisaoEntrar.classList.toggle("oculto", visao !== "entrar");
+  loginVisaoCadastro.classList.toggle("oculto", visao !== "cadastro");
+}
+
+// Se ainda não existe nenhuma conta, a primeira que for criada vira o administrador principal.
+let semContasAinda = false;
+async function prepararTelaLogin() {
+  try {
+    const msg = sessionStorage.getItem(CHAVE_AVISO_LOGIN);
+    if (msg) { mostrarAvisoLogin(msg); sessionStorage.removeItem(CHAVE_AVISO_LOGIN); }
+  } catch { /* sem armazenamento */ }
+  try {
+    semContasAinda = (await listarAdministradores()).length === 0;
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+  if (semContasAinda) {
+    textoCadastroAdmin.textContent = "Primeiro acesso: crie o seu usuário e a sua senha. Esta primeira conta será o administrador principal, com acesso a tudo.";
+    btnVoltarLogin.classList.add("oculto");
+    trocarVisaoLogin("cadastro");
+  }
+}
+
+function sairDoPainel(mensagem) {
+  limparSessao();
+  if (pararOuvinteConta) pararOuvinteConta();
+  try { if (mensagem) sessionStorage.setItem(CHAVE_AVISO_LOGIN, mensagem); } catch { /* sem armazenamento */ }
+  location.reload();
+}
+
+function entrarNoPainel(conta, chave) {
+  contaAtual = conta;
+  chaveSessao = chave;
+  salvarSessao(conta.id, chave);
   telaLoginAdmin.classList.add("oculto");
-  painelAdmin.classList.remove("oculto");
   iniciarPainel();
+  aplicarPermissoes();
+  painelAdmin.classList.remove("oculto");
+
+  // acompanha a própria conta em tempo real: se o administrador mudar os acessos, suspender ou
+  // excluir a conta, ou se a senha for trocada em outro aparelho, o painel reage na hora.
+  if (pararOuvinteConta) pararOuvinteConta();
+  pararOuvinteConta = ouvirAdministrador(conta.id, async (c) => {
+    if (!c) { sairDoPainel("Este cadastro não existe mais."); return; }
+    if (!c.principal && c.status !== "aprovado") { sairDoPainel("O seu acesso foi suspenso pelo administrador."); return; }
+    if (!(await chaveConfere(chaveSessao, c))) { sairDoPainel("A senha foi alterada. Entre de novo com a nova senha."); return; }
+    contaAtual = c;
+    aplicarPermissoes();
+  });
 }
 
 async function tentarLoginAutomatico() {
-  const senhaSalva = localStorage.getItem(CHAVE_SENHA_ADMIN_LOCAL);
-  if (!senhaSalva) return;
+  const sessao = lerSessao();
+  if (!sessao || !sessao.id || !sessao.chave) { prepararTelaLogin(); return; }
   try {
-    const senhaCorreta = await obterSenhaAdmin(SENHA_ADMIN_PADRAO);
-    if (senhaSalva === senhaCorreta) {
-      mostrarPainel();
-    } else {
-      // a senha foi trocada desde o último acesso: pede login novamente
-      localStorage.removeItem(CHAVE_SENHA_ADMIN_LOCAL);
-    }
+    const conta = await obterAdministrador(sessao.id);
+    const valida = conta && (conta.principal || conta.status === "aprovado") && (await chaveConfere(sessao.chave, conta));
+    if (valida) { entrarNoPainel(conta, sessao.chave); return; }
+    limparSessao();
   } catch (err) {
     console.error(err);
-    // sem conexão no momento: não bloqueia quem já tinha acesso salvo neste aparelho
-    mostrarPainel();
+    mostrarToast("Sem conexão no momento. Verifique a internet e recarregue a página.");
   }
+  prepararTelaLogin();
 }
 tentarLoginAutomatico();
 
+document.getElementById("btnIrCadastro").addEventListener("click", () => {
+  textoCadastroAdmin.textContent = "Preencha os dados para pedir acesso. O administrador precisa aprovar o seu cadastro antes de você poder entrar.";
+  erroCadastroAdmin.style.display = "none";
+  trocarVisaoLogin("cadastro");
+});
+btnVoltarLogin.addEventListener("click", () => {
+  mostrarAvisoLogin("");
+  trocarVisaoLogin("entrar");
+});
+
+// Entrar: só a senha. Confere com a senha de cada conta (cada uma tem o próprio sal).
 formLoginAdmin.addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = formLoginAdmin.querySelector("button[type=submit]");
   btn.disabled = true;
   btn.textContent = "Verificando...";
+  erroSenhaAdmin.style.display = "none";
+  mostrarAvisoLogin("");
   try {
-    const senhaCorreta = await obterSenhaAdmin(SENHA_ADMIN_PADRAO);
-    if (inputSenhaAdmin.value === senhaCorreta) {
-      localStorage.setItem(CHAVE_SENHA_ADMIN_LOCAL, senhaCorreta);
-      mostrarPainel();
-    } else {
+    const contas = await listarAdministradores();
+    if (contas.length === 0) { await prepararTelaLogin(); return; }
+    let achada = null;
+    let chave = null;
+    for (const c of contas) {
+      chave = await conferirSenha(inputSenhaAdmin.value, c);
+      if (chave) { achada = c; break; }
+    }
+    if (!achada) {
       erroSenhaAdmin.style.display = "block";
       inputSenhaAdmin.value = "";
       inputSenhaAdmin.focus();
+    } else if (!achada.principal && achada.status === "pendente") {
+      mostrarAvisoLogin("O seu cadastro ainda está aguardando a aprovação do administrador.");
+      inputSenhaAdmin.value = "";
+    } else if (!achada.principal && achada.status !== "aprovado") {
+      mostrarAvisoLogin("O seu acesso está suspenso. Fale com o administrador.");
+      inputSenhaAdmin.value = "";
+    } else {
+      entrarNoPainel(achada, chave);
     }
   } catch (err) {
     console.error(err);
-    mostrarToast("Erro ao conectar. Verifique a configuração do Firebase.");
+    mostrarToast("Erro ao conectar. Verifique a internet e tente de novo.");
   } finally {
     btn.disabled = false;
     btn.textContent = "Entrar";
   }
 });
+
+// Criar cadastro
+const REGEX_USUARIO = /^[a-z0-9._-]{3,30}$/;
+formCadastroAdmin.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nome = capitalizarNome(document.getElementById("cadNome").value.trim().replace(/\s+/g, " "));
+  const usuario = document.getElementById("cadUsuario").value.trim().toLowerCase();
+  const senha = document.getElementById("cadSenha").value;
+  const senha2 = document.getElementById("cadSenha2").value;
+  const erro = (msg) => { erroCadastroAdmin.textContent = msg; erroCadastroAdmin.style.display = "block"; };
+  erroCadastroAdmin.style.display = "none";
+
+  if (nome.length < 2) return erro("Digite o seu nome.");
+  if (!REGEX_USUARIO.test(usuario)) return erro("Usuário inválido: use de 3 a 30 letras minúsculas, números, ponto, traço ou sublinhado.");
+  if (senha.length < TAMANHO_MINIMO_SENHA) return erro(`A senha precisa ter pelo menos ${TAMANHO_MINIMO_SENHA} caracteres.`);
+  if (senha !== senha2) return erro("As senhas não são iguais.");
+
+  const btn = document.getElementById("btnCadastrarAdmin");
+  btn.disabled = true;
+  btn.textContent = "Criando...";
+  try {
+    const contas = await listarAdministradores();
+    if (contas.some((c) => String(c.usuario || "").toLowerCase() === usuario)) return erro("Esse usuário já existe. Escolha outro.");
+    // como o login é só pela senha, duas pessoas não podem ter a mesma
+    for (const c of contas) {
+      if (await conferirSenha(senha, c)) return erro("Essa senha já está em uso por outra pessoa. Escolha uma senha diferente.");
+    }
+    const primeira = contas.length === 0;
+    const { sal, verificador, chave } = await criarCredenciais(senha);
+    const id = await criarAdministrador({
+      nome, usuario, sal, verificador,
+      status: primeira ? "aprovado" : "pendente",
+      principal: primeira,
+      acessos: {}
+    });
+    if (primeira) {
+      try { await removerSenhaAntigaDoPainel(); } catch (err) { console.error(err); }
+      const conta = await obterAdministrador(id);
+      entrarNoPainel(conta, chave);
+    } else {
+      formCadastroAdmin.reset();
+      trocarVisaoLogin("entrar");
+      mostrarAvisoLogin("Cadastro enviado! Assim que o administrador aprovar, entre usando a senha que você criou.");
+    }
+  } catch (err) {
+    console.error(err);
+    erro("Não foi possível criar o cadastro agora. Tente de novo.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Criar cadastro";
+  }
+});
+
+/* ---------------- Permissões: o que cada pessoa enxerga no painel ---------------- */
+// Cada "parte" de uma página (ver CATALOGO_ACESSOS em js/acessos.js) aponta pros elementos da tela
+// que somem quando a pessoa não tem acesso a ela.
+const painelDe = (idInterno) => () => [document.getElementById(idInterno)?.closest(".painel")];
+const ALVOS_PARTES = {
+  intencoes: {
+    horarios: painelDe("cabecalhoHorariosMissas"),
+    listas: painelDe("cabecalhoListasPreenchidas"),
+    email: () => [document.getElementById("painelEnvioEmail")]
+  },
+  avisos: {
+    publicar: painelDe("formNovoAviso"),
+    publicados: painelDe("listaAvisosAdmin")
+  },
+  acompanhamento: {
+    agendados: () => [document.querySelector('.admin-aba[data-aba="agendados"]'), document.getElementById("painelAgendados")],
+    cancelados: () => [document.querySelector('.admin-aba[data-aba="cancelados"]'), document.getElementById("painelCancelados")]
+  },
+  contatos: {
+    info: () => [document.getElementById("quadroInfoContato")],
+    cadastrar: () => [document.getElementById("painelFormContato")],
+    pessoas: () => [document.getElementById("quadroContatos")]
+  },
+  configuracoes: {
+    logo: painelDe("previewLogo"),
+    fundo: painelDe("previewFundo"),
+    banners: () => [
+      document.getElementById("campoBannerDestino")?.closest(".painel"),
+      document.getElementById("cabecalhoBannersAdmin")?.closest(".painel")
+    ]
+  }
+};
+
+function aplicarPermissoes() {
+  const conta = contaAtual;
+  if (!conta) return;
+
+  document.getElementById("nomeAdminTopo").textContent = (conta.nome || "Admin").split(" ")[0];
+
+  // menu: só as páginas liberadas
+  let primeiroLink = null;
+  document.querySelectorAll("#menuLateral nav a[data-secao]").forEach((a) => {
+    const pode = temAcesso(conta, a.dataset.secao);
+    a.classList.toggle("sem-acesso", !pode);
+    if (pode && !primeiroLink) primeiroLink = a;
+  });
+
+  // dentro de cada página: só as partes liberadas
+  Object.entries(ALVOS_PARTES).forEach(([pagina, partes]) => {
+    Object.entries(partes).forEach(([parte, obterElementos]) => {
+      const pode = temAcesso(conta, pagina, parte);
+      obterElementos().forEach((el) => { if (el) el.classList.toggle("sem-acesso", !pode); });
+    });
+  });
+
+  // Acompanhamento: se a aba que estava aberta sumiu, abre a que sobrou
+  const abaAtiva = document.querySelector(".admin-aba.ativa");
+  if (abaAtiva && abaAtiva.classList.contains("sem-acesso")) {
+    document.querySelector(".admin-aba:not(.sem-acesso)")?.click();
+  }
+
+  // página aberta agora: se não puder mais vê-la, vai pra primeira liberada (ou pra tela "sem acesso")
+  const secaoAberta = document.querySelector(".admin-secao:not(.oculto)");
+  const idAberto = secaoAberta ? secaoAberta.id.replace("secao-", "") : "";
+  const semAcesso = document.getElementById("secao-sem-acesso");
+  if (!primeiroLink) {
+    document.querySelectorAll(".admin-secao").forEach((sec) => sec.classList.toggle("oculto", sec !== semAcesso));
+    document.querySelectorAll("#menuLateral nav a").forEach((a) => a.classList.remove("ativa"));
+  } else if (idAberto === "sem-acesso" || !temAcesso(conta, idAberto)) {
+    semAcesso.classList.add("oculto");
+    primeiroLink.click();
+  }
+
+  // a página Administradores só começa a "escutar" as contas quando a pessoa pode vê-la
+  if (temAcesso(conta, PAGINA_ADMINISTRADORES)) iniciarAdministradores();
+}
 
 /* ---------------- Painel (após login) ---------------- */
 function iniciarPainel() {
@@ -93,12 +323,10 @@ function iniciarPainel() {
 
   inicializarNavegacao("admin");
 
-  document.getElementById("btnSairAdmin").addEventListener("click", () => {
-    localStorage.removeItem(CHAVE_SENHA_ADMIN_LOCAL);
-    location.reload();
-  });
+  document.getElementById("btnSairAdmin").addEventListener("click", () => sairDoPainel(""));
 
   configurarMenuSecoes();
+  configurarMinhaConta();
   configurarFrase();
   configurarHorarios();
   configurarIntencoes();
@@ -106,6 +334,7 @@ function iniciarPainel() {
   configurarAcompanhamento();
   configurarInfoContato();
   configurarContatos();
+  configurarAdministradores();
   configurarBanners();
   configurarConfiguracoes();
 }
@@ -438,12 +667,20 @@ function configurarIntencoes() {
     return rotuloListaIntencao(dataMissa, horaMissa);
   }
 
-  // Gera um PDF com as intenções de uma lista específica, organizadas por categoria (mesma
+  // Gera um documento Word (.docx, editável) com as intenções de uma lista específica, organizadas por categoria (mesma
   // ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa. A montagem em si
-  // (o desenho do PDF) é compartilhada com o envio automático por e-mail — ver js/pdf-intencoes.js.
-  async function gerarPdfIntencoes(rotulo, itens) {
-    const docPdf = await construirPdfIntencoes(rotulo, itens);
-    docPdf.save(nomeArquivoPdf(rotulo));
+  // (o desenho do documento) é compartilhada com o envio automático por e-mail — ver js/docx-intencoes.js.
+  async function gerarDocumentoIntencoes(rotulo, itens) {
+    const documento = construirDocxIntencoes(rotulo, itens);
+    const blob = await window.docx.Packer.toBlob(documento);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nomeArquivoDocx(rotulo);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   const ICONE_LAPIS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>`;
@@ -679,7 +916,7 @@ function configurarIntencoes() {
         <button type="button" class="quadro-intencao__enviar" title="Enviar esta lista por e-mail agora">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
         </button>
-        <button type="button" class="quadro-intencao__pdf" title="Extrair PDF">
+        <button type="button" class="quadro-intencao__pdf" title="Baixar documento Word (editável)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
         </button>
         <button type="button" class="quadro-intencao__lixeira" title="Apagar lista">
@@ -703,15 +940,15 @@ function configurarIntencoes() {
       });
       cabecalho.querySelector(".quadro-intencao__pdf").addEventListener("click", async (e) => {
         e.stopPropagation();
-        if (typeof window.jspdf === "undefined") {
-          mostrarToast("Não foi possível carregar o gerador de PDF. Verifique sua conexão.");
+        if (typeof window.docx === "undefined") {
+          mostrarToast("Não foi possível carregar o gerador de documentos. Verifique sua conexão.");
           return;
         }
         try {
-          await gerarPdfIntencoes(rotulo, itens);
+          await gerarDocumentoIntencoes(rotulo, itens);
         } catch (err) {
           console.error(err);
-          mostrarToast("Não foi possível gerar o PDF. Tente novamente.");
+          mostrarToast("Não foi possível gerar o documento. Tente novamente.");
         }
       });
       cabecalho.querySelector(".quadro-intencao__enviar").addEventListener("click", async (e) => {
@@ -764,14 +1001,12 @@ function configurarIntencoes() {
 
   // Chama a função do servidor (api/enviar-listas.js) usando a senha do painel como prova de que é o admin.
   async function chamarApiEnvio(corpo) {
-    let senha = "";
-    try { senha = localStorage.getItem(CHAVE_SENHA_ADMIN_LOCAL) || ""; } catch { /* sem acesso ao armazenamento */ }
     let resposta;
     try {
       resposta = await fetch("/api/enviar-listas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...corpo, senha })
+        body: JSON.stringify({ ...corpo, usuarioId: contaAtual?.id, chave: chaveSessao })
       });
     } catch {
       throw new Error("Sem conexão com o servidor. Verifique a internet e tente de novo.");
@@ -2370,7 +2605,6 @@ function configurarConfiguracoes() {
   const urlLogo = document.getElementById("urlLogo");
   const urlFundo = document.getElementById("urlFundo");
 
-  vincularOlhoSenha(document.getElementById("olhoNovaSenha"), document.getElementById("campoNovaSenha"));
 
   let novoLogoDataUrl = null;
   let novoFundoDataUrl = null;
@@ -2419,23 +2653,365 @@ function configurarConfiguracoes() {
       mostrarToast("Não foi possível salvar (arquivo muito grande). Tente uma imagem menor ou um link.");
     }
   });
+}
 
-  document.getElementById("btnSalvarSenha").addEventListener("click", async () => {
-    const campo = document.getElementById("campoNovaSenha");
-    if (campo.value.trim().length < 4) {
-      mostrarToast("A senha precisa ter pelo menos 4 caracteres.");
-      return;
-    }
+/* ---------------- Minha conta (trocar a própria senha) ---------------- */
+function configurarMinhaConta() {
+  const modal = document.getElementById("modalMinhaConta");
+  const form = document.getElementById("formMinhaSenha");
+  const campoNova = document.getElementById("campoMinhaSenhaNova");
+  const campoNova2 = document.getElementById("campoMinhaSenhaNova2");
+  const erroEl = document.getElementById("erroMinhaSenha");
+  const btnSalvar = document.getElementById("btnSalvarMinhaSenha");
+  vincularOlhoSenha(document.getElementById("olhoMinhaSenha"), campoNova);
+
+  document.getElementById("btnMinhaConta").addEventListener("click", () => {
+    document.getElementById("minhaContaNome").textContent = contaAtual?.nome || "—";
+    document.getElementById("minhaContaUsuario").textContent = contaAtual?.usuario ? `Usuário: ${contaAtual.usuario}` : "";
+    form.reset();
+    erroEl.style.display = "none";
+    abrirModal(modal);
+  });
+  const fechar = () => fecharModal(modal);
+  document.getElementById("fecharModalMinhaConta").addEventListener("click", fechar);
+  document.getElementById("btnFecharMinhaConta").addEventListener("click", fechar);
+  modal.addEventListener("click", (e) => { if (e.target === modal) fechar(); });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const erro = (msg) => { erroEl.textContent = msg; erroEl.style.display = "block"; };
+    erroEl.style.display = "none";
+    const nova = campoNova.value;
+    if (nova.length < TAMANHO_MINIMO_SENHA) return erro(`A senha precisa ter pelo menos ${TAMANHO_MINIMO_SENHA} caracteres.`);
+    if (nova !== campoNova2.value) return erro("As senhas não são iguais.");
+
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = "Salvando...";
+    const chaveAnterior = chaveSessao;
     try {
-      const novaSenha = campo.value.trim();
-      await salvarSenhaAdmin(novaSenha);
-      // mantém este aparelho logado com a nova senha (só os outros precisarão digitá-la de novo)
-      localStorage.setItem(CHAVE_SENHA_ADMIN_LOCAL, novaSenha);
-      campo.value = "";
-      mostrarToast("Senha alterada com sucesso!");
+      // o login é só pela senha: ninguém pode ficar com a mesma senha de outra pessoa
+      const contas = await listarAdministradores();
+      for (const c of contas) {
+        if (c.id !== contaAtual.id && await conferirSenha(nova, c)) return erro("Essa senha já está em uso por outra pessoa. Escolha uma senha diferente.");
+      }
+      const { sal, verificador, chave } = await criarCredenciais(nova);
+      // a sessão precisa já valer a chave nova ANTES de gravar, senão o painel acharia que a senha
+      // foi trocada "por outro lugar" e deslogaria você.
+      chaveSessao = chave;
+      salvarSessao(contaAtual.id, chave);
+      try {
+        await atualizarAdministrador(contaAtual.id, { sal, verificador });
+      } catch (err) {
+        chaveSessao = chaveAnterior;
+        salvarSessao(contaAtual.id, chaveAnterior);
+        throw err;
+      }
+      fechar();
+      mostrarToast("Senha alterada! Use a nova senha na próxima vez que entrar.");
     } catch (err) {
       console.error(err);
-      mostrarToast("Não foi possível alterar a senha.");
+      erro("Não foi possível alterar a senha agora. Tente de novo.");
+    } finally {
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = "Alterar senha";
     }
   });
+}
+
+/* ---------------- Página "Administradores" ---------------- */
+let administradoresOuvindo = false;
+let contasAdmin = [];
+let contaDoModalAcessos = null;
+let contaParaExcluir = null;
+
+const ROTULO_STATUS = { pendente: "Aguardando aprovação", aprovado: "Aprovado", suspenso: "Suspenso" };
+
+// Quem pode mexer em quem: o principal mexe em todo mundo menos nele mesmo; os demais (com acesso a esta
+// página) só mexem em pessoas comuns — nunca no principal, em si mesmos nem em outros administradores.
+function podeGerenciarConta(alvo) {
+  if (!contaAtual || alvo.id === contaAtual.id || alvo.principal) return false;
+  if (contaAtual.principal) return true;
+  return !temAcesso(alvo, PAGINA_ADMINISTRADORES);
+}
+
+function iniciarAdministradores() {
+  if (administradoresOuvindo) return;
+  administradoresOuvindo = true;
+  ouvirAdministradores((contas) => {
+    contasAdmin = contas;
+    renderizarAdministradores();
+  });
+}
+
+function renderizarAdministradores() {
+  const lista = document.getElementById("listaAdmins");
+  if (!lista) return;
+  const ordemStatus = { pendente: 0, aprovado: 1, suspenso: 2 };
+  const ordenadas = [...contasAdmin].sort((a, b) => {
+    const pa = a.principal ? -1 : (ordemStatus[a.status] ?? 3);
+    const pb = b.principal ? -1 : (ordemStatus[b.status] ?? 3);
+    // pendentes primeiro (precisam de atenção), depois o principal, aprovados, suspensos
+    const va = a.status === "pendente" && !a.principal ? -2 : pa;
+    const vb = b.status === "pendente" && !b.principal ? -2 : pb;
+    return va - vb || String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+  });
+
+  const pendentes = contasAdmin.filter((c) => c.status === "pendente" && !c.principal).length;
+  document.getElementById("contagemAdmins").textContent = String(contasAdmin.length);
+  document.getElementById("avisoSemAdmins").classList.toggle("oculto", contasAdmin.length > 0);
+  const seloLista = document.getElementById("seloPendentesAdmins");
+  seloLista.textContent = pendentes === 1 ? "1 aguardando aprovação" : `${pendentes} aguardando aprovação`;
+  seloLista.classList.toggle("oculto", pendentes === 0);
+  const seloMenu = document.getElementById("seloPendentesMenu");
+  seloMenu.textContent = String(pendentes);
+  seloMenu.classList.toggle("oculto", pendentes === 0);
+
+  lista.replaceChildren(...ordenadas.map(criarCartaoAdmin));
+}
+
+function botaoAdmin(texto, classe, aoClicar) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = `btn btn-pequeno ${classe}`;
+  b.textContent = texto;
+  b.addEventListener("click", aoClicar);
+  return b;
+}
+
+function criarCartaoAdmin(conta) {
+  const card = document.createElement("div");
+  const status = conta.principal ? "principal" : (conta.status || "pendente");
+  card.className = `cartao-admin cartao-admin--${status}`;
+  card.dataset.id = conta.id;
+
+  const topo = document.createElement("div");
+  topo.className = "cartao-admin__topo";
+  const nome = document.createElement("div");
+  nome.className = "cartao-admin__nome";
+  const strong = document.createElement("strong");
+  strong.textContent = conta.nome || "(sem nome)";
+  nome.appendChild(strong);
+  if (contaAtual && conta.id === contaAtual.id) {
+    const voce = document.createElement("span");
+    voce.className = "cartao-admin__voce";
+    voce.textContent = "você";
+    nome.appendChild(voce);
+  }
+  const usuario = document.createElement("small");
+  usuario.textContent = `Usuário: ${conta.usuario || "—"}`;
+  nome.appendChild(usuario);
+  const selo = document.createElement("span");
+  selo.className = `cartao-admin__status cartao-admin__status--${status}`;
+  selo.textContent = conta.principal ? "Administrador principal" : (ROTULO_STATUS[conta.status] || conta.status || "—");
+  topo.append(nome, selo);
+
+  const resumo = document.createElement("p");
+  resumo.className = "cartao-admin__acessos";
+  resumo.textContent = conta.status === "pendente" && !conta.principal
+    ? "Ainda sem acessos — aprove o cadastro para definir o que a pessoa poderá ver."
+    : `Acessos: ${resumoDeAcessos(conta)}`;
+
+  card.append(topo, resumo);
+
+  if (podeGerenciarConta(conta)) {
+    const acoes = document.createElement("div");
+    acoes.className = "cartao-admin__acoes";
+    if (conta.status === "pendente") {
+      acoes.append(
+        botaoAdmin("Aprovar", "btn-dourado", () => aprovarConta(conta)),
+        botaoAdmin("Recusar", "btn-contorno", () => pedirExclusaoConta(conta, true))
+      );
+    } else {
+      acoes.append(botaoAdmin("Acessos", "btn-dourado", () => abrirModalAcessos(conta)));
+      if (conta.status === "suspenso") {
+        acoes.append(botaoAdmin("Reativar", "btn-contorno", () => mudarStatusConta(conta, "aprovado", "Acesso reativado.")));
+      } else {
+        acoes.append(botaoAdmin("Suspender", "btn-contorno", () => mudarStatusConta(conta, "suspenso", "Acesso suspenso.")));
+      }
+      acoes.append(botaoAdmin("Excluir", "btn-contorno btn-perigo", () => pedirExclusaoConta(conta, false)));
+    }
+    card.appendChild(acoes);
+  }
+  return card;
+}
+
+async function mudarStatusConta(conta, novoStatus, mensagem) {
+  try {
+    await atualizarAdministrador(conta.id, { status: novoStatus });
+    mostrarToast(mensagem);
+  } catch (err) {
+    console.error(err);
+    mostrarToast("Não foi possível salvar. Tente de novo.");
+  }
+}
+
+async function aprovarConta(conta) {
+  try {
+    await atualizarAdministrador(conta.id, { status: "aprovado" });
+    mostrarToast(`${conta.nome || "Cadastro"} aprovado(a). Agora escolha os acessos.`);
+    abrirModalAcessos({ ...conta, status: "aprovado" });
+  } catch (err) {
+    console.error(err);
+    mostrarToast("Não foi possível aprovar. Tente de novo.");
+  }
+}
+
+function pedirExclusaoConta(conta, recusando) {
+  contaParaExcluir = conta;
+  const nome = conta.nome || "esta pessoa";
+  document.getElementById("tituloExcluirAdmin").textContent = recusando ? "Recusar cadastro" : "Excluir cadastro";
+  document.getElementById("textoExcluirAdmin").textContent = recusando
+    ? `Recusar o cadastro de ${nome}? O pedido será apagado e a pessoa não conseguirá entrar.`
+    : `Excluir o cadastro de ${nome}? Ela perde o acesso ao painel na hora. Se quiser só bloquear por um tempo, use "Suspender".`;
+  document.getElementById("btnConfirmarExcluirAdmin").textContent = recusando ? "Recusar" : "Excluir";
+  abrirModal(document.getElementById("modalExcluirAdmin"));
+}
+
+function configurarAdministradores() {
+  // lista que abre e fecha (começa fechada)
+  const cabecalho = document.getElementById("cabecalhoAdmins");
+  const corpo = document.getElementById("corpoAdmins");
+  function alternar() {
+    const abrir = corpo.classList.contains("oculto");
+    corpo.classList.toggle("oculto", !abrir);
+    cabecalho.classList.toggle("recolhido", !abrir);
+    cabecalho.setAttribute("aria-expanded", String(abrir));
+  }
+  cabecalho.addEventListener("click", alternar);
+  cabecalho.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); }
+  });
+
+  // exclusão / recusa
+  const modalExcluir = document.getElementById("modalExcluirAdmin");
+  const fecharExcluir = () => { fecharModal(modalExcluir); contaParaExcluir = null; };
+  document.getElementById("fecharModalExcluirAdmin").addEventListener("click", fecharExcluir);
+  document.getElementById("btnVoltarExcluirAdmin").addEventListener("click", fecharExcluir);
+  modalExcluir.addEventListener("click", (e) => { if (e.target === modalExcluir) fecharExcluir(); });
+  document.getElementById("btnConfirmarExcluirAdmin").addEventListener("click", async (e) => {
+    const alvo = contaParaExcluir;
+    if (!alvo || !podeGerenciarConta(alvo)) { fecharExcluir(); return; }
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await excluirAdministrador(alvo.id);
+      mostrarToast("Cadastro removido.");
+      fecharExcluir();
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível remover. Tente de novo.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // modal de acessos
+  const modalAcessos = document.getElementById("modalAcessos");
+  const fecharAcessos = () => { fecharModal(modalAcessos); contaDoModalAcessos = null; };
+  document.getElementById("fecharModalAcessos").addEventListener("click", fecharAcessos);
+  document.getElementById("btnCancelarAcessos").addEventListener("click", fecharAcessos);
+  modalAcessos.addEventListener("click", (e) => { if (e.target === modalAcessos) fecharAcessos(); });
+  document.getElementById("btnSalvarAcessos").addEventListener("click", async (e) => {
+    const alvo = contaDoModalAcessos;
+    if (!alvo || !podeGerenciarConta(alvo)) { fecharAcessos(); return; }
+    const escolhidos = {};
+    document.querySelectorAll("#listaAcessosModal .acesso-pagina").forEach((bloco) => {
+      const pagina = bloco.dataset.pagina;
+      if (bloco.querySelector(".acesso-pagina__toda").checked) { escolhidos[pagina] = ["*"]; return; }
+      const partes = [...bloco.querySelectorAll(".acesso-parte:checked")].map((c) => c.value);
+      if (partes.length) escolhidos[pagina] = partes;
+    });
+    // só o administrador principal pode liberar a página "Administradores"
+    if (!contaAtual.principal) delete escolhidos[PAGINA_ADMINISTRADORES];
+    const acessos = normalizarAcessos(escolhidos);
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await atualizarAdministrador(alvo.id, { acessos });
+      mostrarToast("Acessos salvos!");
+      fecharAcessos();
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar os acessos. Tente de novo.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function abrirModalAcessos(conta) {
+  contaDoModalAcessos = conta;
+  document.getElementById("nomeAcessos").textContent = conta.nome || "—";
+  const lista = document.getElementById("listaAcessosModal");
+  lista.replaceChildren();
+  const atuais = conta.acessos || {};
+
+  CATALOGO_ACESSOS.forEach((pg) => {
+    const marcados = Array.isArray(atuais[pg.pagina]) ? atuais[pg.pagina] : [];
+    const paginaToda = marcados.includes("*");
+    const bloqueada = pg.soPrincipalConcede === true && !contaAtual.principal;
+
+    const bloco = document.createElement("div");
+    bloco.className = "acesso-pagina";
+    bloco.dataset.pagina = pg.pagina;
+
+    const rotuloToda = document.createElement("label");
+    rotuloToda.className = "acesso-pagina__cabeca";
+    const toda = document.createElement("input");
+    toda.type = "checkbox";
+    toda.className = "acesso-pagina__toda";
+    toda.checked = paginaToda;
+    toda.disabled = bloqueada;
+    const nome = document.createElement("span");
+    nome.className = "acesso-pagina__nome";
+    nome.textContent = `${pg.emoji} ${pg.titulo}`;
+    const tag = document.createElement("span");
+    tag.className = "acesso-pagina__tag";
+    tag.textContent = pg.partes.length ? "Página toda" : "Liberar página";
+    rotuloToda.append(toda, nome, tag);
+    bloco.appendChild(rotuloToda);
+
+    if (bloqueada) {
+      const nota = document.createElement("p");
+      nota.className = "acesso-pagina__nota";
+      nota.textContent = "Só o administrador principal pode liberar esta página.";
+      bloco.appendChild(nota);
+    }
+
+    if (pg.partes.length) {
+      const partes = document.createElement("div");
+      partes.className = "acesso-pagina__partes";
+      const caixas = pg.partes.map((parte) => {
+        const r = document.createElement("label");
+        r.className = "acesso-parte-rotulo";
+        const c = document.createElement("input");
+        c.type = "checkbox";
+        c.className = "acesso-parte";
+        c.value = parte.id;
+        c.checked = paginaToda || marcados.includes(parte.id);
+        c.disabled = paginaToda;
+        const t = document.createElement("span");
+        t.textContent = parte.titulo;
+        r.append(c, t);
+        partes.appendChild(r);
+        return c;
+      });
+      bloco.appendChild(partes);
+
+      // "Página toda" marca e trava as partes; desmarcar libera pra escolher uma a uma
+      toda.addEventListener("change", () => {
+        caixas.forEach((c) => { c.checked = toda.checked; c.disabled = toda.checked; });
+      });
+      // marcou todas as partes uma a uma? Vira "Página toda"
+      caixas.forEach((c) => c.addEventListener("change", () => {
+        if (caixas.every((x) => x.checked)) {
+          toda.checked = true;
+          caixas.forEach((x) => { x.disabled = true; });
+        }
+      }));
+    }
+    lista.appendChild(bloco);
+  });
+
+  abrirModal(document.getElementById("modalAcessos"));
 }

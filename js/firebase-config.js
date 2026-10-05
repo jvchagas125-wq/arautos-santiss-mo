@@ -20,8 +20,3 @@ export const firebaseConfig = {
   messagingSenderId: "879082779467",
   appId: "1:879082779467:web:f42656ebdffe3733ce2ece"
 };
-
-/* Senha inicial do painel administrativo.
-   Você pode trocar essa senha a qualquer momento dentro do
-   próprio painel admin, em "Configurações". */
-export const SENHA_ADMIN_PADRAO = "arautos2026";

@@ -351,3 +351,64 @@
 .envio-historico__estado{ font-family:'Cinzel'; font-size:.74rem; }
 .quadro-envios{ margin-top:22px; margin-bottom:0; }
 .quadro-envios .quadro-intencao__corpo{ padding-top:10px; }
+
+/* ---------- Contas e acessos ---------- */
+/* o que a pessoa não tem permissão de ver some do painel (ver aplicarPermissoes em js/admin.js) */
+.sem-acesso{ display:none !important; }
+
+.admin-login__aviso{
+  background: rgba(205,164,52,.14); border:1px solid var(--dourado); border-radius:10px;
+  padding:10px 12px; margin-bottom:16px; font-size:.88rem; color: var(--vermelho-escuro); line-height:1.5; text-align:left;
+}
+.admin-login__link{
+  display:block; width:100%; margin-top:14px; background:none; border:none; padding:6px;
+  font-family:'Cinzel'; font-size:.78rem; color: var(--vermelho); text-decoration:underline; cursor:pointer;
+}
+.admin-login__link:hover{ color: var(--vermelho-escuro); }
+.admin-login__caixa form .campo-erro{ display:none; }
+
+.menu-selo, .selo-pendentes{
+  display:inline-flex; align-items:center; justify-content:center;
+  background: var(--vermelho); color:#fff; border-radius:999px; font-family:'Cinzel'; font-weight:600;
+}
+.menu-selo{ min-width:20px; height:20px; padding:0 6px; font-size:.7rem; margin-left:auto; }
+.selo-pendentes{ padding:3px 10px; font-size:.72rem; }
+
+.lista-admins{ display:flex; flex-direction:column; gap:12px; margin-top:14px; }
+.cartao-admin{
+  background:#fff; border:1.5px solid rgba(205,164,52,.55); border-radius:14px; padding:14px 16px;
+}
+.cartao-admin--pendente{ border-color: var(--vermelho); background: rgba(122,12,30,.04); }
+.cartao-admin--suspenso{ opacity:.8; background:#f4efe6; }
+.cartao-admin__topo{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+.cartao-admin__nome{ display:flex; flex-direction:column; gap:2px; min-width:0; overflow-wrap:anywhere; }
+.cartao-admin__nome small{ color: var(--texto-suave); }
+.cartao-admin__voce{
+  display:inline-block; width:max-content; background: rgba(205,164,52,.25); color: var(--dourado-escuro);
+  border-radius:999px; font-size:.68rem; padding:1px 8px; font-family:'Cinzel';
+}
+.cartao-admin__status{
+  border-radius:999px; font-size:.7rem; padding:3px 10px; font-family:'Cinzel'; font-weight:600; white-space:nowrap;
+  background:#eee; color:#555;
+}
+.cartao-admin__status--principal{ background: var(--dourado); color: var(--vermelho-escuro); }
+.cartao-admin__status--aprovado{ background: rgba(61,114,71,.15); color: var(--verde-escuro); }
+.cartao-admin__status--pendente{ background: rgba(122,12,30,.12); color: var(--vermelho); }
+.cartao-admin__status--suspenso{ background:#e5ded1; color:#6b5a48; }
+.cartao-admin__acessos{ margin:10px 0 0; font-size:.86rem; color: var(--texto-suave); line-height:1.5; }
+.cartao-admin__acoes{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.btn-perigo{ color: var(--vermelho); border-color: var(--vermelho); }
+
+.modal--acessos{ max-width:560px; text-align:left; max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px); overflow-y:auto; }
+.modal--acessos h3{ text-align:center; }
+.modal--acessos .modal__ajuda{ font-size:.88rem; margin-bottom:14px; }
+.lista-acessos{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+.acesso-pagina{ border:1px solid rgba(205,164,52,.55); border-radius:12px; padding:10px 12px; background:#fff; }
+.acesso-pagina__cabeca{ display:flex; align-items:center; gap:10px; cursor:pointer; }
+.acesso-pagina__cabeca input, .acesso-parte-rotulo input{ width:18px; height:18px; flex:none; accent-color: var(--vermelho); }
+.acesso-pagina__nome{ font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); font-size:.92rem; }
+.acesso-pagina__tag{ margin-left:auto; font-size:.72rem; color: var(--texto-suave); }
+.acesso-pagina__nota{ margin:6px 0 0 !important; font-size:.8rem; color: var(--texto-suave); }
+.acesso-pagina__partes{ margin:8px 0 0 28px; display:flex; flex-direction:column; gap:6px; }
+.acesso-parte-rotulo{ display:flex; align-items:center; gap:8px; font-size:.88rem; color: var(--texto); cursor:pointer; }
+.acesso-parte-rotulo input:disabled + span{ color: var(--texto-suave); }

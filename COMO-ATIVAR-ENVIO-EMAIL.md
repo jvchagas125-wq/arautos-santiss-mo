@@ -1,10 +1,10 @@
 # Envio automático das listas de intenção por e-mail — como ativar
 
-Quando uma lista de intenções fecha, o site gera o PDF dela e manda por e-mail para os endereços
+Quando uma lista de intenções fecha, o site gera o documento Word dela e manda por e-mail para os endereços
 cadastrados em **Painel administrativo → Intenções da Missa → Envio automático por e-mail**.
 
 Funciona assim: o **GitHub** "cutuca" o site a cada ~10 minutos → o site (função `api/enviar-listas.js`
-na Vercel) vê quais listas já fecharam → gera o PDF → envia pelo e-mail remetente.
+na Vercel) vê quais listas já fecharam → gera o documento Word → envia pelo e-mail remetente.
 Cada lista é enviada uma única vez.
 
 Você precisa fazer **uma vez** os passos abaixo (são só configurações, nenhuma senha vai no código).
@@ -56,9 +56,9 @@ Clique em **Enviar listas de intenção → Run workflow** para testar: deve ter
 ## 4. Painel administrativo
 
 1. **Intenções da Missa → Envio automático por e-mail**.
-2. Digite os e-mails que vão **receber** os PDFs (pode adicionar vários).
+2. Digite os e-mails que vão **receber** os documentos (pode adicionar vários).
 3. Marque **Enviar automaticamente quando a lista fechar** e clique em **Salvar**.
-4. Clique em **Enviar e-mail de teste** — chega um PDF de exemplo nesses endereços (olhe também o spam).
+4. Clique em **Enviar e-mail de teste** — chega um documento Word de exemplo nesses endereços (olhe também o spam).
 
 Em cada lista preenchida há um botão de **envelope** que envia aquela lista na hora.
 
@@ -69,3 +69,15 @@ Em cada lista preenchida há um botão de **envelope** que envia aquela lista na
 - **GitHub Actions fica vermelho** → clique na execução e leia a mensagem; geralmente é `CRON_SECRET` diferente nos dois lugares.
 - **Não chegou e-mail** → olhe a caixa de spam; no painel, em "Últimos envios", aparece se foi enviado ou se falhou.
 - O GitHub **desliga agendamentos** de repositórios públicos sem nenhuma atividade por 60 dias — se isso acontecer, é só reativar na aba Actions.
+
+---
+
+## Contas do painel administrativo (novo)
+
+- A senha antiga única (`arautos2026`) deixou de existir. Cada pessoa cria o próprio usuário e a própria senha na tela de entrada do painel ("Ainda não tenho acesso — criar cadastro").
+- **A primeira conta criada depois de publicar a atualização vira o administrador principal** (acesso a tudo). Por isso, assim que o site for atualizado, abra o painel e crie a sua conta antes de qualquer outra pessoa.
+- Os próximos cadastros ficam "aguardando aprovação" na página **Administradores**. Lá você aprova ou recusa e, no botão **Acessos**, escolhe quais páginas (ou só algumas partes delas) cada pessoa verá.
+- O login é só pela senha, então **duas pessoas não podem ter a mesma senha** (o site avisa na hora de criar ou trocar).
+- As senhas nunca são guardadas: o banco guarda apenas uma "impressão digital" irreversível de cada uma.
+- O envio de e-mail pelo painel (botão "Enviar e-mail de teste" e o envelope de cada lista) também confere a conta e as permissões no servidor.
+- **Se esquecer a sua senha de principal:** no Firebase (Firestore Database) apague a coleção `administradores`; no próximo acesso a tela volta a pedir o "Primeiro acesso". (Pode também apagar o documento antigo `configuracoes → admin`, que não é mais usado — o painel já tenta apagá-lo sozinho no primeiro cadastro.)

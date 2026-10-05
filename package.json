@@ -8,7 +8,7 @@
     "node": "22.x"
   },
   "dependencies": {
-    "jspdf": "^4.2.1",
+    "docx": "9.8.1",
     "nodemailer": "^10.0.14"
   }
 }

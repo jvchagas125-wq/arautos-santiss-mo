@@ -1,7 +1,7 @@
 # Agendador do envio automático das listas de intenção por e-mail.
 #
 # A cada ~10 minutos o GitHub "cutuca" a API do site (api/enviar-listas.js). A API confere quais
-# listas de intenção já fecharam e ainda não foram enviadas e manda o PDF de cada uma por e-mail.
+# listas de intenção já fecharam e ainda não foram enviadas e manda o documento Word de cada uma por e-mail.
 # Quem decide SE envia e PARA QUEM é o painel administrativo — este arquivo só faz o "cutucão".
 #
 # Configuração necessária no GitHub (Settings → Secrets and variables → Actions):

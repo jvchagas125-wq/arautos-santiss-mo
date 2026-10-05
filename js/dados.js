@@ -92,16 +92,55 @@ export async function salvarDiasHorarios(dados) {
   await setDoc(REF_DIAS_HORARIOS, dados, { merge: true });
 }
 
-/* ---------------- Senha do admin ---------------- */
+/* ---------------- Contas do painel administrativo ----------------
+   Coleção "administradores": uma conta por pessoa, com
+   { nome, usuario, sal, verificador, status, principal, acessos, criadoEm }.
+   status: "pendente" (aguardando aprovação) | "aprovado" | "suspenso".
+   A senha em si nunca é guardada — só o sal e o verificador (ver js/contas.js). */
 
-export async function obterSenhaAdmin(senhaPadrao) {
-  const snap = await getDoc(REF_ADMIN);
-  if (!snap.exists() || !snap.data().senha) return senhaPadrao;
-  return snap.data().senha;
+const COLECAO_ADMINS = "administradores";
+
+function contaDoSnap(d) {
+  return { id: d.id, ...d.data() };
 }
 
-export async function salvarSenhaAdmin(novaSenha) {
-  await setDoc(REF_ADMIN, { senha: novaSenha }, { merge: true });
+export async function listarAdministradores() {
+  const snap = await getDocs(collection(db, COLECAO_ADMINS));
+  return snap.docs.map(contaDoSnap);
+}
+
+export function ouvirAdministradores(callback) {
+  return onSnapshot(collection(db, COLECAO_ADMINS), (snap) => callback(snap.docs.map(contaDoSnap)));
+}
+
+// Escuta UMA conta (a de quem está logado). Chama callback(null) se a conta deixar de existir.
+export function ouvirAdministrador(id, callback) {
+  return onSnapshot(doc(db, COLECAO_ADMINS, id), (snap) => callback(snap.exists() ? contaDoSnap(snap) : null));
+}
+
+export async function obterAdministrador(id) {
+  const snap = await getDoc(doc(db, COLECAO_ADMINS, id));
+  return snap.exists() ? contaDoSnap(snap) : null;
+}
+
+export async function criarAdministrador(dados) {
+  const ref = doc(collection(db, COLECAO_ADMINS));
+  await setDoc(ref, { ...dados, criadoEm: serverTimestamp() });
+  return ref.id;
+}
+
+export async function atualizarAdministrador(id, dadosParciais) {
+  await updateDoc(doc(db, COLECAO_ADMINS, id), dadosParciais);
+}
+
+export async function excluirAdministrador(id) {
+  await deleteDoc(doc(db, COLECAO_ADMINS, id));
+}
+
+// A antiga senha única do painel (configuracoes/admin) deixa de existir assim que a primeira
+// conta é criada — cada pessoa passa a ter a própria senha.
+export async function removerSenhaAntigaDoPainel() {
+  await deleteDoc(REF_ADMIN);
 }
 
 /* ---------------- Usuários (cadastro nome + telefone) ---------------- */
