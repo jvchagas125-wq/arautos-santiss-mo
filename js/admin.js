@@ -289,6 +289,20 @@ function configurarIntencoes() {
   const gradesPorDia = document.getElementById("gradesPorDia");
   const campoHorasAntes = document.getElementById("campoHorasAntes");
 
+  // "Listas preenchidas" também começa fechada — só abre quando a pessoa clicar no título
+  const cabecalhoListasPreenchidas = document.getElementById("cabecalhoListasPreenchidas");
+  const corpoListasPreenchidas = document.getElementById("corpoListasPreenchidas");
+  function alternarListasPreenchidas() {
+    const abrir = corpoListasPreenchidas.classList.contains("oculto");
+    corpoListasPreenchidas.classList.toggle("oculto", !abrir);
+    cabecalhoListasPreenchidas.classList.toggle("recolhido", !abrir);
+    cabecalhoListasPreenchidas.setAttribute("aria-expanded", String(abrir));
+  }
+  cabecalhoListasPreenchidas.addEventListener("click", alternarListasPreenchidas);
+  cabecalhoListasPreenchidas.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarListasPreenchidas(); }
+  });
+
   // "Horários das missas" começa fechado — só abre quando a pessoa clicar no título
   const cabecalhoHorariosMissas = document.getElementById("cabecalhoHorariosMissas");
   const corpoHorariosMissas = document.getElementById("corpoHorariosMissas");
@@ -1372,6 +1386,20 @@ function configurarAcompanhamento() {
   document.getElementById("btnFecharMotivo").addEventListener("click", () => fecharModal(modalMotivo));
 
   /* ---- calendário: renderização ---- */
+  // Só conta/exporta os agendamentos que caem dentro do período configurado em "Dias e horários"
+  // (os mesmos dias que o calendário mostra). Agendamentos de períodos antigos continuam guardados,
+  // mas não entram na contagem — antes eles faziam aparecer "213 agendamentos" com o calendário vazio.
+  function agendamentosNoPeriodo() {
+    const { dataInicio, dataFim } = diasHorariosAtual;
+    if (!dataInicio || !dataFim) return [];
+    return agendamentosAtivos.filter((a) => a.data >= dataInicio && a.data <= dataFim);
+  }
+
+  function atualizarContagemAgendados() {
+    const total = agendamentosNoPeriodo().length;
+    contagemAgendadosTotal.textContent = `${total} ${total === 1 ? "agendamento" : "agendamentos"}`;
+  }
+
   function agendamentosDoDia(iso) {
     return agendamentosAtivos.filter((a) => a.data === iso);
   }
@@ -1458,6 +1486,7 @@ function configurarAcompanhamento() {
     } else {
       mesAtualAgendados = null;
     }
+    atualizarContagemAgendados();
     renderizarCalendarioAgendados();
   });
 
@@ -1613,7 +1642,8 @@ function configurarAcompanhamento() {
 
   btnExportarExcel.addEventListener("click", async (e) => {
     const btn = e.currentTarget;
-    if (agendamentosAtivos.length === 0) {
+    const paraExportar = agendamentosNoPeriodo();
+    if (paraExportar.length === 0) {
       mostrarToast("Não há agendamentos para exportar.");
       return;
     }
@@ -1625,7 +1655,7 @@ function configurarAcompanhamento() {
     btn.disabled = true;
     btn.textContent = "Gerando planilha...";
     try {
-      await exportarAgendadosParaExcel(agendamentosAtivos);
+      await exportarAgendadosParaExcel(paraExportar);
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível gerar a planilha. Tente novamente.");
@@ -1651,7 +1681,7 @@ function configurarAcompanhamento() {
 
   ouvirTodosAgendamentos("agendado", (lista) => {
     agendamentosAtivos = lista;
-    contagemAgendadosTotal.textContent = `${lista.length} ${lista.length === 1 ? "agendamento" : "agendamentos"}`;
+    atualizarContagemAgendados();
     renderizarCalendarioAgendados();
   });
 

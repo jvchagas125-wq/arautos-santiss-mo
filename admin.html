@@ -188,6 +188,7 @@
           <div class="painel">
             <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoHorariosMissas" role="button" tabindex="0" aria-expanded="false">
               <span class="emoji">⛪</span> Horários das missas
+              <span class="painel__dica">Clique aqui para poder abrir a lista</span>
               <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
             </div>
             <div id="corpoHorariosMissas" class="oculto">
@@ -211,9 +212,15 @@
           </div>
 
           <div class="painel">
-            <div class="painel__titulo"><span class="emoji">📋</span> Listas preenchidas</div>
-            <p class="mensagem-vazia oculto" id="avisoSemIntencoes">Nenhuma intenção foi enviada ainda.</p>
-            <div id="listaQuadrosIntencoes"></div>
+            <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoListasPreenchidas" role="button" tabindex="0" aria-expanded="false">
+              <span class="emoji">📋</span> Listas preenchidas
+              <span class="painel__dica">Clique aqui para poder abrir a lista</span>
+              <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div id="corpoListasPreenchidas" class="oculto">
+              <p class="mensagem-vazia oculto" id="avisoSemIntencoes">Nenhuma intenção foi enviada ainda.</p>
+              <div id="listaQuadrosIntencoes"></div>
+            </div>
           </div>
         </div>
 
@@ -331,7 +338,7 @@
 
           <div class="aviso-info">
             <span class="aviso-info__icone">ℹ️</span>
-            <p><strong>Como funciona:</strong> o calendário mostra os dias dentro do período configurado em "Dias e horários". Os dias em vermelho já têm alguém agendado — toque neles para ver os horários, as pessoas inscritas em cada um e, se precisar, cancelar algum agendamento. Os dias em tom claro estão disponíveis, mas ainda sem ninguém agendado. O botão "Exportar planilha (Excel)" baixa uma planilha com todos os agendamentos confirmados no momento.</p>
+            <p><strong>Como funciona:</strong> o calendário mostra os dias dentro do período configurado em "Dias e horários". Os dias em vermelho já têm alguém agendado — toque neles para ver os horários, as pessoas inscritas em cada um e, se precisar, cancelar algum agendamento. Os dias em tom claro estão disponíveis, mas ainda sem ninguém agendado. A contagem e o botão "Exportar planilha (Excel)" consideram só os agendamentos dentro desse período.</p>
           </div>
         </div>
 
@@ -492,6 +499,7 @@
         <div class="painel">
           <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoBannersAdmin">
             <span class="emoji">🎞️</span> Banners cadastrados
+            <span class="painel__dica">Clique aqui para poder abrir a lista</span>
             <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </div>
           <div id="corpoBannersAdmin" class="oculto">

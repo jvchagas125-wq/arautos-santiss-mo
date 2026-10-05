@@ -456,6 +456,19 @@ img{ max-width: 100%; display:block; }
   transition: transform .25s ease;
 }
 .painel__titulo--clicavel.recolhido .painel__seta{ transform: rotate(-90deg); }
+/* fechado: sem a folga de baixo do título (não há conteúdo embaixo) e com a dica "Clique aqui…" visível */
+.painel__titulo--clicavel.recolhido{ margin-bottom:0; }
+.painel__titulo--clicavel{ flex-wrap:wrap; }
+.painel__dica{
+  margin-left:auto; font-family:'EB Garamond', serif; font-size:.82rem; font-style:italic;
+  color: var(--texto-suave); text-align:right;
+}
+.painel__dica + .painel__seta{ margin-left:0; }
+.painel__titulo--clicavel:not(.recolhido) .painel__dica{ display:none; }
+@media (max-width: 600px){
+  /* em telas estreitas a dica desce pra uma linha só dela, abaixo do título */
+  .painel__dica{ order:5; width:100%; margin-left:0; text-align:left; padding-left:30px; }
+}
 #corpoBannersAdmin.oculto{ display:none; }
 
 .campo{ margin-bottom: 18px; }
