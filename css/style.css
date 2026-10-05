@@ -1178,3 +1178,6 @@ img{ max-width: 100%; display:block; }
 }
 
 .oculto{ display:none !important; }
+
+/* aviso do limite de datas do agendamento: "só até dd/mm/aaaa" */
+.painel__aviso-limite{ margin:10px 0 0; font-size:.82rem; color: var(--texto-suave); line-height:1.5; text-align:center; }

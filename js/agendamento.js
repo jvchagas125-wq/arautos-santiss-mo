@@ -74,9 +74,11 @@ async function iniciar() {
     // num mês inteiramente bloqueado por dias já passados).
     const hoje = isoParaData(hojeIso());
     const inicioPeriodo = isoParaData(diasHorarios.dataInicio);
-    const mesInicial = inicioPeriodo > hoje ? inicioPeriodo : hoje;
+    // (se o período só começa depois do limite de 30 dias, abre no mês atual mesmo assim)
+    const mesInicial = inicioPeriodo > hoje && diasHorarios.dataInicio <= limiteMaximoIso() ? inicioPeriodo : hoje;
     mesAtual = new Date(mesInicial.getFullYear(), mesInicial.getMonth(), 1);
     renderizarCalendario();
+    atualizarAvisoLimite();
     dataInput.disabled = false;
 
     iniciarCalendarioAgendamentos();
@@ -88,10 +90,35 @@ async function iniciar() {
 
 erroCarregarPeriodo.addEventListener("click", () => iniciar());
 
+// Só dá pra agendar adoração para os próximos 30 dias (contando a partir de hoje), mesmo que o
+// período configurado no painel seja mais longo.
+const DIAS_MAXIMOS_ANTECEDENCIA = 30;
+function limiteMaximoIso() {
+  const d = new Date();
+  d.setDate(d.getDate() + DIAS_MAXIMOS_ANTECEDENCIA);
+  return dataParaIso(d);
+}
+// Último dia que a pessoa pode escolher: o fim do período ou o limite de 30 dias, o que vier antes.
+function ultimoDiaAgendavelIso() {
+  const limite = limiteMaximoIso();
+  return diasHorarios.dataFim < limite ? diasHorarios.dataFim : limite;
+}
+const avisoLimiteAgendamento = document.getElementById("avisoLimiteAgendamento");
+function atualizarAvisoLimite() {
+  if (!avisoLimiteAgendamento) return;
+  // só avisa quando o limite de 30 dias realmente corta o período configurado
+  const cortado = !!(diasHorarios && diasHorarios.dataFim && diasHorarios.dataFim > limiteMaximoIso());
+  avisoLimiteAgendamento.classList.toggle("oculto", !cortado);
+  if (cortado) {
+    avisoLimiteAgendamento.textContent =
+      `Você pode agendar até ${formatarDataBR(limiteMaximoIso())} (${DIAS_MAXIMOS_ANTECEDENCIA} dias a partir de hoje).`;
+  }
+}
+
 function dataDentroDoPeriodo(iso) {
   // hojeIso() garante que dias já passados fiquem bloqueados, mesmo estando dentro do
   // período configurado — o dia de hoje continua disponível normalmente.
-  return iso >= diasHorarios.dataInicio && iso <= diasHorarios.dataFim && iso >= hojeIso();
+  return iso >= diasHorarios.dataInicio && iso <= ultimoDiaAgendavelIso() && iso >= hojeIso();
 }
 
 /* ---------- Grade semanal de agendamentos: mesmo layout/cores da planilha (Excel) exportada
@@ -310,7 +337,7 @@ function renderizarCalendario() {
   const hojeNav = isoParaData(hojeIso());
   const inicioPeriodoNav = isoParaData(diasHorarios.dataInicio);
   const mesInicioPeriodo = inicioPeriodoNav > hojeNav ? inicioPeriodoNav : hojeNav;
-  const mesFimPeriodo = isoParaData(diasHorarios.dataFim);
+  const mesFimPeriodo = isoParaData(ultimoDiaAgendavelIso());
   const anteriorHabilitado = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 0) >=
     new Date(mesInicioPeriodo.getFullYear(), mesInicioPeriodo.getMonth(), 1);
   const proximoHabilitado = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1) <=
@@ -318,6 +345,13 @@ function renderizarCalendario() {
   btnMesAnterior.disabled = !anteriorHabilitado;
   btnMesProximo.disabled = !proximoHabilitado;
 }
+
+// Se a página ficar aberta de um dia pro outro, o limite acompanha a data de hoje.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !diasHorarios || !diasHorarios.dataFim || !mesAtual) return;
+  renderizarCalendario();
+  atualizarAvisoLimite();
+});
 
 btnMesAnterior.addEventListener("click", () => {
   mesAtual = new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1, 1);
@@ -424,6 +458,11 @@ document.getElementById("fecharModalDetalhesOcupado").addEventListener("click", 
 
 btnConfirmarAgendamento.addEventListener("click", () => {
   if (!dataSelecionada || horaSelecionada === null) return;
+
+  if (dataSelecionada > limiteMaximoIso()) {
+    mostrarToast(`Só é possível agendar para os próximos ${DIAS_MAXIMOS_ANTECEDENCIA} dias.`);
+    return;
+  }
 
   // a mesma pessoa não pode agendar duas vezes o mesmo dia e horário
   const jaReservouEsseHorario = horariosOcupados.some(
