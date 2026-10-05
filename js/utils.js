@@ -733,6 +733,10 @@ export function criarCalendario(container, input, opts = {}) {
   }
 
   function render() {
+    // com data máxima definida, não deixa avançar pra um mês inteiramente depois dela
+    if (btnProximo && maxIso) {
+      btnProximo.disabled = dataParaIso(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1)) > maxIso;
+    }
     const nomeMes = MESES[mesAtual.getMonth()];
     elMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesAtual.getFullYear()}`;
     elDias.innerHTML = "";
@@ -774,6 +778,7 @@ export function criarCalendario(container, input, opts = {}) {
     render();
   });
   btnProximo?.addEventListener("click", () => {
+    if (btnProximo.disabled) return;
     mesAtual = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1);
     render();
   });

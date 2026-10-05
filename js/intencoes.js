@@ -68,12 +68,35 @@ let diaSelecionado = null; // nada selecionado até a pessoa escolher no calend�
 let pararEscutas = []; // unsubscribes das listas do dia atualmente exibido
 let ultimaAssinatura = null; // evita recriar o DOM (e perder o que a pessoa está digitando) sem necessidade
 
+// Só dá pra colocar intenções para missas dos próximos 30 dias (contando a partir de hoje).
+const DIAS_MAXIMOS_ANTECEDENCIA = 30;
+function limiteMaximoIso() {
+  const d = new Date();
+  d.setDate(d.getDate() + DIAS_MAXIMOS_ANTECEDENCIA);
+  return dataParaIso(d);
+}
+const avisoLimiteIntencoes = document.getElementById("avisoLimiteIntencoes");
+function atualizarAvisoLimite() {
+  if (avisoLimiteIntencoes) {
+    avisoLimiteIntencoes.textContent = `Você pode escolher datas até ${formatarDataBR(limiteMaximoIso())} (${DIAS_MAXIMOS_ANTECEDENCIA} dias a partir de hoje).`;
+  }
+}
+atualizarAvisoLimite();
+
 const calendario = criarCalendario(calendarioEl, dataInput, {
   minIso: hojeIso(), // impede selecionar dias que já passaram
+  maxIso: limiteMaximoIso(), // e dias além do limite de 30 dias
   aoSelecionar: (iso) => {
     diaSelecionado = iso;
     renderizarDiaSeNecessario();
   }
+});
+
+// Se a página ficar aberta de um dia pro outro, o intervalo permitido acompanha a data de hoje.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  calendario.definirLimites(hojeIso(), limiteMaximoIso());
+  atualizarAvisoLimite();
 });
 
 function pararTodasEscutas() {
@@ -230,6 +253,11 @@ function criarBlocoCategoria(categoria, rotulo, iso, hora) {
     const campoTexto = form.querySelector("textarea, input");
     const texto = campoTexto.value.trim();
     if (!texto) return;
+
+    if (iso > limiteMaximoIso()) {
+      mostrarToast(`Só é possível colocar intenções para os próximos ${DIAS_MAXIMOS_ANTECEDENCIA} dias.`);
+      return;
+    }
 
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
