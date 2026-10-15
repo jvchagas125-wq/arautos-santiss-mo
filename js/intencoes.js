@@ -689,7 +689,9 @@ function mostrarPopupEnviado() {
 
 function abrirPix() {
   const p = formulario.pix;
-  el("pixMensagem").textContent = p.mensagem;
+  // cada frase da mensagem vai numa linha própria (ex.: "Sua contribuição ajuda a manter a nossa obra." /
+  // "Nossa Senhora lhe pague!"); quebras de linha escritas no painel também são respeitadas
+  el("pixMensagem").textContent = String(p.mensagem || "").replace(/([.!?])[ \t]+(?=\S)/g, "$1\n");
   const img = el("pixQrCode");
   if (p.qrCodeUrl) { img.src = p.qrCodeUrl; img.classList.remove("oculto"); } else { img.removeAttribute("src"); img.classList.add("oculto"); }
   const ben = el("pixBeneficiario");

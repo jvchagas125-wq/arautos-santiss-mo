@@ -1335,3 +1335,5 @@ img{ max-width: 100%; display:block; }
 
 /* botão "Copiar PIX": fica verde por alguns segundos depois de copiar */
 #btnCopiarPix.btn-copiado{ background: var(--verde-2); border-color: var(--verde-2); color:#fff; }
+
+#pixMensagem{ white-space: pre-line; }
