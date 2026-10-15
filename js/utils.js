@@ -163,47 +163,61 @@ export function hojeIso() {
    dia do período). Um horário "de 08h" é considerado como começando às 08:00 — por isso um
    limite de término "08:30" ainda inclui o horário das 08h (ele começa antes das 08:30), e um
    limite de início "09:00" exclui o horário das 08h e inclui o das 09h em diante. ---------- */
+// Alterações de agenda de um dia específico (feitas no painel, em "Fechamento e alterações de agenda"):
+// diasHorarios.alteracoes = { "aaaa-mm-dd": { fechado: true } | { inicio: "HH:MM", fim: "HH:MM" } }.
+// Devolve os limites valendo para o dia: { fechado, inicio, fim } ("" = sem limite). Um início/término
+// definido para o dia vale no lugar do horário de início do 1º dia / término do último dia do período.
+export function limitesDoDia(diasHorarios, iso) {
+  const alteracao = diasHorarios?.alteracoes?.[iso];
+  const a = alteracao && typeof alteracao === "object" ? alteracao : {};
+  const primeiro = !!diasHorarios && iso === diasHorarios.dataInicio;
+  const ultimo = !!diasHorarios && iso === diasHorarios.dataFim;
+  return {
+    fechado: a.fechado === true,
+    inicio: a.inicio || (primeiro ? diasHorarios.horaInicioPrimeiroDia : "") || "",
+    fim: a.fim || (ultimo ? diasHorarios.horaFimUltimoDia : "") || ""
+  };
+}
+const minutosDe = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + (m || 0); };
+
 export function horariosDisponiveisNoDia(diasHorarios, iso) {
   let horas = [...(diasHorarios?.horariosAtivos || [])].sort((a, b) => a - b);
   if (!diasHorarios) return horas;
 
-  const ehPrimeiroDia = iso === diasHorarios.dataInicio;
-  const ehUltimoDia = iso === diasHorarios.dataFim;
-
-  if (ehPrimeiroDia && diasHorarios.horaInicioPrimeiroDia) {
-    const [h, m] = diasHorarios.horaInicioPrimeiroDia.split(":").map(Number);
-    const limiteMin = h * 60 + (m || 0);
+  const limites = limitesDoDia(diasHorarios, iso);
+  if (limites.fechado) return [];
+  if (limites.inicio) {
+    const limiteMin = minutosDe(limites.inicio);
     horas = horas.filter((hora) => hora * 60 >= limiteMin);
   }
-  if (ehUltimoDia && diasHorarios.horaFimUltimoDia) {
-    const [h, m] = diasHorarios.horaFimUltimoDia.split(":").map(Number);
-    const limiteMin = h * 60 + (m || 0);
+  if (limites.fim) {
+    const limiteMin = minutosDe(limites.fim);
     horas = horas.filter((hora) => hora * 60 < limiteMin);
   }
   return horas;
 }
 
-/* ---------- Horário automático da Missa de abertura/encerramento: quando o primeiro dia do
-   período tem hora de início configurada, a Missa é a hora imediatamente anterior a ela (ex.:
-   adoração começa às 09:00 -> Missa às 08:00); quando o último dia tem hora de término
-   configurada, a Missa é a hora imediatamente seguinte ao término (ex.: termina às 18:30 ->
-   Missa às 19:00). É automático — não precisa marcar manualmente. ---------- */
+/* ---------- Horário automático da Missa de abertura/encerramento: quando um dia tem hora de
+   início configurada (o 1º dia do período ou um dia alterado em "Fechamento e alterações de
+   agenda"), a Missa é a hora imediatamente anterior a ela (ex.: adoração começa às 09:00 ->
+   Missa às 08:00); quando tem hora de término, a Missa é a hora imediatamente seguinte ao
+   término (ex.: termina às 18:30 -> Missa às 19:00). É automático — não precisa marcar
+   manualmente. ---------- */
 export function horasDeMissaNoDia(diasHorarios, iso) {
   const horas = new Set();
   if (!diasHorarios) return horas;
 
-  const ehPrimeiroDia = iso === diasHorarios.dataInicio;
-  const ehUltimoDia = iso === diasHorarios.dataFim;
-  if (!ehPrimeiroDia && !ehUltimoDia) return horas;
+  const limites = limitesDoDia(diasHorarios, iso);
+  if (limites.fechado || (!limites.inicio && !limites.fim)) return horas;
 
   const disponiveis = horariosDisponiveisNoDia(diasHorarios, iso);
   if (disponiveis.length === 0) return horas;
 
-  if (ehPrimeiroDia && diasHorarios.horaInicioPrimeiroDia) {
+  if (limites.inicio) {
     const primeiraHora = Math.min(...disponiveis);
     horas.add((primeiraHora - 1 + 24) % 24);
   }
-  if (ehUltimoDia && diasHorarios.horaFimUltimoDia) {
+  if (limites.fim) {
     const ultimaHora = Math.max(...disponiveis);
     horas.add((ultimaHora + 1) % 24);
   }

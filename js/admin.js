@@ -6,7 +6,7 @@ import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModa
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
   obterFrases, salvarFrases,
-  obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios,
+  obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios, salvarAlteracoesAgenda,
   ouvirTodosAgendamentos, ouvirTodosUsuarios, obterUsuario, cadastrarOuAtualizarUsuario, editarUsuario,
   atualizarNomeUsuario, atualizarNomeEmAgendamentosDoTelefone,
   excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
@@ -513,6 +513,263 @@ function configurarHorarios() {
       btn.disabled = false;
       btn.textContent = "Salvar dias e horários";
     }
+  });
+
+  /* ---------- As duas listas começam fechadas: só abrem quando a pessoa clicar no título ---------- */
+  function tornarRecolhivel(cabecalhoId, corpoId) {
+    const cabecalho = document.getElementById(cabecalhoId);
+    const corpo = document.getElementById(corpoId);
+    function alternar() {
+      const abrir = corpo.classList.contains("oculto");
+      corpo.classList.toggle("oculto", !abrir);
+      cabecalho.classList.toggle("recolhido", !abrir);
+      cabecalho.setAttribute("aria-expanded", String(abrir));
+    }
+    cabecalho.addEventListener("click", alternar);
+    cabecalho.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); }
+    });
+  }
+  tornarRecolhivel("cabecalhoPeriodo", "corpoPeriodo");
+  tornarRecolhivel("cabecalhoAlteracoes", "corpoAlteracoes");
+
+  /* ---------- Fechamento e alterações de agenda ---------- */
+  const calendarioAlteracoesEl = document.getElementById("calendarioAlteracoes");
+  const listaAlteracoesEl = document.getElementById("listaAlteracoes");
+  const avisoSemPeriodoAlt = document.getElementById("avisoAlteracoesSemPeriodo");
+  const modalAlteracao = document.getElementById("modalAlteracaoAgenda");
+  const campoAltFechado = document.getElementById("alteracaoFechado");
+  const campoAltInicio = document.getElementById("alteracaoInicio");
+  const campoAltFim = document.getElementById("alteracaoFim");
+  const blocoAltHorarios = document.getElementById("alteracaoHorarios");
+  let periodoAgenda = { dataInicio: "", dataFim: "", alteracoes: {} };
+  let diaAlteracaoEditando = null;
+  let mesAlteracoes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+  const ICONE_LAPIS_ALT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>`;
+  const ICONE_LIXEIRA_ALT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>`;
+  function botaoIconeAlt(classeExtra, titulo, svg) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = `intencao-item__btn ${classeExtra}`;
+    b.title = titulo;
+    b.setAttribute("aria-label", titulo);
+    b.innerHTML = svg;
+    return b;
+  }
+
+  const temPeriodo = () => !!(periodoAgenda.dataInicio && periodoAgenda.dataFim);
+  const diaDoPeriodo = (iso) => temPeriodo() && iso >= periodoAgenda.dataInicio && iso <= periodoAgenda.dataFim && iso >= hojeIso();
+
+  function resumoAlteracao(a) {
+    if (a.fechado) return "Sem adoração neste dia";
+    if (a.inicio && a.fim) return `Adoração das ${a.inicio} às ${a.fim}`;
+    if (a.inicio) return `Adoração só a partir das ${a.inicio}`;
+    if (a.fim) return `Adoração só até as ${a.fim}`;
+    return "Sem alteração";
+  }
+
+  function abrirAlteracao(iso) {
+    diaAlteracaoEditando = iso;
+    const atual = periodoAgenda.alteracoes[iso];
+    campoAltFechado.checked = !!(atual && atual.fechado);
+    campoAltInicio.value = (atual && atual.inicio) || "";
+    campoAltFim.value = (atual && atual.fim) || "";
+    blocoAltHorarios.classList.toggle("campo-desativado", campoAltFechado.checked);
+    campoAltInicio.disabled = campoAltFim.disabled = campoAltFechado.checked;
+    document.getElementById("alteracaoData").textContent = formatarDataComDiaSemana(iso);
+    document.getElementById("alteracaoAviso").textContent = atual
+      ? "Este dia já tem uma alteração. Ajuste abaixo ou volte ao padrão."
+      : "Este dia segue o horário padrão do período. Marque abaixo para fechá-lo ou alterar o horário.";
+    document.getElementById("btnRemoverAlteracao").classList.toggle("oculto", !atual);
+    abrirModal(modalAlteracao);
+  }
+  function fecharAlteracao() { fecharModal(modalAlteracao); diaAlteracaoEditando = null; }
+
+  campoAltFechado.addEventListener("change", () => {
+    blocoAltHorarios.classList.toggle("campo-desativado", campoAltFechado.checked);
+    campoAltInicio.disabled = campoAltFim.disabled = campoAltFechado.checked;
+  });
+  document.getElementById("fecharModalAlteracao").addEventListener("click", fecharAlteracao);
+  document.getElementById("btnCancelarAlteracao").addEventListener("click", fecharAlteracao);
+
+  // grava o mapa inteiro; datas que já passaram são descartadas (não servem mais pra nada)
+  async function gravarAlteracoes(mapa) {
+    const hoje = hojeIso();
+    const limpo = {};
+    Object.entries(mapa).forEach(([iso, a]) => { if (iso >= hoje) limpo[iso] = a; });
+    const salvo = await salvarAlteracoesAgenda(limpo);
+    periodoAgenda = { ...periodoAgenda, alteracoes: salvo };
+    renderizarAlteracoes();
+  }
+
+  document.getElementById("btnSalvarAlteracao").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const iso = diaAlteracaoEditando;
+    if (!iso) return;
+    const mapa = { ...periodoAgenda.alteracoes };
+    let aviso;
+    if (campoAltFechado.checked) {
+      mapa[iso] = { fechado: true };
+      aviso = "Salvo: este dia ficou sem adoração.";
+    } else {
+      const inicio = campoAltInicio.value || "";
+      const fim = campoAltFim.value || "";
+      if (!inicio && !fim) { delete mapa[iso]; aviso = "Nenhum horário alterado — este dia voltou ao padrão."; }
+      else if (inicio && fim && inicio >= fim) { mostrarToast("O horário de início precisa ser antes do horário de término."); return; }
+      else { mapa[iso] = { fechado: false, inicio, fim }; aviso = "Alteração do dia salva!"; }
+    }
+    btn.disabled = true;
+    btn.textContent = "Salvando...";
+    try {
+      await gravarAlteracoes(mapa);
+      fecharAlteracao();
+      mostrarToast(aviso);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Salvar alterações";
+    }
+  });
+  document.getElementById("btnRemoverAlteracao").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const iso = diaAlteracaoEditando;
+    if (!iso) return;
+    const mapa = { ...periodoAgenda.alteracoes };
+    delete mapa[iso];
+    btn.disabled = true;
+    try {
+      await gravarAlteracoes(mapa);
+      fecharAlteracao();
+      mostrarToast("Este dia voltou ao padrão do período.");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function renderizarCalendarioAlteracoes() {
+    const elMesAno = calendarioAlteracoesEl.querySelector("[data-mes-ano]");
+    const elDias = calendarioAlteracoesEl.querySelector("[data-dias]");
+    const nomeMes = MESES[mesAlteracoes.getMonth()];
+    elMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesAlteracoes.getFullYear()}`;
+    // a navegação fica dentro dos meses do período (e nunca antes do mês atual)
+    const primeiroMes = (() => {
+      const base = temPeriodo() && periodoAgenda.dataInicio > hojeIso() ? isoParaData(periodoAgenda.dataInicio) : new Date();
+      return new Date(base.getFullYear(), base.getMonth(), 1);
+    })();
+    const ultimoMes = temPeriodo() ? new Date(isoParaData(periodoAgenda.dataFim).getFullYear(), isoParaData(periodoAgenda.dataFim).getMonth(), 1) : primeiroMes;
+    calendarioAlteracoesEl.querySelector("[data-nav-anterior]").disabled = mesAlteracoes <= primeiroMes;
+    calendarioAlteracoesEl.querySelector("[data-nav-proximo]").disabled = mesAlteracoes >= ultimoMes;
+    elDias.innerHTML = "";
+    const primeiro = new Date(mesAlteracoes.getFullYear(), mesAlteracoes.getMonth(), 1).getDay();
+    const total = new Date(mesAlteracoes.getFullYear(), mesAlteracoes.getMonth() + 1, 0).getDate();
+    for (let i = 0; i < primeiro; i++) {
+      const vazio = document.createElement("span");
+      vazio.className = "calendario__vazio";
+      elDias.appendChild(vazio);
+    }
+    for (let dia = 1; dia <= total; dia++) {
+      const iso = dataParaIso(new Date(mesAlteracoes.getFullYear(), mesAlteracoes.getMonth(), dia));
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "calendario__dia";
+      btn.textContent = dia;
+      if (diaDoPeriodo(iso)) {
+        btn.classList.add("disponivel");
+        const alt = periodoAgenda.alteracoes[iso];
+        if (alt) {
+          btn.classList.add("especial");
+          if (alt.fechado) btn.classList.add("sem-missa");
+          btn.title = resumoAlteracao(alt);
+        }
+        btn.addEventListener("click", () => abrirAlteracao(iso));
+      }
+      elDias.appendChild(btn);
+    }
+  }
+  calendarioAlteracoesEl.querySelector("[data-nav-anterior]").addEventListener("click", () => {
+    mesAlteracoes = new Date(mesAlteracoes.getFullYear(), mesAlteracoes.getMonth() - 1, 1);
+    renderizarCalendarioAlteracoes();
+  });
+  calendarioAlteracoesEl.querySelector("[data-nav-proximo]").addEventListener("click", () => {
+    mesAlteracoes = new Date(mesAlteracoes.getFullYear(), mesAlteracoes.getMonth() + 1, 1);
+    renderizarCalendarioAlteracoes();
+  });
+
+  function renderizarListaAlteracoes() {
+    const hoje = hojeIso();
+    const datas = Object.keys(periodoAgenda.alteracoes).filter((iso) => iso >= hoje).sort();
+    listaAlteracoesEl.innerHTML = "";
+    if (datas.length === 0) {
+      const vazio = document.createElement("p");
+      vazio.className = "lista-especiais__vazio";
+      vazio.textContent = "Nenhum dia com fechamento ou alteração por enquanto.";
+      listaAlteracoesEl.appendChild(vazio);
+      return;
+    }
+    datas.forEach((iso) => {
+      const a = periodoAgenda.alteracoes[iso];
+      const item = document.createElement("div");
+      item.className = "item-especial";
+      const texto = document.createElement("div");
+      texto.className = "item-especial__texto";
+      const forte = document.createElement("strong");
+      forte.textContent = formatarDataComDiaSemana(iso);
+      texto.appendChild(forte);
+      texto.appendChild(document.createTextNode(resumoAlteracao(a)));
+      if (!diaDoPeriodo(iso)) {
+        const fora = document.createElement("span");
+        fora.className = "item-especial__fora";
+        fora.textContent = "Fora do período atual — não tem efeito enquanto o período não incluir este dia.";
+        texto.appendChild(fora);
+      }
+      const acoes = document.createElement("span");
+      acoes.className = "item-especial__acoes";
+      const btnEditar = botaoIconeAlt("intencao-item__btn--editar", "Editar este dia", ICONE_LAPIS_ALT);
+      btnEditar.addEventListener("click", () => abrirAlteracao(iso));
+      const btnApagar = botaoIconeAlt("intencao-item__btn--apagar", "Voltar ao padrão", ICONE_LIXEIRA_ALT);
+      btnApagar.addEventListener("click", async () => {
+        const mapa = { ...periodoAgenda.alteracoes };
+        delete mapa[iso];
+        try {
+          await gravarAlteracoes(mapa);
+          mostrarToast("Este dia voltou ao padrão do período.");
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível salvar. Tente novamente.");
+        }
+      });
+      acoes.appendChild(btnEditar);
+      acoes.appendChild(btnApagar);
+      item.appendChild(texto);
+      item.appendChild(acoes);
+      listaAlteracoesEl.appendChild(item);
+    });
+  }
+
+  function renderizarAlteracoes() {
+    avisoSemPeriodoAlt.classList.toggle("oculto", temPeriodo());
+    calendarioAlteracoesEl.classList.toggle("oculto", !temPeriodo());
+    renderizarCalendarioAlteracoes();
+    renderizarListaAlteracoes();
+  }
+
+  let primeiraLeituraPeriodo = true;
+  ouvirDiasHorarios((dh) => {
+    const alteracoes = dh.alteracoes && typeof dh.alteracoes === "object" ? dh.alteracoes : {};
+    periodoAgenda = { dataInicio: dh.dataInicio || "", dataFim: dh.dataFim || "", alteracoes };
+    if (primeiraLeituraPeriodo) {
+      primeiraLeituraPeriodo = false;
+      // abre o calendário no primeiro mês do período (ou no mês atual, se o período já começou)
+      const base = temPeriodo() && dh.dataInicio > hojeIso() ? isoParaData(dh.dataInicio) : new Date();
+      mesAlteracoes = new Date(base.getFullYear(), base.getMonth(), 1);
+    }
+    renderizarAlteracoes();
   });
 }
 

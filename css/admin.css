@@ -480,3 +480,19 @@
 .pix-upload{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
 .pix-upload__preview{ width:120px; height:120px; object-fit:contain; border:1px solid rgba(157,122,31,.4); border-radius:10px; background:#fff; padding:4px; }
 .pix-upload__acoes{ display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ---------- Fechamento e alterações de agenda (Dias e Horários) ---------- */
+.legenda-dot--fechado{ background: linear-gradient(135deg, #6b6b6b, #3c3c3c); }
+.aviso-sem-periodo{
+  margin:0 0 14px; padding:10px 13px; border-radius:10px; font-size:.84rem; line-height:1.5;
+  background: rgba(205,164,52,.14); border:1px solid rgba(157,122,31,.3); color: var(--texto-suave);
+}
+#calendarioAlteracoes .calendario__dia.disponivel{ cursor:pointer; }
+#calendarioAlteracoes .calendario__dia.especial{
+  background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro)); color:#fff;
+  box-shadow: 0 3px 10px var(--vermelho-glow);
+}
+#calendarioAlteracoes .calendario__dia.sem-missa{ background: linear-gradient(135deg, #6b6b6b, #3c3c3c); box-shadow:none; }
+.modal--especial input[type="time"]{ width:100%; }
+.item-especial__fora{ display:block; font-size:.74rem; color: var(--dourado-escuro); font-style:italic; }
+#alteracaoHorarios.campo-desativado{ opacity:.45; pointer-events:none; }

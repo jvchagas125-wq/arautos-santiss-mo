@@ -91,6 +91,8 @@ erroCarregarPeriodo.addEventListener("click", () => iniciar());
 function dataDentroDoPeriodo(iso) {
   // hojeIso() garante que dias já passados fiquem bloqueados, mesmo estando dentro do
   // período configurado — o dia de hoje continua disponível normalmente.
+  // dias marcados como "sem adoração" no painel (Fechamento e alterações de agenda) também ficam bloqueados
+  if (diasHorarios.alteracoes?.[iso]?.fechado === true) return false;
   return iso >= diasHorarios.dataInicio && iso <= diasHorarios.dataFim && iso >= hojeIso();
 }
 

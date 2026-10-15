@@ -140,7 +140,12 @@
         <h1 class="titulo-pagina">Dias e Horários</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
         <div class="painel">
-          <div class="painel__titulo"><span class="emoji">🗓️</span> Período da adoração</div>
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoPeriodo" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🗓️</span> Período da adoração
+            <span class="painel__dica">Clique aqui para abrir a lista</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoPeriodo" class="oculto">
           <form id="formPeriodo">
             <div class="campo">
               <label for="campoDataInicio">De</label>
@@ -224,6 +229,40 @@
             </div>
             <button type="submit" class="btn btn-dourado" style="margin-top:16px;">Salvar dias e horários</button>
           </form>
+          </div>
+        </div>
+
+        <div class="painel" id="painelAlteracoesAgenda">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoAlteracoes" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🚫</span> Fechamento e alterações de agenda
+            <span class="painel__dica">Clique aqui para abrir a lista</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoAlteracoes" class="oculto">
+            <p class="especiais__texto">
+              Algum dia do período não terá adoração, ou ela terá um horário diferente (por exemplo, terminar às 18:30 ou
+              voltar só às 07:00)? Toque no dia no calendário e informe. Dias sem adoração ficam bloqueados no site para agendamento.
+            </p>
+            <p class="aviso-sem-periodo oculto" id="avisoAlteracoesSemPeriodo">Defina primeiro o <strong>período da adoração</strong> (De / Até) e salve — depois os dias dele aparecem aqui.</p>
+            <div class="calendario-grande especiais__calendario" id="calendarioAlteracoes">
+              <div class="calendario__cabecalho">
+                <button type="button" class="calendario__nav" data-nav-anterior aria-label="Mês anterior">‹</button>
+                <strong data-mes-ano>—</strong>
+                <button type="button" class="calendario__nav" data-nav-proximo aria-label="Próximo mês">›</button>
+              </div>
+              <div class="calendario__semana">
+                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+              </div>
+              <div class="calendario__dias" data-dias></div>
+              <div class="calendario__legenda-dupla">
+                <span><i class="legenda-dot legenda-dot--disponivel"></i> Dia normal do período</span>
+                <span><i class="legenda-dot legenda-dot--especial"></i> Horário alterado</span>
+                <span><i class="legenda-dot legenda-dot--fechado"></i> Sem adoração</span>
+              </div>
+            </div>
+            <p class="especiais__subtitulo">Dias com fechamento ou alteração</p>
+            <div id="listaAlteracoes" class="lista-especiais"></div>
+          </div>
         </div>
       </section>
 
@@ -846,6 +885,41 @@
       <button class="modal--fechar" id="fecharModalDiaAgendados" aria-label="Fechar">&times;</button>
       <h3 id="diaAgendadosTitulo">—</h3>
       <div id="diaAgendadosConteudo" class="modal__conteudo-scroll" style="text-align:left;"></div>
+    </div>
+  </div>
+
+  <!-- Modal: fechamento / alteração da agenda de adoração em um dia -->
+  <div class="modal-overlay" id="modalAlteracaoAgenda">
+    <div class="modal modal--largo modal--especial">
+      <button class="modal--fechar" id="fecharModalAlteracao" aria-label="Fechar">&times;</button>
+      <h3>Agenda da adoração neste dia</h3>
+      <p class="modal__data" id="alteracaoData">—</p>
+      <div class="especial-corpo">
+        <p class="especial-aviso" id="alteracaoAviso"></p>
+        <div class="campo campo-checkbox-simples" style="margin-top:6px;">
+          <label>
+            <input type="checkbox" id="alteracaoFechado" />
+            <span>Sem adoração neste dia <small>(o dia fica bloqueado para agendamento no site)</small></span>
+          </label>
+        </div>
+        <div id="alteracaoHorarios">
+          <div class="campo">
+            <label for="alteracaoInicio">Adoração começa às</label>
+            <input type="time" id="alteracaoInicio" step="300" />
+            <small class="campo-ajuda">Opcional — deixe em branco para começar na primeira hora do dia. Ex.: voltar só às 07:00.</small>
+          </div>
+          <div class="campo">
+            <label for="alteracaoFim">Adoração termina às</label>
+            <input type="time" id="alteracaoFim" step="300" />
+            <small class="campo-ajuda">Opcional — deixe em branco para ir até o fim do dia. Ex.: terminar às 18:30 (os horários só aparecem até antes desse horário).</small>
+          </div>
+        </div>
+      </div>
+      <div class="especial-acoes">
+        <button type="button" class="btn btn-dourado btn-full" id="btnSalvarAlteracao">Salvar alterações</button>
+        <button type="button" class="btn btn-contorno btn-full oculto" id="btnRemoverAlteracao">Voltar ao padrão deste dia</button>
+        <button type="button" class="btn btn-contorno btn-full" id="btnCancelarAlteracao">Cancelar</button>
+      </div>
     </div>
   </div>
 

@@ -96,6 +96,22 @@ export async function salvarDiasHorarios(dados) {
   await setDoc(REF_DIAS_HORARIOS, dados, { merge: true });
 }
 
+// Fechamentos e alterações de agenda por dia: { "aaaa-mm-dd": { fechado: true } | { inicio, fim } }.
+// Salva o mapa inteiro de uma vez (updateDoc troca o campo todo, então um dia removido some de verdade;
+// salvarDiasHorarios, que usa merge, não mexe nesse campo).
+export async function salvarAlteracoesAgenda(mapa) {
+  const limpo = {};
+  Object.entries(mapa || {}).forEach(([iso, a]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || !a || typeof a !== "object") return;
+    if (a.fechado === true) limpo[iso] = { fechado: true };
+    else if (a.inicio || a.fim) limpo[iso] = { fechado: false, inicio: a.inicio || "", fim: a.fim || "" };
+  });
+  const snap = await getDoc(REF_DIAS_HORARIOS);
+  if (snap.exists()) await updateDoc(REF_DIAS_HORARIOS, { alteracoes: limpo });
+  else await setDoc(REF_DIAS_HORARIOS, { alteracoes: limpo }, { merge: true });
+  return limpo;
+}
+
 /* ---------------- Contas do painel administrativo ----------------
    Coleção "administradores": uma conta por pessoa, com
    { nome, usuario, sal, verificador, status, principal, acessos, criadoEm }.
