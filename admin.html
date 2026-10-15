@@ -6,6 +6,9 @@
 <title>Painel Administrativo — Arautos do Evangelho</title>
 <link rel="icon" href="assets/favicon.png?v=2" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" /></noscript>
 <link rel="stylesheet" href="css/style.css" />
 <link rel="stylesheet" href="css/admin.css" />
 </head>
@@ -407,7 +410,12 @@
         </div>
 
         <div class="painel painel-envio-email" id="painelEnvioEmail">
-          <div class="painel__titulo"><span class="emoji">✉️</span> Envio automático por e-mail</div>
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoEnvioEmail" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">✉️</span> Envio automático por e-mail
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoEnvioEmail" class="oculto">
           <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
             Quando uma lista de intenções fecha, o site envia sozinho o documento Word dela para os e-mails abaixo — já
             organizado por categoria, pronto para imprimir. Você pode cadastrar mais de um e-mail.
@@ -447,6 +455,7 @@
             <span class="aviso-info__icone">ℹ️</span>
             <p><strong>Como funciona:</strong> o site confere a cada poucos minutos se alguma lista já fechou e, se ainda não tiver sido enviada, manda o documento Word por e-mail — uma única vez por lista. Pode levar alguns minutos depois do horário de fechamento. O botão de envelope em cada lista (acima) envia aquela lista na hora.</p>
           </div>
+        </div>
         </div>
       </section>
 
@@ -905,12 +914,36 @@
         <div id="alteracaoHorarios">
           <div class="campo">
             <label for="alteracaoInicio">Adoração começa às</label>
-            <input type="time" id="alteracaoInicio" step="300" />
+            <div style="position:relative;">
+              <input type="text" id="alteracaoInicio" class="campo-clicavel" placeholder="Clique aqui e selecione o horário" readonly autocomplete="off" />
+              <div class="seletor-hora" id="seletorAlteracaoInicio">
+                <div class="seletor-hora__colunas">
+                  <div class="seletor-hora__coluna" data-coluna-horas></div>
+                  <div class="seletor-hora__coluna" data-coluna-minutos></div>
+                </div>
+                <div class="seletor-hora__acoes">
+                  <button type="button" class="btn btn-contorno" data-limpar>Limpar</button>
+                  <button type="button" class="btn btn-dourado" data-confirmar>OK</button>
+                </div>
+              </div>
+            </div>
             <small class="campo-ajuda">Opcional — deixe em branco para começar na primeira hora do dia. Ex.: voltar só às 07:00.</small>
           </div>
           <div class="campo">
             <label for="alteracaoFim">Adoração termina às</label>
-            <input type="time" id="alteracaoFim" step="300" />
+            <div style="position:relative;">
+              <input type="text" id="alteracaoFim" class="campo-clicavel" placeholder="Clique aqui e selecione o horário" readonly autocomplete="off" />
+              <div class="seletor-hora" id="seletorAlteracaoFim">
+                <div class="seletor-hora__colunas">
+                  <div class="seletor-hora__coluna" data-coluna-horas></div>
+                  <div class="seletor-hora__coluna" data-coluna-minutos></div>
+                </div>
+                <div class="seletor-hora__acoes">
+                  <button type="button" class="btn btn-contorno" data-limpar>Limpar</button>
+                  <button type="button" class="btn btn-dourado" data-confirmar>OK</button>
+                </div>
+              </div>
+            </div>
             <small class="campo-ajuda">Opcional — deixe em branco para ir até o fim do dia. Ex.: terminar às 18:30 (os horários só aparecem até antes desse horário).</small>
           </div>
         </div>

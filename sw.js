@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v42";
+const CACHE_NAME = "arautos-shell-v43";
 
 const ARQUIVOS_APP_SHELL = [
   "./",
@@ -34,6 +34,7 @@ const ARQUIVOS_APP_SHELL = [
   "./js/acessos.js",
   "./js/contas.js",
   "./js/instalar-app.js",
+  "./js/pdf-intencoes.js",
   "./js/sw-registro.js",
   "./assets/logo.png",
   "./assets/favicon.png?v=2",
@@ -57,34 +58,106 @@ self.addEventListener("install", (evento) => {
 self.addEventListener("activate", (evento) => {
   evento.waitUntil(
     caches.keys()
-      .then((nomes) => Promise.all(nomes.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))))
+      .then((nomes) => Promise.all(nomes.filter((n) => n !== CACHE_NAME && n !== CACHE_EXTERNO).map((n) => caches.delete(n))))
       .then(() => self.clients.claim())
   );
 });
+
+
+// Cache à parte (nunca apagado nas atualizações do site) para o que é de terceiros e não muda:
+// as fontes do Google e o código do Firebase (a URL já traz a versão). Assim, depois da primeira
+// visita, nem as fontes nem o Firebase precisam ser baixados de novo pela internet do celular.
+const CACHE_EXTERNO = "arautos-externo-v1";
+
+// Painel administrativo: continua buscando a versão mais nova na rede primeiro (quem administra
+// precisa ver na hora o que acabou de ser publicado). O resto do site abre direto do cache.
+const ARQUIVOS_ADMIN = /\/(admin(\.html)?|js\/(admin|acessos|contas|docx-intencoes|pdf-intencoes)\.js|css\/admin\.css)$/;
+
+function ehNavegacao(requisicao) {
+  return requisicao.mode === "navigate";
+}
+
+async function acharNoCache(cache, requisicao, url) {
+  let achado = await cache.match(requisicao, { ignoreSearch: ehNavegacao(requisicao) });
+  if (!achado && ehNavegacao(requisicao)) {
+    // o Vercel serve /agendamento (sem .html) — o cache inicial guardou como agendamento.html
+    const caminho = url.pathname === "/" ? "./index.html" : "." + url.pathname.replace(/\/$/, "") + ".html";
+    achado = await cache.match(caminho);
+  }
+  return achado;
+}
+
+// rede primeiro, com limite de tempo, e cache só se a rede falhar (painel admin)
+function redePrimeiro(evento, requisicao, url) {
+  return Promise.race([
+    fetch(requisicao),
+    new Promise((_, rejeitar) => setTimeout(() => rejeitar(new Error("tempo esgotado")), 3500))
+  ])
+    .then((respostaRede) => {
+      if (respostaRede && respostaRede.ok) {
+        const copia = respostaRede.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(requisicao, copia));
+      }
+      return respostaRede;
+    })
+    .catch(async () => {
+      const cache = await caches.open(CACHE_NAME);
+      return (await acharNoCache(cache, requisicao, url)) || Response.error();
+    });
+}
+
+// "stale-while-revalidate": mostra NA HORA o que já está guardado e, em segundo plano, baixa a
+// versão mais nova pra próxima abertura. É isso que faz o app abrir instantaneamente no celular,
+// sem esperar a rede a cada página. Se não houver nada guardado ainda, busca na rede normalmente.
+async function cacheEAtualiza(evento, requisicao, url) {
+  const cache = await caches.open(CACHE_NAME);
+  const guardado = await acharNoCache(cache, requisicao, url);
+  const atualizacao = fetch(requisicao)
+    .then((respostaRede) => {
+      if (respostaRede && respostaRede.ok) cache.put(requisicao, respostaRede.clone());
+      return respostaRede;
+    })
+    .catch(() => null);
+  if (guardado) {
+    evento.waitUntil(atualizacao);
+    return guardado;
+  }
+  return (await atualizacao) || Response.error();
+}
+
+// fontes e Firebase: usa o que está guardado; se não houver, baixa e guarda
+async function cacheExterno(evento, requisicao, revalidar) {
+  const cache = await caches.open(CACHE_EXTERNO);
+  const guardado = await cache.match(requisicao);
+  const buscar = () => fetch(requisicao).then((resposta) => {
+    if (resposta && (resposta.ok || resposta.type === "opaque")) cache.put(requisicao, resposta.clone());
+    return resposta;
+  });
+  if (guardado) {
+    if (revalidar) evento.waitUntil(buscar().catch(() => {}));
+    return guardado;
+  }
+  return buscar();
+}
 
 self.addEventListener("fetch", (evento) => {
   const requisicao = evento.request;
   if (requisicao.method !== "GET") return;
 
   const url = new URL(requisicao.url);
-  // só cuida dos arquivos do próprio site — Firestore, fontes do Google etc. seguem direto pra rede
-  if (url.origin !== self.location.origin) return;
 
-  // network-first: tenta buscar a versão mais nova na rede primeiro (pra nunca mostrar uma tela
-  // desatualizada) e só usa o cache se a rede falhar de verdade (sem internet). Um limite de
-  // tempo evita ficar esperando pra sempre numa conexão travada — nesse caso também cai pro cache.
-  evento.respondWith(
-    Promise.race([
-      fetch(requisicao),
-      new Promise((_, rejeitar) => setTimeout(() => rejeitar(new Error("tempo esgotado")), 4000))
-    ])
-      .then((respostaRede) => {
-        if (respostaRede && respostaRede.ok) {
-          const copia = respostaRede.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(requisicao, copia));
-        }
-        return respostaRede;
-      })
-      .catch(() => caches.match(requisicao))
-  );
+  if (url.origin !== self.location.origin) {
+    if (url.hostname === "fonts.googleapis.com") {
+      evento.respondWith(cacheExterno(evento, requisicao, true));   // CSS das fontes: atualiza em segundo plano
+    } else if (url.hostname === "fonts.gstatic.com" || (url.hostname === "www.gstatic.com" && url.pathname.startsWith("/firebasejs/"))) {
+      evento.respondWith(cacheExterno(evento, requisicao, false));  // arquivos com versão fixa: nunca mudam
+    }
+    return; // Firestore, Cloudinary etc. seguem direto pra rede
+  }
+
+  if (ARQUIVOS_ADMIN.test(url.pathname)) {
+    evento.respondWith(redePrimeiro(evento, requisicao, url));
+  } else {
+    evento.respondWith(cacheEAtualiza(evento, requisicao, url));
+  }
 });

@@ -3,8 +3,6 @@
    Tema: vermelho sangue, dourado e branco, estilo gótico-elegante
    ========================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
-
 :root{
   --vermelho: #7a0c1e;
   --vermelho-2: #93101f;
@@ -83,7 +81,6 @@ img{ max-width: 100%; display:block; }
   background-color: var(--vermelho-escuro);
   background-size: cover;
   background-position: center 20%;
-  filter: saturate(1.05);
   z-index: -2;
 }
 .tela-fundo::after{
@@ -712,7 +709,10 @@ img{ max-width: 100%; display:block; }
 .grade-semanal__cel--extra{ background:#CBB6E8; }
 .grade-semanal__cel--aberto{ background:#E7ABAB; }
 .grade-semanal__cel--missa{ background:#FFD700; color:#6B5900; font-weight:700; }
-.grade-semanal__cel--bloqueado{ background:#2c2c2c; }
+.grade-semanal__cel--bloqueado{
+  background:#cfcfcf; color:#6a6a6a; font-size:.62rem; font-weight:600; line-height:1.15;
+  text-align:center; letter-spacing:.2px; padding:2px 4px;
+}
 .calendario-grande{
   width:100%; max-width:460px; margin:0 auto; background: var(--branco);
   border: 1.5px solid var(--dourado); border-radius:14px;
@@ -1295,4 +1295,40 @@ img{ max-width: 100%; display:block; }
   .intencoes-modal__rodape{ grid-template-columns: 1fr 1fr; }
   .intencoes-modal__rodape #btnListaEnviar{ grid-column: 1 / -1; }
   .previa-grupo ul{ columns:1; }
+}
+
+/* seletor de hora dentro de janelas (modais): abre no fluxo normal, sem ficar cortado */
+.modal .seletor-hora{ position:static; width:100%; margin-top:8px; display:none; }
+.modal .seletor-hora.aberto{ display:block; }
+
+/* ============ HOME NO CELULAR: tudo cabe em uma tela só, sem precisar rolar ============
+   A tela inicial (body.pagina-home) ocupa exatamente a altura visível do aparelho: o título, o
+   banner, a frase do dia e os 4 atalhos se ajustam (espaços e tamanhos menores) pra caber de uma
+   vez. Em celulares muito baixinhos a página ainda rola, só por segurança. */
+@media (max-width: 600px){
+  .pagina-home{ min-height:100vh; min-height:100dvh; }
+  .pagina-home .conteudo{ padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); justify-content:space-between; }
+  .pagina-home .titulo-cidade{ margin-bottom: 10px; font-size:.74rem; }
+  .pagina-home .carrossel-banners{ margin-bottom: 10px; }
+  .pagina-home .carrossel-banners__pontos{ margin-top:6px; }
+  .pagina-home .card-frase{ padding: 14px 16px; margin-bottom: 10px; }
+  .pagina-home .card-frase__eyebrow{ margin-bottom:6px; font-size:.66rem; }
+  .pagina-home .card-frase blockquote{ font-size: clamp(.9rem, 2.4dvh, 1.05rem); line-height:1.4; margin-bottom:6px; }
+  .pagina-home .card-frase cite{ font-size:.78rem; }
+  /* os 4 atalhos dividem o espaço que sobrar na tela (2 linhas de altura igual) */
+  .pagina-home .atalhos-grade{ flex:1 1 auto; margin-top:0; gap:10px; grid-auto-rows: minmax(0, 1fr); min-height:164px; max-height:300px; }
+  .pagina-home .atalho-card{ padding: 8px 8px; gap:6px; justify-content:center; }
+  .pagina-home .atalho-card__icone{ width: clamp(34px, 6dvh, 46px); height: clamp(34px, 6dvh, 46px); }
+  .pagina-home .atalho-card__icone svg{ width:20px; height:20px; }
+  .pagina-home .atalho-card__texto{ font-size:.74rem; line-height:1.25; }
+  .pagina-home .rodape-simples{ display:none; }
+}
+@media (max-width: 600px) and (max-height: 680px){
+  .pagina-home .topbar{ min-height:54px; padding:8px 16px; }
+  .pagina-home .topbar__logo{ height:36px; }
+  .pagina-home .card-frase blockquote{ font-size:.86rem; line-height:1.32; }
+  .pagina-home .atalho-card__texto{ font-size:.68rem; }
+  .pagina-home .card-frase{ padding: 10px 14px; margin-bottom:8px; }
+  .pagina-home .carrossel-banners{ margin-bottom:8px; }
+  .pagina-home .atalhos-grade{ min-height:150px; gap:8px; }
 }

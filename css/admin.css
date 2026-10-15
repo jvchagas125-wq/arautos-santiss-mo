@@ -329,7 +329,7 @@
 .form-editar-aviso .campo{ margin-bottom:10px; }
 
 /* ---------- envio automático por e-mail (admin) ---------- */
-.painel-envio-email{ margin-top:20px; }
+.painel-envio-email{ margin-top:24px; }
 .envio-emails{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
 .envio-emails.campo{ margin-bottom:10px; }
 .envio-email-linha{ display:flex; gap:8px; align-items:center; }
@@ -496,3 +496,6 @@
 .modal--especial input[type="time"]{ width:100%; }
 .item-especial__fora{ display:block; font-size:.74rem; color: var(--dourado-escuro); font-style:italic; }
 #alteracaoHorarios.campo-desativado{ opacity:.45; pointer-events:none; }
+
+/* mais respiro entre as listas de cima e o "Formulário das intenções" */
+#painelFormularioIntencoes{ margin-top:30px; }

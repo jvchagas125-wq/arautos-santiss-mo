@@ -706,6 +706,33 @@ function salvarCacheVisual(campo, url) {
 // dá uma dica ao navegador pra baixar essa imagem o quanto antes, com prioridade alta — o fundo
 // de tela em cache é aplicado via CSS (background-image), que historicamente o navegador
 // costuma baixar com prioridade mais baixa do que uma <img> normal, o que atrasava a troca.
+/* Imagens que vêm do Cloudinary: pede uma versão já reduzida e otimizada (formato moderno, qualidade
+   automática, largura máxima) em vez da foto original enorme — a imagem aparece igual na tela,
+   mas baixa bem mais rápido no celular. Se o Cloudinary recusar a versão otimizada por algum motivo,
+   quem chama volta sozinho para a URL original (ver definirSrcOtimizado / aplicarFundo). */
+export function otimizarImagemUrl(url, largura) {
+  const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(v\d+\/.+)$/.exec(url || "");
+  if (!m) return url;
+  return `${m[1]}f_auto,q_auto,c_limit,w_${largura}/${m[2]}`;
+}
+export function definirSrcOtimizado(img, url, largura) {
+  const otimizada = otimizarImagemUrl(url, largura);
+  if (otimizada !== url) {
+    img.addEventListener("error", () => { if (img.src !== url) img.src = url; }, { once: true });
+  }
+  img.src = otimizada;
+}
+function definirFundoCss(url) {
+  const otimizada = otimizarImagemUrl(url, 1000);
+  document.documentElement.style.setProperty("--fundo-img", `url('${otimizada}')`);
+  if (otimizada !== url) {
+    const teste = new Image();
+    teste.onerror = () => document.documentElement.style.setProperty("--fundo-img", `url('${url}')`);
+    teste.src = otimizada;
+  }
+  return otimizada;
+}
+
 function precarregarImagem(url) {
   try {
     const link = document.createElement("link");
@@ -724,23 +751,22 @@ export function aplicarConfigVisualEmCache() {
   const cache = lerCacheVisual();
   if (!cache) return;
   if (cache.logoUrl) {
-    document.querySelectorAll(".js-logo").forEach((img) => { img.src = cache.logoUrl; });
+    document.querySelectorAll(".js-logo").forEach((img) => definirSrcOtimizado(img, cache.logoUrl, 500));
   }
   if (cache.fundoUrl) {
-    document.documentElement.style.setProperty("--fundo-img", `url('${cache.fundoUrl}')`);
-    precarregarImagem(cache.fundoUrl);
+    precarregarImagem(definirFundoCss(cache.fundoUrl));
   }
 }
 
 export function aplicarLogo(url) {
   document.querySelectorAll(".js-logo").forEach((img) => {
-    if (url) img.src = url;
+    if (url) definirSrcOtimizado(img, url, 500);
   });
   if (url) salvarCacheVisual("logoUrl", url);
 }
 export function aplicarFundo(url) {
   if (!url) return;
-  document.documentElement.style.setProperty("--fundo-img", `url('${url}')`);
+  definirFundoCss(url);
   salvarCacheVisual("fundoUrl", url);
 }
 

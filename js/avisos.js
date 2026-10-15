@@ -1,5 +1,5 @@
 import { exigirCadastro } from "./auth.js";
-import { inicializarNavegacao, aplicarLogo, aplicarFundo, linkificarTexto } from "./utils.js";
+import { inicializarNavegacao, aplicarLogo, aplicarFundo, linkificarTexto, definirSrcOtimizado } from "./utils.js";
 import { obterConfiguracoesGerais, ouvirAvisos } from "./dados.js";
 
 inicializarNavegacao("avisos");
@@ -74,7 +74,7 @@ ouvirAvisos((avisos) => {
     if (aviso.imagemUrl) {
       const img = document.createElement("img");
       img.className = "cartao-aviso__img";
-      img.src = aviso.imagemUrl;
+      definirSrcOtimizado(img, aviso.imagemUrl, 900);
       img.alt = aviso.titulo || "";
       corpo.appendChild(img);
     }

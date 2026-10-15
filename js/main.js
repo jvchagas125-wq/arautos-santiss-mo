@@ -1,5 +1,5 @@
 import { exigirCadastro } from "./auth.js";
-import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia, comLimiteDeTempo } from "./utils.js";
+import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia, comLimiteDeTempo, definirSrcOtimizado } from "./utils.js";
 import { obterConfiguracoesGerais, obterFrases, ouvirBanners } from "./dados.js";
 
 inicializarNavegacao("index");
@@ -89,9 +89,11 @@ function criarSlideBanner(banner, indice) {
 
   const img = document.createElement("img");
   img.className = "carrossel-banners__img";
-  img.src = banner.imagemUrl;
+  definirSrcOtimizado(img, banner.imagemUrl, 1000);
   img.alt = banner.textoBotao || "";
   img.loading = indice === 0 ? "eager" : "lazy";
+  img.decoding = "async";
+  if (indice === 0) img.fetchPriority = "high";
   slide.appendChild(img);
 
   if (banner.textoBotao) {

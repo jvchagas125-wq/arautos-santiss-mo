@@ -168,6 +168,7 @@ function renderizarGradeSemanal() {
   thead.appendChild(trCabecalho);
 
   const tbody = document.createElement("tbody");
+  const celulasJaMescladas = new Set();
   for (let hora = 0; hora < 24; hora++) {
     const tr = document.createElement("tr");
     const thHora = document.createElement("th");
@@ -175,6 +176,7 @@ function renderizarGradeSemanal() {
     tr.appendChild(thHora);
 
     dias.forEach((iso) => {
+      if (celulasJaMescladas.has(`${iso}_${hora}`)) return; // coberta pelo rowspan da célula de cima
       const td = document.createElement("td");
       const horasAtivas = horasAtivasPorDia.get(iso);
       const horasMissa = horasDeMissaPorDia.get(iso);
@@ -184,6 +186,14 @@ function renderizarGradeSemanal() {
         td.textContent = "Missa";
         td.className = "grade-semanal__cel--missa";
       } else if (!horasAtivas.has(hora)) {
+        // horas seguidas sem adoração viram um único bloco cinza com o aviso escrito uma vez só
+        let fim = hora + 1;
+        while (fim < 24 && !horasMissa.has(fim) && !horasAtivas.has(fim)) fim++;
+        if (fim - hora > 1) {
+          td.rowSpan = fim - hora;
+          for (let h = hora + 1; h < fim; h++) celulasJaMescladas.add(`${iso}_${h}`);
+        }
+        td.textContent = "Sem adoração neste horário";
         td.className = "grade-semanal__cel--bloqueado";
       } else if (pessoas.length > 0) {
         const algumExtra = pessoas.some((p) => p.extra);

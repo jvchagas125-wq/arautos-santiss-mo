@@ -542,6 +542,8 @@ function configurarHorarios() {
   const campoAltInicio = document.getElementById("alteracaoInicio");
   const campoAltFim = document.getElementById("alteracaoFim");
   const blocoAltHorarios = document.getElementById("alteracaoHorarios");
+  const seletorAltInicio = criarSeletorHora(document.getElementById("seletorAlteracaoInicio"), campoAltInicio, {});
+  const seletorAltFim = criarSeletorHora(document.getElementById("seletorAlteracaoFim"), campoAltFim, {});
   let periodoAgenda = { dataInicio: "", dataFim: "", alteracoes: {} };
   let diaAlteracaoEditando = null;
   let mesAlteracoes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -573,8 +575,9 @@ function configurarHorarios() {
     diaAlteracaoEditando = iso;
     const atual = periodoAgenda.alteracoes[iso];
     campoAltFechado.checked = !!(atual && atual.fechado);
-    campoAltInicio.value = (atual && atual.inicio) || "";
-    campoAltFim.value = (atual && atual.fim) || "";
+    seletorAltInicio.definirValor((atual && atual.inicio) || "");
+    seletorAltFim.definirValor((atual && atual.fim) || "");
+    document.querySelectorAll("#modalAlteracaoAgenda .seletor-hora.aberto").forEach((c) => c.classList.remove("aberto"));
     blocoAltHorarios.classList.toggle("campo-desativado", campoAltFechado.checked);
     campoAltInicio.disabled = campoAltFim.disabled = campoAltFechado.checked;
     document.getElementById("alteracaoData").textContent = formatarDataComDiaSemana(iso);
@@ -1127,6 +1130,20 @@ function configurarIntencoes() {
       rascunhosLimpos = true;
       limparRascunhosVencidos(config.horasAntes).catch((err) => console.error(err));
     }
+  });
+
+  /* ---------- Envio automático por e-mail: lista fechada, só abre quando a pessoa clicar ---------- */
+  const cabecalhoEnvioEmail = document.getElementById("cabecalhoEnvioEmail");
+  const corpoEnvioEmail = document.getElementById("corpoEnvioEmail");
+  function alternarEnvioEmail() {
+    const abrir = corpoEnvioEmail.classList.contains("oculto");
+    corpoEnvioEmail.classList.toggle("oculto", !abrir);
+    cabecalhoEnvioEmail.classList.toggle("recolhido", !abrir);
+    cabecalhoEnvioEmail.setAttribute("aria-expanded", String(abrir));
+  }
+  cabecalhoEnvioEmail.addEventListener("click", alternarEnvioEmail);
+  cabecalhoEnvioEmail.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarEnvioEmail(); }
   });
 
   /* ---------- Formulário das intenções: categorias, tempos de falecimento, PIX ---------- */
