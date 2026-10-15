@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v45";
+const CACHE_NAME = "arautos-shell-v46";
 
 const ARQUIVOS_APP_SHELL = [
   "./",
@@ -45,12 +45,26 @@ const ARQUIVOS_APP_SHELL = [
   "./assets/icone-app-180.png?v=2"
 ];
 
+// IMPORTANTE: o Vercel redireciona "agendamento.html" para "agendamento" (URLs limpas). Uma resposta
+// que veio de um redirecionamento NÃO pode ser entregue como página pelo service worker — o
+// navegador mostra "ERR_FAILED / Não é possível acessar esse site". Por isso toda resposta
+// guardada ou entregue passa por aqui, que a copia sem a marca de "redirecionada".
+async function semRedirecionamento(resposta) {
+  if (!resposta || !resposta.redirected) return resposta;
+  const corpo = await resposta.clone().blob();
+  return new Response(corpo, { status: resposta.status, statusText: resposta.statusText, headers: resposta.headers });
+}
+
 self.addEventListener("install", (evento) => {
   self.skipWaiting();
   evento.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
-      // addAll falha inteiro se um arquivo não existir — adiciona um por um pra não travar o resto
-      Promise.all(ARQUIVOS_APP_SHELL.map((arquivo) => cache.add(arquivo).catch(() => {})))
+      // um arquivo por vez (se um não existir, o resto continua) e já sem a marca de redirecionamento
+      Promise.all(ARQUIVOS_APP_SHELL.map((arquivo) =>
+        fetch(arquivo, { cache: "reload" })
+          .then(async (resposta) => { if (resposta.ok) await cache.put(arquivo, await semRedirecionamento(resposta)); })
+          .catch(() => {})
+      ))
     )
   );
 });
@@ -84,7 +98,7 @@ async function acharNoCache(cache, requisicao, url) {
     const caminho = url.pathname === "/" ? "./index.html" : "." + url.pathname.replace(/\/$/, "") + ".html";
     achado = await cache.match(caminho);
   }
-  return achado;
+  return semRedirecionamento(achado);
 }
 
 // rede primeiro, com limite de tempo, e cache só se a rede falhar (painel admin)
@@ -96,13 +110,17 @@ function redePrimeiro(evento, requisicao, url) {
     .then((respostaRede) => {
       if (respostaRede && respostaRede.ok) {
         const copia = respostaRede.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(requisicao, copia));
+        caches.open(CACHE_NAME).then(async (cache) => cache.put(requisicao, await semRedirecionamento(copia)));
       }
       return respostaRede;
     })
     .catch(async () => {
-      const cache = await caches.open(CACHE_NAME);
-      return (await acharNoCache(cache, requisicao, url)) || Response.error();
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        const guardado = await acharNoCache(cache, requisicao, url);
+        if (guardado) return guardado;
+      } catch { /* cai na rede abaixo */ }
+      return fetch(requisicao);
     });
 }
 
@@ -113,8 +131,8 @@ async function cacheEAtualiza(evento, requisicao, url) {
   const cache = await caches.open(CACHE_NAME);
   const guardado = await acharNoCache(cache, requisicao, url);
   const atualizacao = fetch(requisicao)
-    .then((respostaRede) => {
-      if (respostaRede && respostaRede.ok) cache.put(requisicao, respostaRede.clone());
+    .then(async (respostaRede) => {
+      if (respostaRede && respostaRede.ok) await cache.put(requisicao, await semRedirecionamento(respostaRede.clone()));
       return respostaRede;
     })
     .catch(() => null);
@@ -122,7 +140,8 @@ async function cacheEAtualiza(evento, requisicao, url) {
     evento.waitUntil(atualizacao);
     return guardado;
   }
-  return (await atualizacao) || Response.error();
+  // nada guardado ainda: segue a rede normalmente (inclusive redirecionamentos, que o navegador resolve sozinho)
+  return (await atualizacao) || fetch(requisicao);
 }
 
 // fontes e Firebase: usa o que está guardado; se não houver, baixa e guarda
@@ -155,9 +174,10 @@ self.addEventListener("fetch", (evento) => {
     return; // Firestore, Cloudinary etc. seguem direto pra rede
   }
 
-  if (ARQUIVOS_ADMIN.test(url.pathname)) {
-    evento.respondWith(redePrimeiro(evento, requisicao, url));
-  } else {
-    evento.respondWith(cacheEAtualiza(evento, requisicao, url));
-  }
+  // rede de segurança: se qualquer coisa der errado aqui dentro, a página é buscada direto na
+  // internet, como se o service worker não existisse — nunca mais uma tela de erro por causa dele
+  const resposta = ARQUIVOS_ADMIN.test(url.pathname)
+    ? redePrimeiro(evento, requisicao, url)
+    : cacheEAtualiza(evento, requisicao, url);
+  evento.respondWith(resposta.catch(() => fetch(requisicao)));
 });
