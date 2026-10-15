@@ -1332,3 +1332,6 @@ img{ max-width: 100%; display:block; }
   .pagina-home .carrossel-banners{ margin-bottom:8px; }
   .pagina-home .atalhos-grade{ min-height:150px; gap:8px; }
 }
+
+/* botão "Copiar PIX": fica verde por alguns segundos depois de copiar */
+#btnCopiarPix.btn-copiado{ background: var(--verde-2); border-color: var(--verde-2); color:#fff; }

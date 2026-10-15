@@ -19,6 +19,9 @@ const HORAS_ANTES_PADRAO = 3;
 const FOLGA_APOS_MISSA_HORAS = 2;
 const MAX_TENTATIVAS = 5;
 const ENVIANDO_EXPIRA_MINUTOS = 15;
+// Depois que a lista foi ENVIADA por e-mail (e a missa já passou), ela é apagada do painel e do
+// banco de dados quando se completam estes dias desde o envio.
+export const EXCLUIR_LISTA_APOS_DIAS = 2;
 
 /* ---------------- Datas (sempre no horário de Brasília) ---------------- */
 
@@ -166,6 +169,57 @@ export function criarClienteFirestore({ projectId, apiKey, fetchFn = fetch }) {
       return true;
     },
 
+    // Apaga um documento (devolve true se apagou ou se já não existia).
+    async excluirDocumento(caminho) {
+      const r = await chamar(`${base}/${caminho}?${sufixoChave}`, { method: "DELETE" });
+      if (r.status === 404) return true;
+      if (!r.ok) throw new Error(`Firestore (excluir ${caminho}) respondeu ${r.status}: ${r.json?.error?.message || ""}`);
+      return true;
+    },
+
+    // Registros de envio já concluídos (configuracoes/envio_DATA_HORA com status "enviado").
+    async enviosConcluidos() {
+      const r = await chamar(`${base}:runQuery?${sufixoChave}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: "configuracoes" }],
+            where: { fieldFilter: { field: { fieldPath: "status" }, op: "EQUAL", value: { stringValue: "enviado" } } }
+          }
+        })
+      });
+      if (!r.ok) throw new Error(`Firestore (consultar envios) respondeu ${r.status}: ${r.json?.error?.message || ""}`);
+      return (r.json || []).filter((x) => x.document).map((x) => ({
+        id: x.document.name.split("/").pop(),
+        dados: decodificarCampos(x.document.fields || {})
+      }));
+    },
+
+    // Códigos de TODOS os documentos de uma lista (enviados e rascunhos), pra poder apagá-los.
+    async idsIntencoesDaLista(dataMissa, horaMissa) {
+      const r = await chamar(`${base}:runQuery?${sufixoChave}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: "intencoes" }],
+            where: {
+              compositeFilter: {
+                op: "AND",
+                filters: [
+                  { fieldFilter: { field: { fieldPath: "dataMissa" }, op: "EQUAL", value: { stringValue: dataMissa } } },
+                  { fieldFilter: { field: { fieldPath: "horaMissa" }, op: "EQUAL", value: { integerValue: String(horaMissa) } } }
+                ]
+              }
+            }
+          }
+        })
+      });
+      if (!r.ok) throw new Error(`Firestore (consultar intenções) respondeu ${r.status}: ${r.json?.error?.message || ""}`);
+      return (r.json || []).filter((x) => x.document).map((x) => x.document.name.split("/").pop());
+    },
+
     // Todas as intenções de uma lista (data + hora).
     async intencoesDaLista(dataMissa, horaMissa) {
       const r = await chamar(`${base}:runQuery?${sufixoChave}`, {
@@ -302,4 +356,42 @@ export async function processarListasFechadas({ agora = new Date() } = {}, depen
     }
   }
   return { ativo: true, relatorio };
+}
+
+
+/* ---------------- Limpeza: listas antigas já enviadas ---------------- */
+
+// Apaga do banco (e, com isso, do painel) as listas que já foram enviadas por e-mail há
+// EXCLUIR_LISTA_APOS_DIAS dias ou mais E cuja missa já passou. Lista que nunca foi enviada (envio
+// automático desligado, falha no e-mail...) NÃO é apagada — assim nada se perde sem ter chegado
+// no e-mail. Devolve um relatório (um item por lista apagada).
+export async function limparListasAntigas({ agora = new Date() } = {}, { firestore }) {
+  const limiteMs = EXCLUIR_LISTA_APOS_DIAS * 24 * 3600000;
+  const envios = await firestore.enviosConcluidos();
+  const relatorio = [];
+  for (const { id, dados } of envios) {
+    if (!id.startsWith("envio_") || dados.limpo === true) continue;
+    const { dataMissa, horaMissa } = dados;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dataMissa || "")) || horaMissa === undefined || horaMissa === null) continue;
+    const enviadoEm = new Date(dados.enviadoEm || 0);
+    if (!(enviadoEm.getTime() > 0)) continue;
+    if (agora - enviadoEm < limiteMs) continue;                       // ainda não deu o prazo
+    // a missa já passou E a janela de envio automático dela já fechou (senão a lista apagada poderia ser reenviada vazia)
+    if (agora < new Date(instanteDaMissa(dataMissa, Number(horaMissa)).getTime() + (FOLGA_APOS_MISSA_HORAS + 1) * 3600000)) continue;
+    const item = { dataMissa, horaMissa: Number(horaMissa) };
+    try {
+      const codigos = await firestore.idsIntencoesDaLista(dataMissa, Number(horaMissa));
+      for (const codigo of codigos) await firestore.excluirDocumento(`intencoes/${codigo}`);
+      try {
+        await firestore.excluirDocumento(`configuracoes/${id}`);
+      } catch (erroRegistro) {
+        // se por algum motivo o registro de envio não puder ser apagado, só marca como "limpo" pra não tentar de novo
+        await firestore.atualizar(`configuracoes/${id}`, { limpo: true });
+      }
+      relatorio.push({ ...item, resultado: "apagada", intencoes: codigos.length });
+    } catch (erro) {
+      relatorio.push({ ...item, resultado: "erro", erro: String(erro?.message || erro).slice(0, 300) });
+    }
+  }
+  return relatorio;
 }

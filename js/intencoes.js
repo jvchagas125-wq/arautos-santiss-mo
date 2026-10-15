@@ -696,24 +696,54 @@ function abrirPix() {
   ben.textContent = p.beneficiario ? `Favorecido: ${p.beneficiario}` : "";
   ben.classList.toggle("oculto", !p.beneficiario);
   el("pixChave").textContent = p.chave;
+  el("pixChave").classList.add("oculto");
+  el("btnCopiarPix").textContent = "Copiar PIX copia e cola";
+  el("btnCopiarPix").classList.remove("btn-copiado");
   el("pixChaveCaixa").classList.toggle("oculto", !p.chave);
   abrir(modalPix);
 }
 el("btnFecharPix").addEventListener("click", () => fechar(modalPix));
+let temporizadorCopiado = null;
+function marcarPixCopiado() {
+  const btn = el("btnCopiarPix");
+  btn.textContent = "✓ Código copiado!";
+  btn.classList.add("btn-copiado");
+  mostrarToast("Código PIX copiado! Cole no seu aplicativo do banco.");
+  clearTimeout(temporizadorCopiado);
+  temporizadorCopiado = setTimeout(() => {
+    btn.textContent = "Copiar PIX copia e cola";
+    btn.classList.remove("btn-copiado");
+  }, 3000);
+}
+// toque no botão = código copiado na hora. Se o aparelho bloquear a cópia automática, o código
+// aparece na tela já selecionado, pra pessoa só copiar.
 el("btnCopiarPix").addEventListener("click", async () => {
   const texto = formulario.pix.chave;
   try {
     await navigator.clipboard.writeText(texto);
-    mostrarToast("Código PIX copiado!");
-  } catch {
-    // alguns navegadores bloqueiam a área de transferência: seleciona o texto pra copiar na mão
-    const range = document.createRange();
-    range.selectNodeContents(el("pixChave"));
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    mostrarToast("Selecionei o código — é só copiar.");
-  }
+    marcarPixCopiado();
+    return;
+  } catch { /* tenta o jeito antigo abaixo */ }
+  try {
+    const campo = document.createElement("textarea");
+    campo.value = texto;
+    campo.setAttribute("readonly", "");
+    campo.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+    document.body.appendChild(campo);
+    campo.select();
+    campo.setSelectionRange(0, texto.length);
+    const copiou = document.execCommand("copy");
+    campo.remove();
+    if (copiou) { marcarPixCopiado(); return; }
+  } catch { /* cai no último recurso */ }
+  const caixa = el("pixChave");
+  caixa.classList.remove("oculto");
+  const range = document.createRange();
+  range.selectNodeContents(caixa);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  mostrarToast("Não consegui copiar sozinho — o código está selecionado, é só copiar.");
 });
 
 /* ---------- Lista que fecha enquanto a pessoa ainda está nela ---------- */
