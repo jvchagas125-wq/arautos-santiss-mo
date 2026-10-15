@@ -4,6 +4,10 @@ import {
   collection, query, where, getDocs, onSnapshot, orderBy,
   serverTimestamp
 } from "./firebase-init.js";
+import {
+  normalizarConfigIntencoes, normalizarFormularioIntencoes, horariosPorDiaParaFirestore,
+  normalizarHorariosEspeciais, statusMissaEspecifica
+} from "./utils.js";
 
 /* ---------------- Configurações gerais (frase do dia, logo, fundo) ---------------- */
 
@@ -323,44 +327,62 @@ export function ouvirTodosAgendamentos(status, callback) {
 
 /* ---------------- Intenções da missa ---------------- */
 
-// horariosPorDia: um array por dia da semana, índice = Date.getDay() (0=domingo ... 6=sábado).
-// Um dia com array vazio significa "sem missa nesse dia" — a lista de intenções simplesmente pula esse dia.
-function horariosPorDiaPadrao() {
-  return [[10, 18], [7, 19], [7, 19], [7, 19], [7, 19], [7, 19], [7, 19]];
-}
-const HORAS_ANTES_PADRAO = 3;
-
-// Aceita tanto o formato novo (horariosPorDia) quanto o formato antigo (horariosSemana/horariosDomingo,
-// salvo antes dessa opção por dia existir), convertendo o antigo automaticamente.
-function normalizarConfigIntencoes(dados) {
-  if (Array.isArray(dados.horariosPorDia) && dados.horariosPorDia.length === 7) {
-    return { horariosPorDia: dados.horariosPorDia, horasAntes: dados.horasAntes ?? HORAS_ANTES_PADRAO };
-  }
-  if (Array.isArray(dados.horariosSemana) || Array.isArray(dados.horariosDomingo)) {
-    const semana = dados.horariosSemana || [];
-    const domingo = dados.horariosDomingo || [];
-    return {
-      horariosPorDia: [domingo, semana, semana, semana, semana, semana, semana],
-      horasAntes: dados.horasAntes ?? HORAS_ANTES_PADRAO
-    };
-  }
-  return { horariosPorDia: horariosPorDiaPadrao(), horasAntes: HORAS_ANTES_PADRAO };
-}
-
+// Configuração dos horários (doc configuracoes/intencoes). Em memória: { horariosPorDia: [7 listas],
+// horasAntes, horariosEspeciais: { "aaaa-mm-dd": [horas] } } — a leitura tolerante (formato atual e antigos)
+// fica em js/utils.js (normalizarConfigIntencoes), a mesma usada pelo servidor.
 export async function obterConfigIntencoes() {
   const snap = await getDoc(REF_INTENCOES_CONFIG);
-  if (!snap.exists()) return { horariosPorDia: horariosPorDiaPadrao(), horasAntes: HORAS_ANTES_PADRAO };
-  return normalizarConfigIntencoes(snap.data());
+  return normalizarConfigIntencoes(snap.exists() ? snap.data() : null);
 }
 
 export function ouvirConfigIntencoes(callback) {
   return onSnapshot(REF_INTENCOES_CONFIG, (snap) => {
-    callback(snap.exists() ? normalizarConfigIntencoes(snap.data()) : { horariosPorDia: horariosPorDiaPadrao(), horasAntes: HORAS_ANTES_PADRAO });
+    callback(normalizarConfigIntencoes(snap.exists() ? snap.data() : null));
   });
 }
 
-export async function salvarConfigIntencoes(dados) {
-  await setDoc(REF_INTENCOES_CONFIG, dados, { merge: true });
+// Salva os horários da semana + "fechar quantas horas antes". O Firestore NÃO aceita lista dentro de
+// lista, então os 7 dias vão como um mapa {"0": [..], ..., "6": [..]} (era isso que dava
+// "Nested arrays are not supported" ao salvar).
+export async function salvarConfigIntencoes({ horariosPorDia, horasAntes }) {
+  // mergeFields troca esses dois campos por inteiro (inclusive se antes "horariosPorDia" era uma lista) e
+  // não encosta nos demais, como os dias com horário diferente
+  await setDoc(REF_INTENCOES_CONFIG, {
+    horariosPorDia: horariosPorDiaParaFirestore(horariosPorDia),
+    horasAntes
+  }, { mergeFields: ["horariosPorDia", "horasAntes"] });
+}
+
+// Salva TODOS os dias com horário diferente de uma vez ({ "aaaa-mm-dd": [horas] }). Usa updateDoc
+// (que troca o campo inteiro) pra que um dia removido realmente suma — setDoc com merge só
+// acrescentaria chaves.
+export async function salvarHorariosEspeciais(mapa) {
+  const limpo = normalizarHorariosEspeciais(mapa);
+  const snap = await getDoc(REF_INTENCOES_CONFIG);
+  if (snap.exists()) await updateDoc(REF_INTENCOES_CONFIG, { horariosEspeciais: limpo });
+  else await setDoc(REF_INTENCOES_CONFIG, { horariosEspeciais: limpo }, { merge: true });
+}
+
+/* ---------- Formulário das intenções (categorias, tempos de falecimento, PIX) ----------
+   Doc configuracoes/intencoesForm — editado no painel, lido pelo site público e pelo servidor. */
+const REF_FORM_INTENCOES = doc(db, "configuracoes", "intencoesForm");
+
+export async function obterFormularioIntencoes() {
+  const snap = await getDoc(REF_FORM_INTENCOES);
+  return normalizarFormularioIntencoes(snap.exists() ? snap.data() : null);
+}
+
+export function ouvirFormularioIntencoes(callback) {
+  return onSnapshot(REF_FORM_INTENCOES, (snap) => {
+    callback(normalizarFormularioIntencoes(snap.exists() ? snap.data() : null));
+  });
+}
+
+export async function salvarFormularioIntencoes(formulario) {
+  const limpo = normalizarFormularioIntencoes(formulario);
+  // setDoc SEM merge: o documento inteiro é trocado, assim categoria/tempo removido some de vez
+  await setDoc(REF_FORM_INTENCOES, limpo);
+  return limpo;
 }
 
 /* ---------- Envio automático das listas por e-mail ----------
@@ -399,12 +421,10 @@ export function ouvirEnviosIntencoes(callback) {
 }
 
 // Envia uma intenção para a lista da missa indicada. Guarda nome e telefoneDigits de quem
-// enviou (identificação padrão do site, já feita em toda página) — usado só pra avisar a
-// própria pessoa se ela já tiver enviado outra intenção nessa mesma categoria, nessa mesma
-// missa (ver js/intencoes.js). O texto é sempre livre, do jeito que a pessoa escrever — tanto
-// no painel administrativo (ver js/admin.js) quanto no PDF extraído pelo padre, as intenções de
-// uma mesma categoria/missa aparecem juntas, separadas por vírgula.
-export async function criarIntencao({ dataMissa, horaMissa, categoria, texto, nome, telefoneDigits }) {
+// enviou (identificação padrão do site, já feita em toda página). "destaque" = sai em negrito no
+// documento Word (usado nas intenções por alma com tempo de falecimento). O texto é sempre livre,
+// do jeito que a pessoa escrever.
+export async function criarIntencao({ dataMissa, horaMissa, categoria, texto, nome, telefoneDigits, destaque = false, tempo = "" }) {
   const ref = doc(collection(db, "intencoes"));
   const dados = {
     dataMissa, horaMissa, categoria, texto,
@@ -412,8 +432,61 @@ export async function criarIntencao({ dataMissa, horaMissa, categoria, texto, no
     telefoneDigits: telefoneDigits || "",
     criadoEm: serverTimestamp()
   };
+  if (destaque) dados.destaque = true;
+  if (tempo) dados.tempo = tempo;
   await setDoc(ref, dados);
   return ref.id;
+}
+
+// Rascunhos: o que a pessoa já digitou mas ainda não enviou (ou enviou e está editando). Ficam na
+// mesma coleção "intencoes", com tipo = "rascunho" e um id fixo por pessoa+lista; as telas do painel e o
+// envio por e-mail ignoram esses documentos. Depois que a lista fecha, eles são apagados
+// (limparRascunhosVencidos).
+const ehRascunho = (it) => it && it.tipo === "rascunho";
+export function idRascunho(dataMissa, horaMissa, telefoneDigits) {
+  return `rasc_${dataMissa}_${String(horaMissa).padStart(2, "0")}_${telefoneDigits}`;
+}
+
+export async function obterRascunho(dataMissa, horaMissa, telefoneDigits) {
+  const snap = await getDoc(doc(db, "intencoes", idRascunho(dataMissa, horaMissa, telefoneDigits)));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+export async function salvarRascunho({ dataMissa, horaMissa, telefoneDigits, nome, itens, assinaturaEnviada }) {
+  const ref = doc(db, "intencoes", idRascunho(dataMissa, horaMissa, telefoneDigits));
+  await setDoc(ref, {
+    tipo: "rascunho", dataMissa, horaMissa, telefoneDigits, nome: nome || "",
+    itens, assinaturaEnviada: assinaturaEnviada || "", atualizadoEm: serverTimestamp()
+  });
+}
+
+export async function excluirRascunho(dataMissa, horaMissa, telefoneDigits) {
+  await deleteDoc(doc(db, "intencoes", idRascunho(dataMissa, horaMissa, telefoneDigits)));
+}
+
+// As intenções que ESTA pessoa já enviou para uma lista (sem contar o rascunho).
+export async function obterIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits) {
+  const q = query(
+    collection(db, "intencoes"),
+    where("dataMissa", "==", dataMissa),
+    where("horaMissa", "==", horaMissa),
+    where("telefoneDigits", "==", telefoneDigits)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((it) => !ehRascunho(it));
+}
+
+// "Enviar intenções": troca TUDO que esta pessoa tinha enviado para a lista pelo conteúdo atual do
+// rascunho (cada item vira uma intenção separada, como sempre foi). Reenviar depois de editar
+// simplesmente atualiza a lista — enquanto ela estiver aberta.
+export async function enviarIntencoesDaPessoa({ dataMissa, horaMissa, nome, telefoneDigits, itens, assinatura }) {
+  const anteriores = await obterIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits);
+  await Promise.all(anteriores.map((it) => deleteDoc(doc(db, "intencoes", it.id))));
+  await Promise.all(itens.map((it) => criarIntencao({
+    dataMissa, horaMissa, categoria: it.categoria, texto: it.texto, nome, telefoneDigits,
+    destaque: it.destaque === true, tempo: it.tempo || ""
+  })));
+  await salvarRascunho({ dataMissa, horaMissa, telefoneDigits, nome, itens, assinaturaEnviada: assinatura });
 }
 
 // Escuta em tempo real as intenções já enviadas para uma lista específica (dataMissa + horaMissa).
@@ -424,25 +497,23 @@ export function ouvirIntencoesDaLista(dataMissa, horaMissa, callback) {
     where("horaMissa", "==", horaMissa)
   );
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((it) => !ehRascunho(it)));
   });
 }
 
 // Usado pelo painel admin: todas as intenções já enviadas, de todas as listas (agrupamento é feito na UI).
 export function ouvirTodasIntencoes(callback) {
   return onSnapshot(collection(db, "intencoes"), (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((it) => !ehRascunho(it)));
   });
 }
 
-// Atualiza o texto de uma intenção já enviada — usado quando a própria pessoa edita algo que
-// ela escreveu (ver js/intencoes.js), ou quando o painel administrativo edita uma intenção.
+// Atualiza o texto de uma intenção já enviada — usado quando o painel administrativo edita uma intenção.
 export async function atualizarIntencao(id, dadosParciais) {
   await updateDoc(doc(db, "intencoes", id), dadosParciais);
 }
 
-// Apaga uma única intenção — usado quando a própria pessoa apaga algo que ela escreveu
-// (diferente de excluirListaIntencoes, que apaga a lista inteira e é só do painel admin).
+// Apaga uma única intenção (diferente de excluirListaIntencoes, que apaga a lista inteira).
 export async function excluirIntencao(id) {
   await deleteDoc(doc(db, "intencoes", id));
 }
@@ -456,7 +527,20 @@ export async function excluirListaIntencoes(dataMissa, horaMissa) {
   );
   const snap = await getDocs(q);
   await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, "intencoes", d.id))));
-  return snap.docs.length;
+  return snap.docs.filter((d) => !ehRascunho(d.data())).length;
+}
+
+// Apaga os rascunhos de listas que já fecharam (ninguém mais pode editar). O que a pessoa chegou a
+// ENVIAR continua guardado normalmente — só o "rascunho" some do site e do banco de dados.
+export async function limparRascunhosVencidos(horasAntes, agora = new Date()) {
+  const snap = await getDocs(query(collection(db, "intencoes"), where("tipo", "==", "rascunho")));
+  const vencidos = snap.docs.filter((d) => {
+    const dados = d.data();
+    if (!dados.dataMissa || dados.horaMissa === undefined) return true;
+    return !statusMissaEspecifica(dados.dataMissa, Number(dados.horaMissa), horasAntes, agora).aberta;
+  });
+  await Promise.all(vencidos.map((d) => deleteDoc(doc(db, "intencoes", d.id))));
+  return vencidos.length;
 }
 
 /* ---------------- Avisos ---------------- */

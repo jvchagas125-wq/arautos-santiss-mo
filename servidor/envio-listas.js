@@ -8,7 +8,7 @@
 // menos "horas antes") e ainda não foram enviadas, gera o documento Word de cada uma e manda por e-mail
 // pros endereços cadastrados no painel administrativo. Cada lista é enviada uma única vez —
 // o "carimbo" de envio fica guardado no Firestore (coleção configuracoes, doc "envio_DATA_HORA").
-import { horariosDoDia } from "../js/utils.js";
+import { horariosDoDia, normalizarConfigIntencoes, normalizarFormularioIntencoes } from "../js/utils.js";
 import { rotuloListaIntencao, nomeArquivoDocx } from "../js/docx-intencoes.js";
 
 // Brasil não tem mais horário de verão desde 2019: Brasília é sempre UTC-3.
@@ -49,22 +49,8 @@ export function instanteDaMissa(iso, hora) {
 
 /* ---------------- Configurações ---------------- */
 
-// Mesma leitura tolerante de js/dados.js (normalizarConfigIntencoes) — não dá pra importar
-// aquele arquivo aqui porque ele depende do Firebase do navegador.
-export function normalizarConfigIntencoes(dados) {
-  const padrao = [[10, 18], [7, 19], [7, 19], [7, 19], [7, 19], [7, 19], [7, 19]];
-  if (!dados) return { horariosPorDia: padrao, horasAntes: HORAS_ANTES_PADRAO };
-  const horasAntes = Number(dados.horasAntes) > 0 ? Number(dados.horasAntes) : HORAS_ANTES_PADRAO;
-  if (Array.isArray(dados.horariosPorDia) && dados.horariosPorDia.length === 7) {
-    return { horariosPorDia: dados.horariosPorDia, horasAntes };
-  }
-  if (Array.isArray(dados.horariosSemana) || Array.isArray(dados.horariosDomingo)) {
-    const semana = dados.horariosSemana || [];
-    const domingo = dados.horariosDomingo || [];
-    return { horariosPorDia: [domingo, semana, semana, semana, semana, semana, semana], horasAntes };
-  }
-  return { horariosPorDia: padrao, horasAntes };
-}
+// A leitura da configuração (aceita os formatos novo e antigo) é a mesma do navegador: vive em js/utils.js.
+export { normalizarConfigIntencoes };
 
 const REGEX_EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 
@@ -201,7 +187,9 @@ export function criarClienteFirestore({ projectId, apiKey, fetchFn = fetch }) {
         })
       });
       if (!r.ok) throw new Error(`Firestore (consultar intenções) respondeu ${r.status}: ${r.json?.error?.message || ""}`);
-      return (r.json || []).filter((x) => x.document).map((x) => decodificarCampos(x.document.fields || {}));
+      // "rascunho" é o que a pessoa ainda não enviou (ver js/dados.js) — nunca entra na lista da missa.
+      return (r.json || []).filter((x) => x.document).map((x) => decodificarCampos(x.document.fields || {}))
+        .filter((it) => it.tipo !== "rascunho");
     }
   };
 }
@@ -217,7 +205,13 @@ export async function montarEEnviarLista({ dataMissa, horaMissa, destinatarios, 
   const { firestore, gerarDocumento, enviarEmail } = dependencias;
   const itens = itensProntos || (await firestore.intencoesDaLista(dataMissa, horaMissa));
   const rotulo = rotuloListaIntencao(dataMissa, horaMissa);
-  const arquivo = await gerarDocumento(rotulo, itens);
+  // categorias editáveis no painel (configuracoes/intencoesForm); se não der pra ler, usa as de fábrica
+  let categorias;
+  try {
+    const docForm = await firestore.lerDocumento("configuracoes/intencoesForm");
+    categorias = normalizarFormularioIntencoes(docForm?.dados).categorias;
+  } catch { categorias = normalizarFormularioIntencoes(null).categorias; }
+  const arquivo = await gerarDocumento(rotulo, itens, { categorias });
   const total = itens.length;
   const assunto = `${teste ? "[TESTE] " : ""}Intenções da Santa Missa — ${rotulo}`;
   const texto = [

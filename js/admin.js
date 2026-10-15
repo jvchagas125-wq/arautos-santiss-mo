@@ -1,7 +1,7 @@
 import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
-  MESES, CATEGORIAS_INTENCAO, PLACEHOLDERS_INTENCAO, INTENCAO_FIXA_ALMA, DIAS_SEMANA_COMPLETO, linkificarTexto, ORDEM_PAGINAS,
+  MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS,
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -11,7 +11,9 @@ import {
   atualizarNomeUsuario, atualizarNomeEmAgendamentosDoTelefone,
   excluirUsuario, cancelarAgendamento, limparAgendamentosCancelados,
   marcarAgendamentoExtra,
-  obterConfigIntencoes, salvarConfigIntencoes, ouvirTodasIntencoes, excluirListaIntencoes,
+  obterConfigIntencoes, salvarConfigIntencoes, ouvirConfigIntencoes, salvarHorariosEspeciais,
+  obterFormularioIntencoes, ouvirFormularioIntencoes, salvarFormularioIntencoes, limparRascunhosVencidos,
+  ouvirTodasIntencoes, excluirListaIntencoes,
   obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes,
   criarIntencao, atualizarIntencao, excluirIntencao,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
@@ -248,7 +250,8 @@ const ALVOS_PARTES = {
   intencoes: {
     horarios: painelDe("cabecalhoHorariosMissas"),
     listas: painelDe("cabecalhoListasPreenchidas"),
-    email: () => [document.getElementById("painelEnvioEmail")]
+    email: () => [document.getElementById("painelEnvioEmail")],
+    formulario: () => [document.getElementById("painelFormularioIntencoes")]
   },
   avisos: {
     publicar: painelDe("formNovoAviso"),
@@ -546,6 +549,8 @@ function configurarIntencoes() {
   cabecalhoHorariosMissas.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarHorariosMissas(); }
   });
+  // categorias do formulário (editáveis em "Formulário das intenções"); começam nas de fábrica até a leitura do banco
+  let categoriasAtuais = CATEGORIAS_PADRAO;
   const listaQuadros = document.getElementById("listaQuadrosIntencoes");
   const avisoSemIntencoes = document.getElementById("avisoSemIntencoes");
 
@@ -664,6 +669,431 @@ function configurarIntencoes() {
     }
   });
 
+  /* ---------- Dias com horário diferente (calendário + janela de horários) ---------- */
+  let configIntencoes = { horariosPorDia: [[], [], [], [], [], [], []], horasAntes: 3, horariosEspeciais: {} };
+  const modalEspecial = document.getElementById("modalHorarioEspecial");
+  const gradeEspecial = document.getElementById("especialGrade");
+  const calendarioEspeciaisEl = document.getElementById("calendarioEspeciais");
+  const listaEspeciaisEl = document.getElementById("listaHorariosEspeciais");
+  let diaEspecialEditando = null;
+  let mesEspeciais = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+  for (let h = 0; h < 24; h++) {
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="checkbox" value="${h}" /> ${String(h).padStart(2, "0")}h`;
+    label.querySelector("input").addEventListener("change", (e) => label.classList.toggle("marcado", e.target.checked));
+    gradeEspecial.appendChild(label);
+  }
+  function marcarGradeEspecial(horas) {
+    const ativos = new Set(horas || []);
+    gradeEspecial.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+      cb.checked = ativos.has(Number(cb.value));
+      cb.closest("label").classList.toggle("marcado", cb.checked);
+    });
+  }
+  function horasDaGradeEspecial() {
+    return Array.from(gradeEspecial.querySelectorAll("input:checked")).map((cb) => Number(cb.value)).sort((a, b) => a - b);
+  }
+  const horasPadraoDaSemana = (iso) => [...(configIntencoes.horariosPorDia[isoParaData(iso).getDay()] || [])].sort((a, b) => a - b);
+  const textoHoras = (horas) => horas.length ? horas.map((h) => `${String(h).padStart(2, "0")}h`).join(", ") : "";
+
+  function abrirHorarioEspecial(iso) {
+    diaEspecialEditando = iso;
+    const atual = configIntencoes.horariosEspeciais[iso];
+    const temEspecial = Array.isArray(atual);
+    marcarGradeEspecial(temEspecial ? atual : horasPadraoDaSemana(iso));
+    document.getElementById("especialData").textContent = formatarDataComDiaSemana(iso);
+    document.getElementById("especialAviso").textContent = temEspecial
+      ? "Este dia já tem um horário diferente do padrão."
+      : `Este dia usa o horário padrão da semana${horasPadraoDaSemana(iso).length ? ` (${textoHoras(horasPadraoDaSemana(iso))})` : " (sem missa)"}. Ajuste abaixo para criar um horário diferente.`;
+    document.getElementById("btnRemoverEspecial").classList.toggle("oculto", !temEspecial);
+    abrirModal(modalEspecial);
+  }
+  function fecharHorarioEspecial() { fecharModal(modalEspecial); diaEspecialEditando = null; }
+
+  // guarda o mapa inteiro de dias especiais; datas que já passaram são descartadas (não servem mais pra nada)
+  async function gravarHorariosEspeciais(mapa) {
+    const hoje = hojeIso();
+    const limpo = {};
+    Object.entries(mapa).forEach(([iso, horas]) => { if (iso >= hoje) limpo[iso] = horas; });
+    await salvarHorariosEspeciais(limpo);
+  }
+
+  document.getElementById("fecharModalHorarioEspecial").addEventListener("click", fecharHorarioEspecial);
+  document.getElementById("btnCancelarEspecial").addEventListener("click", fecharHorarioEspecial);
+  document.getElementById("btnSalvarEspecial").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const iso = diaEspecialEditando;
+    if (!iso) return;
+    const horas = horasDaGradeEspecial();
+    const mapa = { ...configIntencoes.horariosEspeciais };
+    const padrao = horasPadraoDaSemana(iso);
+    const igualAoPadrao = horas.length === padrao.length && horas.every((h, i) => h === padrao[i]);
+    let aviso;
+    if (igualAoPadrao) { delete mapa[iso]; aviso = "Esses são os horários padrão da semana — este dia voltou ao normal."; }
+    else { mapa[iso] = horas; aviso = horas.length ? "Horários do dia salvos!" : "Salvo: este dia ficou sem missa."; }
+    btn.disabled = true;
+    btn.textContent = "Salvando...";
+    try {
+      await gravarHorariosEspeciais(mapa);
+      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa };
+      renderizarEspeciais();
+      fecharHorarioEspecial();
+      mostrarToast(aviso);
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Salvar alterações";
+    }
+  });
+  document.getElementById("btnRemoverEspecial").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const iso = diaEspecialEditando;
+    if (!iso) return;
+    const mapa = { ...configIntencoes.horariosEspeciais };
+    delete mapa[iso];
+    btn.disabled = true;
+    try {
+      await gravarHorariosEspeciais(mapa);
+      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa };
+      renderizarEspeciais();
+      fecharHorarioEspecial();
+      mostrarToast("Este dia voltou ao horário padrão da semana.");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function renderizarCalendarioEspeciais() {
+    const elMesAno = calendarioEspeciaisEl.querySelector("[data-mes-ano]");
+    const elDias = calendarioEspeciaisEl.querySelector("[data-dias]");
+    const nomeMes = MESES[mesEspeciais.getMonth()];
+    elMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mesEspeciais.getFullYear()}`;
+    const hoje = hojeIso();
+    const mesAtualReal = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    calendarioEspeciaisEl.querySelector("[data-nav-anterior]").disabled = mesEspeciais <= mesAtualReal;
+    elDias.innerHTML = "";
+    const primeiro = new Date(mesEspeciais.getFullYear(), mesEspeciais.getMonth(), 1).getDay();
+    const total = new Date(mesEspeciais.getFullYear(), mesEspeciais.getMonth() + 1, 0).getDate();
+    for (let i = 0; i < primeiro; i++) {
+      const vazio = document.createElement("span");
+      vazio.className = "calendario__vazio";
+      elDias.appendChild(vazio);
+    }
+    for (let dia = 1; dia <= total; dia++) {
+      const iso = dataParaIso(new Date(mesEspeciais.getFullYear(), mesEspeciais.getMonth(), dia));
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "calendario__dia";
+      btn.textContent = dia;
+      if (iso >= hoje) {
+        btn.classList.add("disponivel");
+        const especial = configIntencoes.horariosEspeciais[iso];
+        if (Array.isArray(especial)) {
+          btn.classList.add("especial");
+          if (especial.length === 0) btn.classList.add("sem-missa");
+          btn.title = especial.length ? `Missa às ${textoHoras(especial)}` : "Sem missa neste dia";
+        }
+        btn.addEventListener("click", () => abrirHorarioEspecial(iso));
+      }
+      elDias.appendChild(btn);
+    }
+  }
+  calendarioEspeciaisEl.querySelector("[data-nav-anterior]").addEventListener("click", () => {
+    mesEspeciais = new Date(mesEspeciais.getFullYear(), mesEspeciais.getMonth() - 1, 1);
+    renderizarCalendarioEspeciais();
+  });
+  calendarioEspeciaisEl.querySelector("[data-nav-proximo]").addEventListener("click", () => {
+    mesEspeciais = new Date(mesEspeciais.getFullYear(), mesEspeciais.getMonth() + 1, 1);
+    renderizarCalendarioEspeciais();
+  });
+
+  function renderizarListaEspeciais() {
+    const hoje = hojeIso();
+    const datas = Object.keys(configIntencoes.horariosEspeciais).filter((iso) => iso >= hoje).sort();
+    listaEspeciaisEl.innerHTML = "";
+    if (datas.length === 0) {
+      const vazio = document.createElement("p");
+      vazio.className = "lista-especiais__vazio";
+      vazio.textContent = "Nenhum dia com horário diferente por enquanto.";
+      listaEspeciaisEl.appendChild(vazio);
+      return;
+    }
+    datas.forEach((iso) => {
+      const horas = configIntencoes.horariosEspeciais[iso];
+      const item = document.createElement("div");
+      item.className = "item-especial";
+      const texto = document.createElement("div");
+      texto.className = "item-especial__texto";
+      const forte = document.createElement("strong");
+      forte.textContent = formatarDataComDiaSemana(iso);
+      texto.appendChild(forte);
+      texto.appendChild(document.createTextNode(horas.length ? `Missa às ${textoHoras(horas)}` : "Sem missa neste dia"));
+      const acoes = document.createElement("span");
+      acoes.className = "item-especial__acoes";
+      const btnEditar = criarBotaoIcone("intencao-item__btn--editar", "Editar horários deste dia", ICONE_LAPIS);
+      btnEditar.addEventListener("click", () => abrirHorarioEspecial(iso));
+      const btnApagar = criarBotaoIcone("intencao-item__btn--apagar", "Voltar ao horário padrão", ICONE_LIXEIRA);
+      btnApagar.addEventListener("click", async () => {
+        const mapa = { ...configIntencoes.horariosEspeciais };
+        delete mapa[iso];
+        try {
+          await gravarHorariosEspeciais(mapa);
+          configIntencoes = { ...configIntencoes, horariosEspeciais: mapa };
+          renderizarEspeciais();
+          mostrarToast("Este dia voltou ao horário padrão da semana.");
+        } catch (err) {
+          console.error(err);
+          mostrarToast("Não foi possível salvar. Tente novamente.");
+        }
+      });
+      acoes.appendChild(btnEditar);
+      acoes.appendChild(btnApagar);
+      item.appendChild(texto);
+      item.appendChild(acoes);
+      listaEspeciaisEl.appendChild(item);
+    });
+  }
+  function renderizarEspeciais() { renderizarCalendarioEspeciais(); renderizarListaEspeciais(); }
+
+  let rascunhosLimpos = false;
+  ouvirConfigIntencoes((config) => {
+    configIntencoes = config;
+    renderizarEspeciais();
+    // rascunhos de listas que já fecharam não servem mais: apaga (uma vez por abertura do painel)
+    if (!rascunhosLimpos) {
+      rascunhosLimpos = true;
+      limparRascunhosVencidos(config.horasAntes).catch((err) => console.error(err));
+    }
+  });
+
+  /* ---------- Formulário das intenções: categorias, tempos de falecimento, PIX ---------- */
+  const cabecalhoFormulario = document.getElementById("cabecalhoFormulario");
+  const corpoFormulario = document.getElementById("corpoFormulario");
+  function alternarFormulario() {
+    const abrir = corpoFormulario.classList.contains("oculto");
+    corpoFormulario.classList.toggle("oculto", !abrir);
+    cabecalhoFormulario.classList.toggle("recolhido", !abrir);
+    cabecalhoFormulario.setAttribute("aria-expanded", String(abrir));
+  }
+  cabecalhoFormulario.addEventListener("click", alternarFormulario);
+  cabecalhoFormulario.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarFormulario(); }
+  });
+
+  const formFormulario = document.getElementById("formFormularioIntencoes");
+  const caixaCategorias = document.getElementById("formCategorias");
+  const caixaTempos = document.getElementById("formTempos");
+  let categoriasEdicao = [];
+  let temposEdicao = [];
+  let pixQrUrl = "";
+
+  const novaChave = (prefixo) => `${prefixo}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+
+  function botaoLinha(texto, titulo, classe, aoClicar, desabilitado = false) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = `linha-form__btn ${classe || ""}`.trim();
+    b.title = titulo;
+    b.setAttribute("aria-label", titulo);
+    b.textContent = texto;
+    b.disabled = desabilitado;
+    b.addEventListener("click", aoClicar);
+    return b;
+  }
+  function campoTexto(valor, placeholder, aoMudar) {
+    const i = document.createElement("input");
+    i.type = "text";
+    i.placeholder = placeholder;
+    i.value = valor || "";
+    i.addEventListener("input", () => aoMudar(i.value));
+    return i;
+  }
+  function campoComRotulo(rotulo, valor, placeholder, aoMudar) {
+    const caixa = document.createElement("div");
+    caixa.className = "linha-form__campo";
+    const l = document.createElement("label");
+    l.textContent = rotulo;
+    caixa.appendChild(l);
+    caixa.appendChild(campoTexto(valor, placeholder, aoMudar));
+    return caixa;
+  }
+  function mover(lista, i, delta, redesenhar) {
+    const j = i + delta;
+    if (j < 0 || j >= lista.length) return;
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+    redesenhar();
+  }
+
+  function desenharCategorias() {
+    caixaCategorias.innerHTML = "";
+    categoriasEdicao.forEach((cat, i) => {
+      const linha = document.createElement("div");
+      linha.className = "linha-form";
+      const topo = document.createElement("div");
+      topo.className = "linha-form__topo";
+      topo.appendChild(campoTexto(cat.rotulo, "Nome da categoria", (v) => { cat.rotulo = v; }));
+      const tipo = document.createElement("select");
+      tipo.innerHTML = `<option value="nome">Só nomes</option><option value="falecimento">Falecimento (com tempo)</option>`;
+      tipo.value = cat.tipo;
+      tipo.addEventListener("change", () => { cat.tipo = tipo.value; });
+      topo.appendChild(tipo);
+      const botoes = document.createElement("span");
+      botoes.className = "linha-form__botoes";
+      botoes.appendChild(botaoLinha("↑", "Subir", "", () => mover(categoriasEdicao, i, -1, desenharCategorias), i === 0));
+      botoes.appendChild(botaoLinha("↓", "Descer", "", () => mover(categoriasEdicao, i, 1, desenharCategorias), i === categoriasEdicao.length - 1));
+      botoes.appendChild(botaoLinha("×", "Remover categoria", "linha-form__btn--remover", () => {
+        categoriasEdicao.splice(i, 1);
+        desenharCategorias();
+      }));
+      topo.appendChild(botoes);
+      linha.appendChild(topo);
+      linha.appendChild(campoComRotulo("Texto de ajuda dentro do campo de nome", cat.placeholder, "Ex.: Digite o nome completo e clique em ...", (v) => { cat.placeholder = v; }));
+      linha.appendChild(campoComRotulo("Intenção fixa no fim da lista (opcional)", cat.textoFixo, "Ex.: Pelas almas do purgatório...", (v) => { cat.textoFixo = v; }));
+      caixaCategorias.appendChild(linha);
+    });
+  }
+  function desenharTempos() {
+    caixaTempos.innerHTML = "";
+    temposEdicao.forEach((t, i) => {
+      const linha = document.createElement("div");
+      linha.className = "linha-form";
+      const topo = document.createElement("div");
+      topo.className = "linha-form__topo";
+      topo.appendChild(campoComRotulo("Opção (o que a pessoa marca)", t.rotulo, "Ex.: 7° dia", (v) => { t.rotulo = v; }));
+      topo.appendChild(campoComRotulo("Texto na lista, entre parênteses", t.sufixo, "Ex.: 7 dias (vazio = só o nome)", (v) => { t.sufixo = v; }));
+      const botoes = document.createElement("span");
+      botoes.className = "linha-form__botoes";
+      botoes.appendChild(botaoLinha("↑", "Subir", "", () => mover(temposEdicao, i, -1, desenharTempos), i === 0));
+      botoes.appendChild(botaoLinha("↓", "Descer", "", () => mover(temposEdicao, i, 1, desenharTempos), i === temposEdicao.length - 1));
+      botoes.appendChild(botaoLinha("×", "Remover opção", "linha-form__btn--remover", () => {
+        temposEdicao.splice(i, 1);
+        desenharTempos();
+      }));
+      topo.appendChild(botoes);
+      linha.appendChild(topo);
+      linha.appendChild(campoComRotulo("Explicação mostrada junto da opção (opcional)", t.dica, "Ex.: Caso não deseje informar o tempo, clique aqui", (v) => { t.dica = v; }));
+      caixaTempos.appendChild(linha);
+    });
+  }
+  document.getElementById("btnAddCategoria").addEventListener("click", () => {
+    categoriasEdicao.push({ chave: novaChave("cat"), rotulo: "", tipo: "nome", placeholder: "", textoFixo: "" });
+    desenharCategorias();
+    caixaCategorias.lastElementChild?.querySelector("input")?.focus();
+  });
+  document.getElementById("btnAddTempo").addEventListener("click", () => {
+    temposEdicao.push({ chave: novaChave("tempo"), rotulo: "", sufixo: "", dica: "" });
+    desenharTempos();
+    caixaTempos.lastElementChild?.querySelector("input")?.focus();
+  });
+
+  // PIX / QR Code
+  const pixAtivo = document.getElementById("pixAtivo");
+  const pixPreview = document.getElementById("pixPreview");
+  const pixArquivo = document.getElementById("pixArquivo");
+  const btnPixEscolher = document.getElementById("btnPixEscolher");
+  const btnPixRemover = document.getElementById("btnPixRemover");
+  function mostrarQr() {
+    if (pixQrUrl) { pixPreview.src = pixQrUrl; pixPreview.classList.remove("oculto"); }
+    else { pixPreview.removeAttribute("src"); pixPreview.classList.add("oculto"); }
+    btnPixRemover.classList.toggle("oculto", !pixQrUrl);
+    btnPixEscolher.textContent = pixQrUrl ? "Trocar imagem do QR Code" : "Escolher imagem do QR Code";
+  }
+  btnPixEscolher.addEventListener("click", () => pixArquivo.click());
+  btnPixRemover.addEventListener("click", () => { pixQrUrl = ""; mostrarQr(); });
+  pixArquivo.addEventListener("change", async () => {
+    const arquivo = pixArquivo.files[0];
+    pixArquivo.value = "";
+    if (!arquivo) return;
+    btnPixEscolher.disabled = true;
+    btnPixEscolher.textContent = "Enviando imagem...";
+    try {
+      pixQrUrl = await enviarImagemParaCloudinary(arquivo);
+      mostrarQr();
+      mostrarToast("QR Code carregado — clique em Salvar formulário para publicar.");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível enviar a imagem. Verifique a conexão.");
+      mostrarQr();
+    } finally {
+      btnPixEscolher.disabled = false;
+    }
+  });
+
+  function preencherFormulario(f) {
+    categoriasEdicao = f.categorias.map((c) => ({ ...c }));
+    temposEdicao = f.temposFalecimento.map((t) => ({ ...t }));
+    desenharCategorias();
+    desenharTempos();
+    pixAtivo.checked = f.pix.ativo;
+    pixQrUrl = f.pix.qrCodeUrl;
+    mostrarQr();
+    document.getElementById("pixChaveCampo").value = f.pix.chave;
+    document.getElementById("pixBeneficiarioCampo").value = f.pix.beneficiario;
+    document.getElementById("pixMensagemCampo").value = f.pix.mensagem;
+    document.getElementById("textoEnviadoCampo").value = f.textos.enviado;
+    document.getElementById("textoPerguntaCampo").value = f.textos.pergunta;
+  }
+
+  let formularioPreenchido = false;
+  ouvirFormularioIntencoes((f) => {
+    categoriasAtuais = f.categorias; // a lista de "Listas preenchidas" passa a usar já as categorias novas
+    rerenderizar();
+    // o formulário em si só é preenchido na primeira leitura: depois disso, o que a pessoa está editando não é sobrescrito
+    if (!formularioPreenchido) { formularioPreenchido = true; preencherFormulario(f); }
+  });
+
+  formFormulario.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const categorias = categoriasEdicao
+      .map((c) => ({ ...c, rotulo: c.rotulo.trim(), placeholder: c.placeholder.trim(), textoFixo: c.textoFixo.trim() }))
+      .filter((c) => c.rotulo);
+    if (categorias.length === 0) { mostrarToast("Deixe pelo menos uma categoria."); return; }
+    const tempos = temposEdicao
+      .map((t) => ({ ...t, rotulo: t.rotulo.trim(), sufixo: t.sufixo.trim(), dica: t.dica.trim() }))
+      .filter((t) => t.rotulo);
+    if (categorias.some((c) => c.tipo === "falecimento") && tempos.length === 0) {
+      mostrarToast("A categoria de falecimento precisa de pelo menos uma opção de tempo.");
+      return;
+    }
+    const pix = {
+      ativo: pixAtivo.checked,
+      chave: document.getElementById("pixChaveCampo").value.trim(),
+      qrCodeUrl: pixQrUrl,
+      beneficiario: document.getElementById("pixBeneficiarioCampo").value.trim(),
+      mensagem: document.getElementById("pixMensagemCampo").value.trim()
+    };
+    if (pix.ativo && !pix.qrCodeUrl && !pix.chave) {
+      mostrarToast("Para ligar o PIX, envie a imagem do QR Code ou cole o código copia e cola.");
+      return;
+    }
+    const btn = document.getElementById("btnSalvarFormulario");
+    btn.disabled = true;
+    btn.textContent = "Salvando...";
+    try {
+      const salvo = await salvarFormularioIntencoes({
+        categorias, temposFalecimento: tempos, pix,
+        textos: {
+          enviado: document.getElementById("textoEnviadoCampo").value.trim(),
+          pergunta: document.getElementById("textoPerguntaCampo").value.trim()
+        }
+      });
+      preencherFormulario(salvo); // mostra já como ficou (textos vazios voltam ao padrão, etc.)
+      mostrarToast("Formulário das intenções salvo!");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Salvar formulário";
+    }
+  });
+
   function tituloLista(dataMissa, horaMissa) {
     return rotuloListaIntencao(dataMissa, horaMissa);
   }
@@ -672,7 +1102,7 @@ function configurarIntencoes() {
   // ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa. A montagem em si
   // (o desenho do documento) é compartilhada com o envio automático por e-mail — ver js/docx-intencoes.js.
   async function gerarDocumentoIntencoes(rotulo, itens) {
-    const documento = construirDocxIntencoes(rotulo, itens);
+    const documento = construirDocxIntencoes(rotulo, itens, { categorias: categoriasAtuais });
     const blob = await window.docx.Packer.toBlob(documento);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -791,7 +1221,7 @@ function configurarIntencoes() {
     const campoTexto = document.createElement("textarea");
     campoTexto.rows = ehGracas ? 2 : 4;
     campoTexto.required = true;
-    campoTexto.placeholder = PLACEHOLDERS_INTENCAO[chaveCategoria] || "";
+    campoTexto.placeholder = categoriasAtuais.find((c) => c.chave === chaveCategoria)?.placeholder || "";
     form.appendChild(campoTexto);
 
     const btn = document.createElement("button");
@@ -816,7 +1246,9 @@ function configurarIntencoes() {
       btn.disabled = true;
       btn.textContent = "Adicionando...";
       try {
-        await criarIntencao({ dataMissa, horaMissa, categoria: chaveCategoria, texto, nome: "", telefoneDigits: "" });
+        // categoria de falecimento: um nome seguido de "(...)" (ex.: "Maria (7 dias)") sai em negrito no Word
+        const destaque = categoriasAtuais.find((c) => c.chave === chaveCategoria)?.tipo === "falecimento" && /\(.+\)\s*$/.test(texto);
+        await criarIntencao({ dataMissa, horaMissa, categoria: chaveCategoria, texto, nome: "", telefoneDigits: "", destaque });
         campoTexto.value = "";
         mostrarToast("Intenção adicionada!");
       } catch (err) {
@@ -831,6 +1263,7 @@ function configurarIntencoes() {
     return form;
   }
 
+  const CHAVE_ORFAS = "__outras__";
   function criarBlocoCategoria(chaveCategoria, rotuloCategoria, doGrupo, dataMissa, horaMissa, chaveQuadro) {
     const bloco = document.createElement("div");
     bloco.className = "grupo-horario-dia";
@@ -857,9 +1290,10 @@ function configurarIntencoes() {
     const lista = document.createElement("div");
     lista.className = "categoria-intencao__lista";
 
-    // "Por alma" sempre tem pelo menos a intenção fixa (ver INTENCAO_FIXA_ALMA em utils.js) —
+    // Uma categoria com "intenção fixa" (por padrão, "Por alma") sempre tem pelo menos essa intenção —
     // nunca mostra o estado "vazio", mesmo sem ninguém ter colocado nome nenhum ainda.
-    const ehAlma = chaveCategoria === "alma";
+    const textoFixo = categoriasAtuais.find((c) => c.chave === chaveCategoria)?.textoFixo || "";
+    const ehAlma = !!textoFixo;
 
     if (doGrupo.length === 0 && !ehAlma) {
       const vazio = document.createElement("p");
@@ -874,12 +1308,13 @@ function configurarIntencoes() {
       const textoReal = extrairTextosCategoria(doGrupo);
       // a intenção fixa nunca se mistura com o "e" dos nomes reais — entra como uma frase à
       // parte, sempre por último, pra não parecer que alguém "escreveu" ela.
-      paragrafo.textContent = ehAlma ? [textoReal, INTENCAO_FIXA_ALMA].filter(Boolean).join(" ") : textoReal;
+      paragrafo.textContent = ehAlma ? [textoReal, textoFixo].filter(Boolean).join(" ") : textoReal;
       lista.appendChild(paragrafo);
     }
     bloco.appendChild(lista);
     if (emEdicao) bloco.appendChild(criarAcoesSalvarLista(chaveCompleta, doGrupo, lista));
-    bloco.appendChild(criarFormAdicionar(chaveCategoria, dataMissa, horaMissa));
+    // intenções de uma categoria que já foi apagada do formulário ficam visíveis (e editáveis), mas sem campo de adicionar
+    if (chaveCategoria !== CHAVE_ORFAS) bloco.appendChild(criarFormAdicionar(chaveCategoria, dataMissa, horaMissa));
 
     return bloco;
   }
@@ -928,10 +1363,13 @@ function configurarIntencoes() {
       const corpo = document.createElement("div");
       corpo.className = "quadro-intencao__corpo";
       corpo.classList.toggle("oculto", !estaAberto);
-      CATEGORIAS_INTENCAO.forEach(({ chave: chaveCategoria, rotulo: rotuloCategoria }) => {
+      categoriasAtuais.forEach(({ chave: chaveCategoria, rotulo: rotuloCategoria }) => {
         const doGrupo = itens.filter((it) => it.categoria === chaveCategoria);
         corpo.appendChild(criarBlocoCategoria(chaveCategoria, rotuloCategoria, doGrupo, dataMissa, horaMissa, chave));
       });
+      const conhecidas = new Set(categoriasAtuais.map((c) => c.chave));
+      const orfas = itens.filter((it) => !conhecidas.has(it.categoria));
+      if (orfas.length) corpo.appendChild(criarBlocoCategoria(CHAVE_ORFAS, "Outras intenções", orfas, dataMissa, horaMissa, chave));
 
       cabecalho.addEventListener("click", () => {
         if (quadrosAbertos.has(chave)) quadrosAbertos.delete(chave);

@@ -30,8 +30,8 @@ import {
   normalizarConfigEnvio, idDocEnvio
 } from "../servidor/envio-listas.js";
 
-async function gerarDocumento(rotulo, itens) {
-  return docx.Packer.toBuffer(construirDocxIntencoes(rotulo, itens, { docx }));
+async function gerarDocumento(rotulo, itens, opcoes = {}) {
+  return docx.Packer.toBuffer(construirDocxIntencoes(rotulo, itens, { docx, categorias: opcoes.categorias }));
 }
 
 function criarEnviadorDeEmail() {
@@ -91,7 +91,8 @@ function lerCorpo(req) {
 const ITENS_DE_EXEMPLO = [
   { categoria: "gracas", texto: "Família Exemplo" },
   { categoria: "saude", texto: "Maria da Silva" },
-  { categoria: "alma", texto: "José de Souza (3 anos)" },
+  { categoria: "alma", texto: "José de Souza (7 dias)", destaque: true },
+  { categoria: "alma", texto: "Maria de Souza" },
   { categoria: "aniversarios", texto: "Ana Paula" }
 ];
 

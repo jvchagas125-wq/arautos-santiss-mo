@@ -252,6 +252,32 @@
               </div>
               <button type="submit" class="btn btn-dourado" style="margin-top:10px;">Salvar horários das missas</button>
             </form>
+            <div class="especiais" id="blocoHorariosEspeciais">
+              <div class="especiais__titulo"><span class="emoji">📆</span> Dias com horário diferente</div>
+              <p class="especiais__texto">
+                Vai ter missa em um horário diferente em algum dia (por exemplo, às 10h numa data especial)?
+                Toque no dia no calendário e escolha os horários daquela data — ela passa a valer no lugar dos
+                horários da semana, e a lista fecha automaticamente a quantidade de horas definida acima antes da missa.
+              </p>
+              <div class="calendario-grande especiais__calendario" id="calendarioEspeciais">
+                <div class="calendario__cabecalho">
+                  <button type="button" class="calendario__nav" data-nav-anterior aria-label="Mês anterior">‹</button>
+                  <strong data-mes-ano>—</strong>
+                  <button type="button" class="calendario__nav" data-nav-proximo aria-label="Próximo mês">›</button>
+                </div>
+                <div class="calendario__semana">
+                  <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                </div>
+                <div class="calendario__dias" data-dias></div>
+                <div class="calendario__legenda-dupla">
+                  <span><i class="legenda-dot legenda-dot--disponivel"></i> Dia comum (horário da semana)</span>
+                  <span><i class="legenda-dot legenda-dot--especial"></i> Dia com horário diferente</span>
+                </div>
+              </div>
+              <p class="especiais__subtitulo">Próximos dias com horário diferente</p>
+              <div id="listaHorariosEspeciais" class="lista-especiais"></div>
+            </div>
+
             <div class="aviso-info" style="margin-top:20px;">
               <span class="aviso-info__icone">ℹ️</span>
               <p><strong>Como funciona:</strong> a lista de intenções da próxima missa fica aberta até a quantidade de horas configurada acima antes do horário da missa. Depois disso ela fecha, e assim que a missa acontece a lista da missa seguinte já abre automaticamente no site público.</p>
@@ -269,6 +295,75 @@
               <p class="mensagem-vazia oculto" id="avisoSemIntencoes">Nenhuma intenção foi enviada ainda.</p>
               <div id="listaQuadrosIntencoes"></div>
             </div>
+          </div>
+        </div>
+
+        <div class="painel" id="painelFormularioIntencoes">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFormulario" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">📝</span> Formulário das intenções
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoFormulario" class="oculto">
+            <p class="formulario-intro">
+              Aqui você escolhe como o formulário aparece no site público: as <strong>categorias</strong>, as opções de
+              <strong>tempo de falecimento</strong> e o <strong>PIX</strong> mostrado depois que a pessoa envia a lista.
+            </p>
+            <form id="formFormularioIntencoes" novalidate>
+
+              <h3 class="formulario-secao">Categorias</h3>
+              <p class="formulario-ajuda">Na ordem em que aparecem na lista e no documento Word. "Só nomes" é o campo comum; "Falecimento" mostra as opções de tempo (7º dia, 1 mês...).</p>
+              <div id="formCategorias" class="formulario-linhas"></div>
+              <button type="button" class="btn btn-contorno btn-pequeno" id="btnAddCategoria">+ Adicionar categoria</button>
+
+              <h3 class="formulario-secao">Opções de tempo de falecimento</h3>
+              <p class="formulario-ajuda">Aparecem para marcar nas categorias do tipo "Falecimento". O <em>texto na lista</em> é o que sai entre parênteses depois do nome (ex.: "Maria (7 dias)", em negrito no Word); deixe vazio para mostrar só o nome.</p>
+              <div id="formTempos" class="formulario-linhas"></div>
+              <button type="button" class="btn btn-contorno btn-pequeno" id="btnAddTempo">+ Adicionar opção</button>
+
+              <h3 class="formulario-secao">PIX da contribuição</h3>
+              <div class="campo campo-checkbox-simples" style="margin-top:0;">
+                <label>
+                  <input type="checkbox" id="pixAtivo" />
+                  <span>Perguntar se a pessoa quer contribuir (mostrar o PIX) depois que ela enviar a lista</span>
+                </label>
+              </div>
+              <div class="campo">
+                <label>QR Code do PIX</label>
+                <div class="pix-upload">
+                  <img id="pixPreview" class="pix-upload__preview oculto" alt="QR Code do PIX" />
+                  <div class="pix-upload__acoes">
+                    <input type="file" id="pixArquivo" accept="image/*" hidden />
+                    <button type="button" class="btn btn-contorno btn-pequeno" id="btnPixEscolher">Escolher imagem do QR Code</button>
+                    <button type="button" class="btn btn-contorno btn-pequeno oculto" id="btnPixRemover">Remover</button>
+                  </div>
+                </div>
+              </div>
+              <div class="campo">
+                <label for="pixChaveCampo">PIX copia e cola ou chave PIX <small>(opcional — aparece com botão "Copiar")</small></label>
+                <textarea id="pixChaveCampo" rows="2" placeholder="Cole aqui o código copia e cola ou a chave PIX"></textarea>
+              </div>
+              <div class="campo">
+                <label for="pixBeneficiarioCampo">Nome do favorecido <small>(opcional)</small></label>
+                <input type="text" id="pixBeneficiarioCampo" placeholder="Ex.: Arautos do Evangelho Campos" />
+              </div>
+              <div class="campo">
+                <label for="pixMensagemCampo">Mensagem junto do QR Code</label>
+                <textarea id="pixMensagemCampo" rows="2"></textarea>
+              </div>
+
+              <h3 class="formulario-secao">Textos da janela depois de enviar</h3>
+              <div class="campo">
+                <label for="textoEnviadoCampo">Mensagem de lista enviada</label>
+                <input type="text" id="textoEnviadoCampo" />
+              </div>
+              <div class="campo">
+                <label for="textoPerguntaCampo">Pergunta sobre contribuir</label>
+                <input type="text" id="textoPerguntaCampo" />
+              </div>
+
+              <button type="submit" class="btn btn-dourado" id="btnSalvarFormulario">Salvar formulário</button>
+            </form>
           </div>
         </div>
 
@@ -751,6 +846,25 @@
       <button class="modal--fechar" id="fecharModalDiaAgendados" aria-label="Fechar">&times;</button>
       <h3 id="diaAgendadosTitulo">—</h3>
       <div id="diaAgendadosConteudo" class="modal__conteudo-scroll" style="text-align:left;"></div>
+    </div>
+  </div>
+
+  <!-- Modal: horários de missa de uma data específica (dias com horário diferente) -->
+  <div class="modal-overlay" id="modalHorarioEspecial">
+    <div class="modal modal--largo modal--especial">
+      <button class="modal--fechar" id="fecharModalHorarioEspecial" aria-label="Fechar">&times;</button>
+      <h3>Horários da missa neste dia</h3>
+      <p class="modal__data" id="especialData">—</p>
+      <div class="especial-corpo">
+        <p class="especial-aviso" id="especialAviso"></p>
+        <div class="grade-checkbox" id="especialGrade"></div>
+        <p class="especial-dica">Marque os horários em que haverá missa neste dia. Sem nenhum horário marcado, este dia fica <strong>sem missa</strong> (e sem lista de intenções).</p>
+      </div>
+      <div class="especial-acoes">
+        <button type="button" class="btn btn-dourado btn-full" id="btnSalvarEspecial">Salvar alterações</button>
+        <button type="button" class="btn btn-contorno btn-full oculto" id="btnRemoverEspecial">Voltar ao horário padrão da semana</button>
+        <button type="button" class="btn btn-contorno btn-full" id="btnCancelarEspecial">Cancelar</button>
+      </div>
     </div>
   </div>
 

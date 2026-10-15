@@ -412,3 +412,71 @@
 .acesso-pagina__partes{ margin:8px 0 0 28px; display:flex; flex-direction:column; gap:6px; }
 .acesso-parte-rotulo{ display:flex; align-items:center; gap:8px; font-size:.88rem; color: var(--texto); cursor:pointer; }
 .acesso-parte-rotulo input:disabled + span{ color: var(--texto-suave); }
+
+/* ---------- Dias com horário diferente (calendário dentro de "Horários das missas") ---------- */
+.especiais{ margin-top:26px; padding-top:20px; border-top:1.5px dashed rgba(157,122,31,.4); }
+.especiais__titulo{ font-family:'Cinzel'; font-size:.98rem; color: var(--vermelho-escuro); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.especiais__texto{ margin:0 0 14px; font-size:.86rem; color: var(--texto-suave); line-height:1.6; }
+.especiais__calendario{ margin:0 auto 16px; }
+.especiais__calendario .calendario__dia.disponivel{ cursor:pointer; }
+.especiais__calendario .calendario__dia.especial{
+  position:relative; background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro)); color:#fff;
+  box-shadow: 0 3px 10px var(--vermelho-glow);
+}
+.especiais__calendario .calendario__dia.especial.sem-missa{ background: linear-gradient(135deg, #6b6b6b, #3c3c3c); }
+.legenda-dot--especial{ background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro)); }
+.especiais__subtitulo{ font-family:'Cinzel'; font-size:.78rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:.04em; margin:6px 0 8px; }
+.lista-especiais{ display:flex; flex-direction:column; gap:8px; }
+.lista-especiais__vazio{ margin:0; font-size:.84rem; color: var(--texto-suave); font-style:italic; }
+.item-especial{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  border:1.5px solid rgba(157,122,31,.3); border-radius:12px; padding:10px 12px; background:#fffefb;
+}
+.item-especial__texto{ flex:1 1 180px; min-width:0; font-size:.9rem; line-height:1.45; }
+.item-especial__texto strong{ display:block; font-family:'Cinzel'; font-size:.82rem; color: var(--vermelho-escuro); }
+.item-especial__acoes{ display:flex; gap:6px; }
+
+/* janela de horários de um dia */
+.modal--especial{ max-width:460px; text-align:left; }
+.modal--especial h3, .modal--especial .modal__data{ text-align:center; flex-shrink:0; }
+.modal--especial .modal__data{ margin:-4px 0 14px; font-size:.9rem; color: var(--texto-suave); }
+.especial-corpo{ overflow-y:auto; flex:1; min-height:0; }
+.especial-aviso{ margin:0 0 6px !important; font-size:.8rem; color: var(--dourado-escuro); font-style:italic; }
+.especial-dica{ margin:10px 0 16px !important; font-size:.8rem; line-height:1.5; }
+.especial-acoes{ display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
+
+/* ---------- Formulário das intenções (categorias, tempos, PIX) ---------- */
+.formulario-intro{ margin:0 0 6px; font-size:.86rem; color: var(--texto-suave); line-height:1.6; }
+.formulario-secao{
+  font-family:'Cinzel'; font-size:.95rem; color: var(--vermelho-escuro); margin:26px 0 6px;
+  padding-bottom:6px; border-bottom:1.5px solid rgba(157,122,31,.3);
+}
+.formulario-ajuda{ margin:0 0 12px; font-size:.82rem; color: var(--texto-suave); line-height:1.55; }
+.formulario-linhas{ display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+.linha-form{
+  border:1.5px solid rgba(157,122,31,.3); border-radius:12px; padding:12px; background:#fffefb;
+  display:flex; flex-direction:column; gap:8px;
+}
+.linha-form__topo{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.linha-form input[type="text"], .linha-form select{
+  flex:1 1 160px; min-width:0; padding:9px 11px; border-radius:9px; border:1px solid rgba(157,122,31,.4);
+  font-family:'EB Garamond', serif; font-size:.95rem; background:#fff; color: var(--texto);
+}
+.linha-form input[type="text"]:focus, .linha-form select:focus{ outline:none; border-color: var(--dourado); }
+.linha-form__campo{ display:flex; flex-direction:column; gap:3px; }
+.linha-form__campo label{ font-family:'Cinzel'; font-size:.64rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:.04em; }
+.linha-form .linha-form__campo input[type="text"]{ flex:none; width:100%; }
+.linha-form__topo .linha-form__campo{ flex:1 1 160px; min-width:0; }
+.linha-form__botoes{ display:flex; gap:6px; flex-shrink:0; }
+.linha-form__btn{
+  width:32px; height:32px; border-radius:50%; border:none; cursor:pointer; font-size:.95rem; line-height:1;
+  background: rgba(205,164,52,.18); color: var(--dourado-escuro); display:flex; align-items:center; justify-content:center;
+  transition: background .2s ease, transform .2s ease;
+}
+.linha-form__btn:hover:not(:disabled){ background: rgba(205,164,52,.35); transform: scale(1.06); }
+.linha-form__btn:disabled{ opacity:.35; cursor:not-allowed; }
+.linha-form__btn--remover{ background: rgba(122,12,30,.1); color: var(--vermelho); }
+.linha-form__btn--remover:hover:not(:disabled){ background: rgba(122,12,30,.2); }
+.pix-upload{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+.pix-upload__preview{ width:120px; height:120px; object-fit:contain; border:1px solid rgba(157,122,31,.4); border-radius:10px; background:#fff; padding:4px; }
+.pix-upload__acoes{ display:flex; gap:8px; flex-wrap:wrap; }

@@ -7,7 +7,7 @@
 // (no navegador ela vem do <script> do admin.html em window.docx; no servidor, do npm).
 // O documento é EDITÁVEL: as linhas em branco pra acrescentar nomes à mão são parágrafos comuns
 // com uma linha embaixo, e todo o texto é texto normal do Word.
-import { CATEGORIAS_INTENCAO, INTENCAO_FIXA_ALMA, formatarDataComDiaSemana } from "./utils.js";
+import { CATEGORIAS_PADRAO, formatarDataComDiaSemana } from "./utils.js";
 
 // Fonte que todo computador com Word tem — o documento não embute fonte nenhuma.
 const FONTE = "Times New Roman";
@@ -44,7 +44,9 @@ export function nomeArquivoDocx(rotulo) {
 // no navegador com docx.Packer.toBlob(doc), no servidor com docx.Packer.toBuffer(doc).
 export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
   const docx = opcoes.docx || window.docx;
-  const { Document, Paragraph, TextRun, AlignmentType, BorderStyle, Footer } = docx;
+  const { Document, Paragraph, TextRun, AlignmentType, BorderStyle, Footer, Table, TableRow, TableCell, WidthType } = docx;
+  // categorias editáveis no painel; sem elas (ou nos testes), as de fábrica
+  const categorias = Array.isArray(opcoes.categorias) && opcoes.categorias.length ? opcoes.categorias : CATEGORIAS_PADRAO;
 
   const VINHO = "7A0C1E", DOURADO = "CDA434", MARROM = "5A4636", TEXTO = "281810", LINHA = "C4B29E";
   const RECUO = 240; // 12pt, como no modelo antigo
@@ -82,16 +84,60 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
     new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: "exact" }, children: [run("", { size: 2 })] })
   ];
 
-  // "Por alma" sempre entra, mesmo sem ninguém ter colocado nome nenhum — ela sempre termina com
-  // a intenção fixa (INTENCAO_FIXA_ALMA), então nunca fica realmente "vazia" no documento.
-  const categoriasComItens = CATEGORIAS_INTENCAO.filter(
-    ({ chave }) => chave === "alma" || itens.filter((it) => it.categoria === chave).length > 0
+  // Uma categoria sempre entra quando tem um "texto fixo" (por padrão, "Por alma": termina com a
+  // intenção fixa, então nunca fica realmente vazia no documento); as demais só entram quando
+  // alguém colocou algum nome.
+  // Intenções de categorias que foram apagadas do painel depois de enviadas não somem: viram "Outras intenções".
+  const chavesConhecidas = new Set(categorias.map((c) => c.chave));
+  const orfas = itens.filter((it) => !chavesConhecidas.has(it.categoria));
+  const categoriasDoDocumento = orfas.length
+    ? [...categorias, { chave: "__outras__", rotulo: "Outras intenções", textoFixo: "" }]
+    : categorias;
+  const itensDe = (chave) => (chave === "__outras__" ? orfas : itens.filter((it) => it.categoria === chave));
+
+  const categoriasComItens = categoriasDoDocumento.filter(
+    (c) => c.textoFixo || itensDe(c.chave).length > 0
   );
 
-  categoriasComItens.forEach(({ chave, rotulo: rotuloCategoria }, indice) => {
-    const doGrupo = itens.filter((it) => it.categoria === chave);
-    const ehAlma = chave === "alma";
-    const textoReal = extrairTextosCategoria(doGrupo);
+  // Nomes em colunas (um embaixo do outro, preenchendo coluna por coluna) pra não ocupar várias
+  // páginas: até 4 nomes ficam numa coluna só, até 8 em duas e acima disso em três.
+  const SEM_BORDA = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+  const bordasNenhuma = { top: SEM_BORDA, bottom: SEM_BORDA, left: SEM_BORDA, right: SEM_BORDA };
+  const LARGURA_UTIL = 11906 - 2 * 1000 - RECUO; // área de texto da página menos o recuo da lista
+  function tabelaDeNomes(doGrupo) {
+    const nomes = doGrupo
+      .map((it) => ({ texto: (it.texto || "").trim().replace(/[.,;:]+$/, ""), negrito: it.destaque === true }))
+      .filter((n) => n.texto);
+    if (nomes.length === 0) return null;
+    const colunas = nomes.length <= 4 ? 1 : nomes.length <= 8 ? 2 : 3;
+    const porColuna = Math.ceil(nomes.length / colunas);
+    const larguraColuna = Math.floor(LARGURA_UTIL / colunas);
+    const celulas = [];
+    for (let c = 0; c < colunas; c++) {
+      const fatia = nomes.slice(c * porColuna, (c + 1) * porColuna);
+      celulas.push(new TableCell({
+        width: { size: larguraColuna, type: WidthType.DXA },
+        borders: bordasNenhuma,
+        margins: { top: 0, bottom: 0, left: 0, right: 120 },
+        children: fatia.length
+          ? fatia.map((n) => new Paragraph({
+              spacing: { after: 80, line: 276 },
+              children: [run(n.texto, n.negrito ? { bold: true } : {})]
+            }))
+          : [new Paragraph({ children: [run("")] })]
+      }));
+    }
+    return new Table({
+      width: { size: LARGURA_UTIL, type: WidthType.DXA },
+      columnWidths: Array.from({ length: colunas }, () => larguraColuna),
+      indent: { size: RECUO, type: WidthType.DXA },
+      borders: { ...bordasNenhuma, insideHorizontal: SEM_BORDA, insideVertical: SEM_BORDA },
+      rows: [new TableRow({ cantSplit: false, children: celulas })]
+    });
+  }
+
+  categoriasComItens.forEach(({ chave, rotulo: rotuloCategoria, textoFixo }, indice) => {
+    const doGrupo = itensDe(chave);
 
     // o título de uma categoria nunca fica sozinho no fim de uma página
     filhos.push(new Paragraph({
@@ -99,20 +145,19 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
       children: [run(rotuloCategoria, { bold: true, size: 24, color: VINHO })]
     }));
 
-    if (textoReal) {
-      filhos.push(new Paragraph({
-        spacing: { after: 120, line: 300 }, indent: { left: RECUO },
-        children: [run(textoReal)]
-      }));
+    const tabela = tabelaDeNomes(doGrupo);
+    if (tabela) {
+      filhos.push(tabela);
+      filhos.push(new Paragraph({ spacing: { before: 0, after: 60 }, children: [run("", { size: 4 })] }));
     }
 
-    if (ehAlma) {
+    if (textoFixo) {
       // 1ª linha reservada: fica em branco, pra escreverem à mão na hora da missa, se precisar.
       filhos.push(...linhaEmBranco());
       // 2ª linha reservada: já vem com a intenção fixa impressa, pra ser a última intenção falada.
       filhos.push(new Paragraph({
         spacing: { before: 200, after: 120 }, indent: { left: RECUO },
-        children: [run(INTENCAO_FIXA_ALMA, { italics: true })]
+        children: [run(textoFixo, { italics: true })]
       }));
     } else {
       for (let i = 0; i < LINHAS_EXTRAS_POR_TOPICO; i++) filhos.push(...linhaEmBranco());

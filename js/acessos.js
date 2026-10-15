@@ -15,7 +15,8 @@ export const CATALOGO_ACESSOS = [
   {
     pagina: "intencoes", titulo: "Intenções", emoji: "🙏",
     partes: [
-      { id: "horarios", titulo: "Horários das missas" },
+      { id: "horarios", titulo: "Horários das missas (inclui dias com horário diferente)" },
+      { id: "formulario", titulo: "Formulário das intenções (categorias, PIX, tempo de falecimento)" },
       { id: "listas", titulo: "Listas preenchidas (baixar Word e enviar por e-mail)" },
       { id: "email", titulo: "Envio automático por e-mail" }
     ]

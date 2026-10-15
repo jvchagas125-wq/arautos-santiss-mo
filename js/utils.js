@@ -260,35 +260,196 @@ export function escolherFraseDoDia(lista, agora = new Date()) {
   return preenchidas[indice];
 }
 
-/* ---------- Intenções da missa: categorias fixas ---------- */
-export const CATEGORIAS_INTENCAO = [
-  { chave: "gracas", rotulo: "Pedem e agradecem graças" },
-  { chave: "saude", rotulo: "Pela Recuperação e Saúde de" },
-  { chave: "alma", rotulo: "Por alma" },
-  { chave: "aniversarios", rotulo: "Aniversários de" }
-];
-
-/* ---------- Intenções da missa: placeholder do campo de adicionar, por categoria ----------
-   Centralizado aqui (em vez de duplicado em intencoes.js e admin.js) pra nunca ficar um texto
-   diferente no site público e no painel administrativo. */
-export const PLACEHOLDERS_INTENCAO = {
-  gracas: "Digite um nome, família ou grupo e clique em adicionar",
-  saude: "Digite o nome completo da pessoa e clique em adicionar",
-  alma: "Digite o nome completo da pessoa + (Dias, meses ou anos se quiser) e clique em adicionar",
-  aniversarios: "Digite o nome completo e clique em adicionar"
-};
-
 /* ---------- Intenções da missa: intenção fixa de "Por alma" ----------
-   Sempre entra automaticamente como a última intenção de "Por alma" — no parágrafo mesclado do
-   painel administrativo e no PDF (ver js/admin.js e js/pdf-intencoes.js). Não é uma intenção
-   enviada por ninguém (não existe no Firestore), por isso nunca aparece editável/apagável. */
+   Entra automaticamente como a última intenção da categoria que tiver "textoFixo" (por padrão,
+   "Por alma") — no parágrafo mesclado do painel administrativo e no documento Word (ver
+   js/admin.js e js/docx-intencoes.js). Não é uma intenção enviada por ninguém (não existe no
+   Firestore), por isso nunca aparece editável/apagável. */
 export const INTENCAO_FIXA_ALMA = "Pelas almas do purgatório, falecidas e mais necessitadas.";
 
+/* ---------- Intenções da missa: formulário editável (categorias, tempos de falecimento, PIX) ----------
+   Tudo isso é editado no painel administrativo (Intenções > Formulário das intenções) e guardado em
+   configuracoes/intencoesForm. Estes são os valores de fábrica, usados enquanto nada foi salvo (e
+   também quando algum campo vem vazio/inválido). Este arquivo roda no navegador e no servidor. */
+export const PLACEHOLDER_NOME_PADRAO = "Digite o nome completo da pessoa e clique em \"+ Adicionar mais intenções\" para continuar";
+
+export const CATEGORIAS_PADRAO = [
+  {
+    chave: "gracas", rotulo: "Pedem e agradecem graças", tipo: "nome",
+    placeholder: "Digite o nome da pessoa, família ou grupo e clique em \"+ Adicionar mais intenções\" para continuar",
+    textoFixo: ""
+  },
+  { chave: "saude", rotulo: "Pela Recuperação e Saúde de", tipo: "nome", placeholder: PLACEHOLDER_NOME_PADRAO, textoFixo: "" },
+  {
+    chave: "alma", rotulo: "Por alma", tipo: "falecimento",
+    placeholder: "Digite o nome completo da pessoa e clique em \"Adicionar\"",
+    textoFixo: INTENCAO_FIXA_ALMA
+  },
+  { chave: "aniversarios", rotulo: "Aniversários de", tipo: "nome", placeholder: PLACEHOLDER_NOME_PADRAO, textoFixo: "" }
+];
+
+// Mantido por compatibilidade (outros arquivos importam este nome).
+export const CATEGORIAS_INTENCAO = CATEGORIAS_PADRAO;
+
+export const PLACEHOLDERS_INTENCAO = Object.fromEntries(CATEGORIAS_PADRAO.map((c) => [c.chave, c.placeholder]));
+
+// "sufixo" é o que aparece entre parênteses depois do nome (vazio = só o nome). Todo nome que
+// leva sufixo sai em negrito no documento Word.
+export const TEMPOS_FALECIMENTO_PADRAO = [
+  { chave: "7dias", rotulo: "7° dia", sufixo: "7 dias", dica: "" },
+  { chave: "1mes", rotulo: "1 Mês", sufixo: "1 Mês", dica: "" },
+  { chave: "1ano", rotulo: "1 Ano", sufixo: "1 Ano", dica: "" },
+  {
+    chave: "naoinformar", rotulo: "Prefiro não informar", sufixo: "",
+    dica: "Caso não deseje informar o tempo, basta clicar em \"Prefiro não informar\" para mostrar somente o nome da pessoa."
+  }
+];
+
+export const PIX_PADRAO = {
+  ativo: false,
+  chave: "",
+  qrCodeUrl: "",
+  beneficiario: "",
+  mensagem: "Sua contribuição ajuda a manter a nossa obra. Deus lhe pague!"
+};
+
+export const TEXTOS_ENVIO_PADRAO = {
+  enviado: "Muito bem!! Sua lista de intenções foi enviada!!",
+  pergunta: "Você desejaria contribuir com a nossa obra?"
+};
+
+function textoLimpo(v, padrao = "") {
+  return typeof v === "string" && v.trim() ? v.trim() : padrao;
+}
+function chaveSegura(v, padrao) {
+  const t = String(v ?? "").trim().replace(/[^A-Za-z0-9_-]/g, "");
+  return t || padrao;
+}
+
+// Lê o documento configuracoes/intencoesForm de forma tolerante: qualquer parte ausente/inválida
+// cai no valor de fábrica, então a página nunca fica sem categorias por causa de um dado ruim.
+export function normalizarFormularioIntencoes(dados) {
+  const d = dados && typeof dados === "object" ? dados : {};
+
+  let categorias = [];
+  if (Array.isArray(d.categorias)) {
+    const usadas = new Set();
+    d.categorias.forEach((c, i) => {
+      if (!c || typeof c !== "object") return;
+      const rotulo = textoLimpo(c.rotulo);
+      if (!rotulo) return;
+      let chave = chaveSegura(c.chave, `cat${i + 1}`);
+      while (usadas.has(chave)) chave += "x";
+      usadas.add(chave);
+      const tipo = c.tipo === "falecimento" ? "falecimento" : "nome";
+      categorias.push({
+        chave, rotulo, tipo,
+        placeholder: textoLimpo(c.placeholder, tipo === "falecimento" ? CATEGORIAS_PADRAO[2].placeholder : PLACEHOLDER_NOME_PADRAO),
+        textoFixo: textoLimpo(c.textoFixo)
+      });
+    });
+  }
+  if (categorias.length === 0) categorias = CATEGORIAS_PADRAO.map((c) => ({ ...c }));
+
+  let tempos = [];
+  if (Array.isArray(d.temposFalecimento)) {
+    const usadas = new Set();
+    d.temposFalecimento.forEach((t, i) => {
+      if (!t || typeof t !== "object") return;
+      const rotulo = textoLimpo(t.rotulo);
+      if (!rotulo) return;
+      let chave = chaveSegura(t.chave, `tempo${i + 1}`);
+      while (usadas.has(chave)) chave += "x";
+      usadas.add(chave);
+      tempos.push({ chave, rotulo, sufixo: textoLimpo(t.sufixo), dica: textoLimpo(t.dica) });
+    });
+  }
+  if (tempos.length === 0) tempos = TEMPOS_FALECIMENTO_PADRAO.map((t) => ({ ...t }));
+
+  const px = d.pix && typeof d.pix === "object" ? d.pix : {};
+  const pix = {
+    ativo: px.ativo === true,
+    chave: textoLimpo(px.chave),
+    qrCodeUrl: textoLimpo(px.qrCodeUrl),
+    beneficiario: textoLimpo(px.beneficiario),
+    mensagem: textoLimpo(px.mensagem, PIX_PADRAO.mensagem)
+  };
+
+  const tx = d.textos && typeof d.textos === "object" ? d.textos : {};
+  const textos = {
+    enviado: textoLimpo(tx.enviado, TEXTOS_ENVIO_PADRAO.enviado),
+    pergunta: textoLimpo(tx.pergunta, TEXTOS_ENVIO_PADRAO.pergunta)
+  };
+
+  return { categorias, temposFalecimento: tempos, pix, textos };
+}
+
+// Texto final de uma intenção de falecimento: "Nome (7 dias)" — ou só "Nome" quando o tempo não tem sufixo.
+export function textoDaIntencao(nome, tempoChave, tempos) {
+  const base = String(nome || "").trim();
+  if (!tempoChave) return base;
+  const tempo = (tempos || []).find((t) => t.chave === tempoChave);
+  return tempo && tempo.sufixo ? `${base} (${tempo.sufixo})` : base;
+}
+
 /* ---------- Intenções da missa: horários de missa de um dia específico ----------
-   config: { horariosPorDia: [ [domingo], [segunda], [terça], [quarta], [quinta], [sexta], [sábado] ], horasAntes: 3 }
-   (índice de horariosPorDia = Date.getDay(): 0=domingo ... 6=sábado; um dia sem horários fica com array vazio)
-   Retorna as horas de missa (números, em ordem) configuradas para o dia da semana de "iso". */
+   config: { horariosPorDia: [ [domingo], [segunda], ..., [sábado] ], horasAntes: 3, horariosEspeciais: { "aaaa-mm-dd": [horas] } }
+   (índice de horariosPorDia = Date.getDay(): 0=domingo ... 6=sábado; um dia sem horários fica com array vazio).
+   horariosEspeciais troca o horário de UMA data específica (lista vazia = sem missa nessa data).
+   No Firestore, horariosPorDia é guardado como mapa {"0": [..], ..., "6": [..]} porque o Firestore
+   não aceita lista dentro de lista; aqui dentro do código sempre vira uma lista de 7 listas. */
+export const HORAS_ANTES_PADRAO = 3;
+const HORARIOS_POR_DIA_PADRAO = [[10, 18], [7, 19], [7, 19], [7, 19], [7, 19], [7, 19], [7, 19]];
+
+function listaDeHoras(v) {
+  if (!Array.isArray(v)) return [];
+  return [...new Set(v.map(Number).filter((h) => Number.isInteger(h) && h >= 0 && h <= 23))].sort((a, b) => a - b);
+}
+
+export function normalizarHorariosEspeciais(bruto) {
+  const limpo = {};
+  if (bruto && typeof bruto === "object" && !Array.isArray(bruto)) {
+    Object.entries(bruto).forEach(([iso, horas]) => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(iso) && Array.isArray(horas)) limpo[iso] = listaDeHoras(horas);
+    });
+  }
+  return limpo;
+}
+
+// Aceita o formato atual (mapa), o formato "lista de 7 listas" (salvo antes) e o formato bem antigo
+// (horariosSemana/horariosDomingo), sempre devolvendo { horariosPorDia, horasAntes, horariosEspeciais }.
+export function normalizarConfigIntencoes(dados) {
+  if (!dados || typeof dados !== "object") {
+    return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), horasAntes: HORAS_ANTES_PADRAO, horariosEspeciais: {} };
+  }
+  const horasAntes = Number(dados.horasAntes) > 0 ? Number(dados.horasAntes) : HORAS_ANTES_PADRAO;
+  const horariosEspeciais = normalizarHorariosEspeciais(dados.horariosEspeciais);
+  const bruto = dados.horariosPorDia;
+  const ehLista = Array.isArray(bruto) && bruto.length === 7;
+  const ehMapa = bruto && typeof bruto === "object" && !Array.isArray(bruto) && [0, 1, 2, 3, 4, 5, 6].some((d) => Array.isArray(bruto[d]));
+  if (ehLista || ehMapa) {
+    return { horariosPorDia: [0, 1, 2, 3, 4, 5, 6].map((d) => listaDeHoras(bruto[d])), horasAntes, horariosEspeciais };
+  }
+  if (Array.isArray(dados.horariosSemana) || Array.isArray(dados.horariosDomingo)) {
+    const semana = listaDeHoras(dados.horariosSemana);
+    const domingo = listaDeHoras(dados.horariosDomingo);
+    return { horariosPorDia: [domingo, semana, semana, semana, semana, semana, semana], horasAntes, horariosEspeciais };
+  }
+  return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), horasAntes, horariosEspeciais };
+}
+
+// Converte a lista de 7 listas para o formato aceito pelo Firestore (mapa "0".."6").
+export function horariosPorDiaParaFirestore(horariosPorDia) {
+  const mapa = {};
+  for (let d = 0; d < 7; d++) mapa[String(d)] = listaDeHoras((horariosPorDia || [])[d]);
+  return mapa;
+}
+
+// Retorna as horas de missa (números, em ordem) de "iso": se a data tiver horário especial, vale
+// esse; senão, vale o do dia da semana.
 export function horariosDoDia(config, iso) {
+  const especial = config.horariosEspeciais && config.horariosEspeciais[iso];
+  if (Array.isArray(especial)) return [...especial].sort((a, b) => a - b);
   const horariosPorDia = Array.isArray(config.horariosPorDia) ? config.horariosPorDia : [];
   const diaSemana = isoParaData(iso).getDay();
   return [...(horariosPorDia[diaSemana] || [])].sort((a, b) => a - b);

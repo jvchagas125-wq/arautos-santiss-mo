@@ -95,7 +95,7 @@
 
     <div class="aviso-info">
       <span class="aviso-info__icone">ℹ️</span>
-      <p><strong>Como funciona:</strong> escolha no calendário o dia da missa que deseja. Cada horário de missa daquele dia tem sua própria lista de intenções, aberta para preenchimento até algumas horas antes do horário da missa; depois disso ela fecha.</p>
+      <p><strong>Como funciona:</strong> escolha no calendário o dia da missa e depois o horário da lista que deseja preencher. Cada horário de missa tem sua própria lista de intenções, aberta para preenchimento até algumas horas antes da missa; depois disso ela fecha. O que você escrever fica salvo como rascunho até você tocar em "Enviar Intenções" — e você pode voltar e editar enquanto a lista estiver aberta.</p>
     </div>
 
     <div class="aviso-info" style="margin-top:8px;">
@@ -106,18 +106,88 @@
     <p class="rodape-simples">Arautos do Evangelho Campos - RJ</p>
   </main>
 
-  <!-- Modal de confirmação: apagar uma intenção enviada por mim (ver js/intencoes.js). -->
-  <div class="modal-overlay" id="modalApagarIntencao">
-    <div class="modal">
+  <!-- 1) Qual lista (horário da missa) a pessoa quer preencher no dia escolhido -->
+  <div class="modal-overlay" id="modalEscolherLista">
+    <div class="modal modal--pequeno">
       <div class="modal__icone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16.5" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg>
       </div>
-      <h3>Apagar intenção</h3>
-      <p>Tem certeza que deseja apagar esta intenção? Essa ação não pode ser desfeita.</p>
-      <div class="modal__acoes">
-        <button class="btn btn-contorno" id="btnCancelarApagarIntencao">Cancelar</button>
-        <button class="btn btn-dourado" id="btnConfirmarApagarIntencao">Apagar</button>
+      <h3>Qual lista você deseja preencher?</h3>
+      <p class="modal__data" id="escolherListaData">—</p>
+      <div class="escolher-lista" id="escolherListaOpcoes"></div>
+      <button type="button" class="btn btn-contorno btn-full" id="btnVoltarEscolherLista">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- 2) A lista de intenções de uma missa (categorias, nomes, rascunho, envio) -->
+  <div class="modal-overlay" id="modalLista">
+    <div class="modal modal--intencoes">
+      <div class="intencoes-modal__topo">
+        <div>
+          <h3 id="listaTitulo">Missa</h3>
+          <p class="intencoes-modal__sub" id="listaSubtitulo"></p>
+        </div>
+        <span class="selo-rascunho oculto" id="seloRascunho"></span>
       </div>
+      <div class="intencoes-modal__corpo" id="listaCorpo">
+        <div id="listaEntradas"></div>
+        <div class="editor-intencao" id="editorIntencao"></div>
+      </div>
+      <div class="intencoes-modal__rodape">
+        <button type="button" class="btn btn-contorno btn-pequeno" id="btnListaVoltar">← Voltar</button>
+        <button type="button" class="btn btn-contorno btn-pequeno" id="btnListaVisualizar">Visualizar rascunho</button>
+        <button type="button" class="btn btn-dourado btn-pequeno" id="btnListaEnviar">Enviar Intenções</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3) Escolher a categoria (abre por cima da lista) -->
+  <div class="modal-overlay" id="modalCategorias">
+    <div class="modal modal--pequeno">
+      <h3>Escolha a categoria</h3>
+      <div class="escolher-lista" id="categoriasOpcoes"></div>
+      <button type="button" class="btn btn-contorno btn-full" id="btnVoltarCategorias">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- 4) Como a lista vai aparecer -->
+  <div class="modal-overlay" id="modalPrevia">
+    <div class="modal modal--previa">
+      <h3>Seu rascunho</h3>
+      <p class="modal__data" id="previaSubtitulo">É assim que as suas intenções vão aparecer na lista da missa.</p>
+      <div class="previa-lista" id="previaConteudo"></div>
+      <button type="button" class="btn btn-contorno btn-full" id="btnVoltarPrevia">← Voltar</button>
+    </div>
+  </div>
+
+  <!-- 5) Depois de enviar -->
+  <div class="modal-overlay" id="modalEnviado">
+    <div class="modal modal--pequeno">
+      <div class="modal__icone modal__icone--ok">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
+      </div>
+      <h3 id="enviadoTitulo">Muito bem!!</h3>
+      <p id="enviadoPergunta"></p>
+      <div class="modal__acoes" id="enviadoAcoes">
+        <button type="button" class="btn btn-contorno" id="btnContribuirNao">Não</button>
+        <button type="button" class="btn btn-dourado" id="btnContribuirSim">Sim</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6) PIX da contribuição (QR Code definido no painel administrativo) -->
+  <div class="modal-overlay" id="modalPix">
+    <div class="modal modal--pequeno">
+      <h3>Contribua com a nossa obra</h3>
+      <p id="pixMensagem"></p>
+      <img id="pixQrCode" class="pix-qr oculto" alt="QR Code do PIX" />
+      <p class="pix-beneficiario oculto" id="pixBeneficiario"></p>
+      <div class="pix-chave oculto" id="pixChaveCaixa">
+        <span class="pix-chave__rotulo">PIX copia e cola</span>
+        <code id="pixChave"></code>
+        <button type="button" class="btn btn-contorno btn-pequeno" id="btnCopiarPix">Copiar</button>
+      </div>
+      <button type="button" class="btn btn-dourado btn-full" id="btnFecharPix">Fechar</button>
     </div>
   </div>
 
