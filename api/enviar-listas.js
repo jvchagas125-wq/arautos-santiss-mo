@@ -27,7 +27,7 @@ import { temAcesso } from "../js/acessos.js";
 import { construirDocxIntencoes } from "../js/docx-intencoes.js";
 import {
   criarClienteFirestore, processarListasFechadas, montarEEnviarLista,
-  normalizarConfigEnvio, idDocEnvio, limparListasAntigas
+  normalizarConfigEnvio, idDocEnvio
 } from "../servidor/envio-listas.js";
 
 async function gerarDocumento(rotulo, itens, opcoes = {}) {
@@ -112,12 +112,7 @@ export default async function handler(req, res) {
       const enviarEmail = async (dados) => { enviador ||= criarEnviadorDeEmail(); return enviador(dados); };
       const dependencias = { firestore, gerarDocumento, enviarEmail };
       const resultado = await processarListasFechadas({ agora: new Date() }, dependencias);
-      // depois do envio: apaga as listas enviadas há 2 dias ou mais (painel + banco de dados).
-      // Se a limpeza falhar, não atrapalha o envio — tenta de novo na próxima rodada.
-      let limpeza = [];
-      try { limpeza = await limparListasAntigas({ agora: new Date() }, { firestore }); }
-      catch (erroLimpeza) { console.error("[limpeza]", erroLimpeza?.message || erroLimpeza); limpeza = [{ resultado: "erro", erro: String(erroLimpeza?.message || erroLimpeza).slice(0, 300) }]; }
-      return res.status(200).json({ ok: true, ...resultado, limpeza });
+      return res.status(200).json({ ok: true, ...resultado });
     }
 
     /* ---------- 2) e 3) painel admin ---------- */

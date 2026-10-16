@@ -340,6 +340,23 @@
           </div>
         </div>
 
+        <div class="painel" id="painelArquivoListas" style="margin-top:30px;">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoArquivoListas" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🗄️</span> Histórico de listas (arquivo)
+            <span class="painel__dica">Clique aqui para poder abrir a lista</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoArquivoListas" class="oculto">
+            <p class="formulario-intro">
+              Aqui ficam guardadas as listas que já foram enviadas por e-mail há mais de 2 dias. Elas saem da lista
+              principal para o painel ficar organizado, mas <strong>continuam salvas</strong> — você pode abrir, baixar o
+              documento Word ou apagar quando quiser.
+            </p>
+            <p class="mensagem-vazia" id="avisoSemArquivo">Nenhuma lista arquivada ainda.</p>
+            <div id="listaQuadrosArquivo"></div>
+          </div>
+        </div>
+
         <div class="painel" id="painelFormularioIntencoes">
           <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFormulario" role="button" tabindex="0" aria-expanded="false">
             <span class="emoji">📝</span> Formulário das intenções
@@ -453,7 +470,7 @@
           </div>
           <div class="aviso-info" style="margin-top:18px;">
             <span class="aviso-info__icone">ℹ️</span>
-            <p><strong>Como funciona:</strong> o site confere a cada poucos minutos se alguma lista já fechou e, se ainda não tiver sido enviada, manda o documento Word por e-mail — uma única vez por lista. Pode levar alguns minutos depois do horário de fechamento. O botão de envelope em cada lista (acima) envia aquela lista na hora. <strong>Limpeza automática:</strong> 2 dias depois de enviada por e-mail (e com a missa já realizada), a lista é apagada sozinha do painel e do banco de dados. Lista que não foi enviada por e-mail não é apagada.</p>
+            <p><strong>Como funciona:</strong> o site confere a cada poucos minutos se alguma lista já fechou e, se ainda não tiver sido enviada, manda o documento Word por e-mail — uma única vez por lista. Pode levar alguns minutos depois do horário de fechamento. O botão de envelope em cada lista (acima) envia aquela lista na hora. <strong>Arquivo automático:</strong> 2 dias depois de enviada por e-mail (e com a missa já realizada), a lista sai da lista principal e vai para o <em>Histórico de listas (arquivo)</em>. Nada é apagado do banco de dados.</p>
           </div>
         </div>
         </div>

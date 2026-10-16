@@ -1016,3 +1016,18 @@ export function criarCalendario(container, input, opts = {}) {
     }
   };
 }
+
+
+/* ---------- Arquivo de listas de intenções ----------
+   Uma lista vai para o "Histórico (arquivo)" do painel quando já foi ENVIADA por e-mail há
+   ARQUIVAR_LISTA_APOS_DIAS dias ou mais e a missa já passou. Nada é apagado do banco de dados:
+   só muda de lugar na tela do painel administrativo. */
+export const ARQUIVAR_LISTA_APOS_DIAS = 2;
+export function listaArquivada(envio, dataMissa, horaMissa, agora = new Date()) {
+  if (!envio || envio.status !== "enviado" || !envio.enviadoEm) return false;
+  const enviadoEm = new Date(envio.enviadoEm).getTime();
+  if (!(enviadoEm > 0)) return false;
+  if (agora.getTime() - enviadoEm < ARQUIVAR_LISTA_APOS_DIAS * 24 * 3600000) return false;
+  const missa = new Date(`${dataMissa}T${String(Number(horaMissa)).padStart(2, "0")}:00:00-03:00`).getTime();
+  return agora.getTime() >= missa + 3 * 3600000;
+}

@@ -1,4 +1,4 @@
-import { inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
+import { listaArquivada, inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
   MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS,
@@ -249,7 +249,7 @@ const painelDe = (idInterno) => () => [document.getElementById(idInterno)?.close
 const ALVOS_PARTES = {
   intencoes: {
     horarios: painelDe("cabecalhoHorariosMissas"),
-    listas: painelDe("cabecalhoListasPreenchidas"),
+    listas: () => [...painelDe("cabecalhoListasPreenchidas")(), document.getElementById("painelArquivoListas")],
     email: () => [document.getElementById("painelEnvioEmail")],
     formulario: () => [document.getElementById("painelFormularioIntencoes")]
   },
@@ -796,6 +796,20 @@ function configurarIntencoes() {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarListasPreenchidas(); }
   });
 
+  // "Histórico de listas (arquivo)" também começa fechado
+  const cabecalhoArquivoListas = document.getElementById("cabecalhoArquivoListas");
+  const corpoArquivoListas = document.getElementById("corpoArquivoListas");
+  function alternarArquivoListas() {
+    const abrir = corpoArquivoListas.classList.contains("oculto");
+    corpoArquivoListas.classList.toggle("oculto", !abrir);
+    cabecalhoArquivoListas.classList.toggle("recolhido", !abrir);
+    cabecalhoArquivoListas.setAttribute("aria-expanded", String(abrir));
+  }
+  cabecalhoArquivoListas.addEventListener("click", alternarArquivoListas);
+  cabecalhoArquivoListas.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarArquivoListas(); }
+  });
+
   // "Horários das missas" começa fechado — só abre quando a pessoa clicar no título
   const cabecalhoHorariosMissas = document.getElementById("cabecalhoHorariosMissas");
   const corpoHorariosMissas = document.getElementById("corpoHorariosMissas");
@@ -813,6 +827,8 @@ function configurarIntencoes() {
   let categoriasAtuais = CATEGORIAS_PADRAO;
   const listaQuadros = document.getElementById("listaQuadrosIntencoes");
   const avisoSemIntencoes = document.getElementById("avisoSemIntencoes");
+  const listaQuadrosArquivo = document.getElementById("listaQuadrosArquivo");
+  const avisoSemArquivo = document.getElementById("avisoSemArquivo");
 
   const modalExcluirLista = document.getElementById("modalExcluirLista");
   const nomeExcluirLista = document.getElementById("nomeExcluirLista");
@@ -1603,10 +1619,23 @@ function configurarIntencoes() {
     });
 
     const chavesOrdenadas = [...grupos.keys()].sort((a, b) => b.localeCompare(a));
-    listaQuadros.innerHTML = "";
-    avisoSemIntencoes.classList.toggle("oculto", chavesOrdenadas.length > 0);
-
+    // listas já enviadas por e-mail há 2+ dias vão para o "Histórico (arquivo)" (continuam no banco)
+    const agora = new Date();
+    const ativas = [];
+    const arquivadas = [];
     chavesOrdenadas.forEach((chave) => {
+      const [dataMissa, horaMissaStr] = chave.split("|");
+      (listaArquivada(enviosPorLista[chave], dataMissa, Number(horaMissaStr), agora) ? arquivadas : ativas).push(chave);
+    });
+    listaQuadros.innerHTML = "";
+    listaQuadrosArquivo.innerHTML = "";
+    avisoSemIntencoes.textContent = arquivadas.length
+      ? "Nenhuma lista em andamento. As anteriores estão no Histórico de listas (arquivo)."
+      : "Nenhuma intenção foi enviada ainda.";
+    avisoSemIntencoes.classList.toggle("oculto", ativas.length > 0);
+    avisoSemArquivo.classList.toggle("oculto", arquivadas.length > 0);
+
+    const montarQuadro = (chave) => {
       const [dataMissa, horaMissaStr] = chave.split("|");
       const horaMissa = Number(horaMissaStr);
       const itens = grupos.get(chave);
@@ -1687,8 +1716,10 @@ function configurarIntencoes() {
 
       quadro.appendChild(cabecalho);
       quadro.appendChild(corpo);
-      listaQuadros.appendChild(quadro);
-    });
+      return quadro;
+    };
+    ativas.forEach((chave) => listaQuadros.appendChild(montarQuadro(chave)));
+    arquivadas.forEach((chave) => listaQuadrosArquivo.appendChild(montarQuadro(chave)));
   }
 
   ouvirTodasIntencoes(renderizarQuadros);
