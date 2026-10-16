@@ -1171,9 +1171,7 @@ img{ max-width: 100%; display:block; }
      (no celular continuam empilhadas, uma embaixo da outra). */
   #conteudoIntencoes{ max-width: 840px; }
   #conteudoIntencoes #painelDataIntencoes{ max-width: 560px; margin-left:auto; margin-right:auto; }
-  #listaMissasDoDia{
-    display:grid; grid-template-columns: repeat(2, 1fr); gap:20px; align-items:start;
-  }
+  #listaMissasDoDia{ width:100%; max-width:560px; margin-left:auto; margin-right:auto; }
   #listaMissasDoDia > .painel{ margin-top:0; }
 }
 
@@ -1341,8 +1339,8 @@ img{ max-width: 100%; display:block; }
 /* ============ BARRA DE BAIXO DO CELULAR EM VERMELHO (igual à de cima) ============
    O vermelho de cima vem do theme-color; embaixo, quando o aparelho deixa o app ocupar a tela
    inteira, esta faixa e o fundo da página pintam a área da barra de navegação do Android. */
-html{ background-color:#7a0c1e; }
 body.tela-fundo{ background-color:#7a0c1e; }
+@media (max-width: 719px){ html{ background-color:#7a0c1e; } }
 .barra-inferior-app{
   position:fixed; left:0; right:0; bottom:0; height: env(safe-area-inset-bottom, 0px);
   background:#7a0c1e; z-index:9999; pointer-events:none;

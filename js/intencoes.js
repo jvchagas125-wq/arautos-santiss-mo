@@ -173,7 +173,11 @@ function abrirEscolhaDeLista() {
   });
   abrir(modalEscolherLista);
 }
-el("btnVoltarEscolherLista").addEventListener("click", () => fechar(modalEscolherLista));
+// ao voltar, as listas do dia ficam no meio da tela
+function centralizarListasDoDia() {
+  setTimeout(() => listaMissasDoDia.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+}
+el("btnVoltarEscolherLista").addEventListener("click", () => { fechar(modalEscolherLista); centralizarListasDoDia(); });
 
 /* =========================================================
    A lista (modal principal)
