@@ -1337,3 +1337,13 @@ img{ max-width: 100%; display:block; }
 #btnCopiarPix.btn-copiado{ background: var(--verde-2); border-color: var(--verde-2); color:#fff; }
 
 #pixMensagem{ white-space: pre-line; }
+
+/* ============ BARRA DE BAIXO DO CELULAR EM VERMELHO (igual à de cima) ============
+   O vermelho de cima vem do theme-color; embaixo, quando o aparelho deixa o app ocupar a tela
+   inteira, esta faixa e o fundo da página pintam a área da barra de navegação do Android. */
+html{ background-color:#7a0c1e; }
+body.tela-fundo{ background-color:#7a0c1e; }
+.barra-inferior-app{
+  position:fixed; left:0; right:0; bottom:0; height: env(safe-area-inset-bottom, 0px);
+  background:#7a0c1e; z-index:9999; pointer-events:none;
+}

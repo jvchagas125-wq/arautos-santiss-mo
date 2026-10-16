@@ -32,12 +32,34 @@ function mostrarFrase(frase, autor) {
   elFraseAutor.classList.remove("oculto");
 }
 
-comLimiteDeTempo(obterFrases()).then((dados) => {
-  const escolhida = escolherFraseDoDia(dados.lista) || FRASE_PADRAO;
+// A lista de frases fica guardada neste aparelho: a partir da segunda visita a frase do dia aparece
+// NA HORA (sem "esqueleto" de carregamento), e a leitura do banco só confirma/atualiza em seguida.
+const CHAVE_CACHE_FRASES = "arautos_frases_cache";
+function lerFrasesCache() {
+  try {
+    const bruto = localStorage.getItem(CHAVE_CACHE_FRASES);
+    const lista = bruto ? JSON.parse(bruto) : null;
+    return Array.isArray(lista) ? lista : null;
+  } catch { return null; }
+}
+let fraseMostrada = "";
+function mostrarFraseDoDia(lista) {
+  const escolhida = escolherFraseDoDia(lista) || FRASE_PADRAO;
+  const assinatura = `${escolhida.frase}|${escolhida.autor}`;
+  if (assinatura === fraseMostrada) return; // já está na tela, não pisca
+  fraseMostrada = assinatura;
   mostrarFrase(escolhida.frase, escolhida.autor);
+}
+
+const frasesCache = lerFrasesCache();
+if (frasesCache) mostrarFraseDoDia(frasesCache);
+
+comLimiteDeTempo(obterFrases()).then((dados) => {
+  try { localStorage.setItem(CHAVE_CACHE_FRASES, JSON.stringify(dados.lista)); } catch {}
+  mostrarFraseDoDia(dados.lista);
 }).catch((err) => {
   console.error("Erro ao carregar frases:", err);
-  mostrarFrase(FRASE_PADRAO.frase, FRASE_PADRAO.autor);
+  if (!fraseMostrada) mostrarFraseDoDia([]); // sem cache e sem rede: frase padrão
 });
 
 /* ---------- Carrossel de banners da Home ----------

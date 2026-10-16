@@ -619,6 +619,10 @@ function inserirNavegacaoEntrePaginas(paginaAtual) {
 
 export function inicializarNavegacao(paginaAtual) {
   aplicarConfigVisualEmCache();
+  // faixa vermelha embaixo (só aparece em celulares cuja barra de navegação deixa o app ocupar a tela toda)
+  if (!document.querySelector(".barra-inferior-app")) {
+    document.body.insertAdjacentHTML("beforeend", '<div class="barra-inferior-app" aria-hidden="true"></div>');
+  }
 
   const btnMenu = document.getElementById("btnMenu");
   const btnFecharMenu = document.getElementById("btnFecharMenu");
