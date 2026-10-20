@@ -43,7 +43,7 @@ function renderizarLista(agendamentos) {
     : `
       <div class="card-vazio">
         <img class="selo-decorativo" src="assets/selo-adoracao.png" alt="" style="margin:0 auto 14px;" />
-        <p>Você ainda não tem nenhum agendamento.<br/>Que tal reservar um tempo com Nosso Senhor?</p>
+        <p>Você ainda não tem nenhum agendamento.<br/>Venha conviver com Jesus Eucarístico!</p>
       </div>`;
 
   listaCancelados.innerHTML = cancelados.length
