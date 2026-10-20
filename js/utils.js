@@ -320,17 +320,17 @@ export const TEMPOS_FALECIMENTO_PADRAO = [
 ];
 
 export const PIX_PADRAO = {
-  ativo: false,
   chave: "",
   qrCodeUrl: "",
   beneficiario: "",
-  mensagem: "Sua contribuição ajuda a manter a nossa obra. Deus lhe pague!"
+  mensagem: "Ajude-nos a evangelizar! Sua colaboração irá favorecer esse apostolado.\nQue Nossa Senhora lhe retribua!"
 };
 
 export const TEXTOS_ENVIO_PADRAO = {
-  enviado: "Muito bem!! Sua lista de intenções foi enviada!!",
-  pergunta: "Você desejaria contribuir com a nossa obra?"
+  enviado: "Muito bem!! Sua lista de intenções foi enviada!!\nCaso deseje editar, você poderá fazer isso até o horário de fechamento da lista."
 };
+// textos antigos (de antes da mensagem única): se ainda for um deles, vale o texto novo
+const TEXTOS_ENVIO_ANTIGOS = ["Muito bem!! Sua lista de intenções foi enviada!!"];
 
 function textoLimpo(v, padrao = "") {
   return typeof v === "string" && v.trim() ? v.trim() : padrao;
@@ -382,7 +382,6 @@ export function normalizarFormularioIntencoes(dados) {
 
   const px = d.pix && typeof d.pix === "object" ? d.pix : {};
   const pix = {
-    ativo: px.ativo === true,
     chave: textoLimpo(px.chave),
     qrCodeUrl: textoLimpo(px.qrCodeUrl),
     beneficiario: textoLimpo(px.beneficiario),
@@ -391,8 +390,7 @@ export function normalizarFormularioIntencoes(dados) {
 
   const tx = d.textos && typeof d.textos === "object" ? d.textos : {};
   const textos = {
-    enviado: textoLimpo(tx.enviado, TEXTOS_ENVIO_PADRAO.enviado),
-    pergunta: textoLimpo(tx.pergunta, TEXTOS_ENVIO_PADRAO.pergunta)
+    enviado: TEXTOS_ENVIO_ANTIGOS.includes(textoLimpo(tx.enviado)) ? TEXTOS_ENVIO_PADRAO.enviado : textoLimpo(tx.enviado, TEXTOS_ENVIO_PADRAO.enviado)
   };
 
   return { categorias, temposFalecimento: tempos, pix, textos };

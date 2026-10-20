@@ -173,27 +173,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>
       </div>
       <h3 id="enviadoTitulo">Muito bem!!</h3>
-      <p id="enviadoPergunta"></p>
+      <p id="enviadoPergunta" class="oculto"></p>
       <div class="modal__acoes" id="enviadoAcoes">
-        <button type="button" class="btn btn-contorno" id="btnContribuirNao">Não</button>
-        <button type="button" class="btn btn-dourado" id="btnContribuirSim">Sim</button>
+        <button type="button" class="btn btn-dourado" id="btnEnviadoOk">Ok</button>
       </div>
-    </div>
-  </div>
-
-  <!-- 6) PIX da contribuição (QR Code definido no painel administrativo) -->
-  <div class="modal-overlay" id="modalPix">
-    <div class="modal modal--pequeno">
-      <h3>Faça a sua contribuição</h3>
-      <p id="pixMensagem"></p>
-      <img id="pixQrCode" class="pix-qr oculto" alt="QR Code do PIX" />
-      <p class="pix-beneficiario oculto" id="pixBeneficiario"></p>
-      <div class="pix-chave oculto" id="pixChaveCaixa">
-        <button type="button" class="btn btn-contorno btn-full" id="btnCopiarPix">Copiar PIX copia e cola</button>
-        <!-- o código fica escondido: só aparece se o aparelho não deixar copiar sozinho -->
-        <code id="pixChave" class="oculto"></code>
-      </div>
-      <button type="button" class="btn btn-dourado btn-full" id="btnFecharPix">Fechar</button>
     </div>
   </div>
 

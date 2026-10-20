@@ -44,7 +44,6 @@ const modalLista = el("modalLista");
 const modalCategorias = el("modalCategorias");
 const modalPrevia = el("modalPrevia");
 const modalEnviado = el("modalEnviado");
-const modalPix = el("modalPix");
 
 /* =========================================================
    Estado
@@ -665,92 +664,18 @@ el("btnListaEnviar").addEventListener("click", async () => {
   }
 });
 
-/* ---------- Depois de enviar: contribuição (PIX) ---------- */
-function pixConfigurado() {
-  const p = formulario.pix;
-  return p.ativo && (p.qrCodeUrl || p.chave);
-}
-
+/* ---------- Depois de enviar: só a mensagem de lista enviada ----------
+   A primeira linha do texto (editado no painel) vira o título; as demais ficam logo abaixo.
+   A contribuição (PIX) agora fica na página Contatos. */
 function mostrarPopupEnviado() {
-  el("enviadoTitulo").textContent = formulario.textos.enviado;
-  const pergunta = el("enviadoPergunta");
-  const acoes = el("enviadoAcoes");
-  if (pixConfigurado()) {
-    pergunta.textContent = formulario.textos.pergunta;
-    pergunta.classList.remove("oculto");
-    acoes.innerHTML = `
-      <button type="button" class="btn btn-contorno" id="btnContribuirNao">Não</button>
-      <button type="button" class="btn btn-dourado" id="btnContribuirSim">Sim</button>`;
-    el("btnContribuirNao").addEventListener("click", () => fechar(modalEnviado)); // fecha com a animação do modal
-    el("btnContribuirSim").addEventListener("click", () => { fechar(modalEnviado); abrirPix(); });
-  } else {
-    pergunta.textContent = "Sua lista continua salva — você pode voltar e editar enquanto ela estiver aberta.";
-    acoes.innerHTML = `<button type="button" class="btn btn-dourado" id="btnEnviadoOk">Ok</button>`;
-    el("btnEnviadoOk").addEventListener("click", () => fechar(modalEnviado));
-  }
+  const linhas = String(formulario.textos.enviado || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  el("enviadoTitulo").textContent = linhas[0] || "Muito bem!!";
+  const resto = el("enviadoPergunta");
+  resto.textContent = linhas.slice(1).join("\n");
+  resto.classList.toggle("oculto", linhas.length < 2);
   abrir(modalEnviado);
 }
-
-function abrirPix() {
-  const p = formulario.pix;
-  // cada frase da mensagem vai numa linha própria (ex.: "Sua contribuição ajuda a manter a nossa obra." /
-  // "Nossa Senhora lhe pague!"); quebras de linha escritas no painel também são respeitadas
-  el("pixMensagem").textContent = String(p.mensagem || "").replace(/([.!?])[ \t]+(?=\S)/g, "$1\n");
-  const img = el("pixQrCode");
-  if (p.qrCodeUrl) { img.src = p.qrCodeUrl; img.classList.remove("oculto"); } else { img.removeAttribute("src"); img.classList.add("oculto"); }
-  const ben = el("pixBeneficiario");
-  ben.textContent = p.beneficiario ? `Favorecido: ${p.beneficiario}` : "";
-  ben.classList.toggle("oculto", !p.beneficiario);
-  el("pixChave").textContent = p.chave;
-  el("pixChave").classList.add("oculto");
-  el("btnCopiarPix").textContent = "Copiar PIX copia e cola";
-  el("btnCopiarPix").classList.remove("btn-copiado");
-  el("pixChaveCaixa").classList.toggle("oculto", !p.chave);
-  abrir(modalPix);
-}
-el("btnFecharPix").addEventListener("click", () => fechar(modalPix));
-let temporizadorCopiado = null;
-function marcarPixCopiado() {
-  const btn = el("btnCopiarPix");
-  btn.textContent = "✓ Código copiado!";
-  btn.classList.add("btn-copiado");
-  mostrarToast("Código PIX copiado! Cole no seu aplicativo do banco.");
-  clearTimeout(temporizadorCopiado);
-  temporizadorCopiado = setTimeout(() => {
-    btn.textContent = "Copiar PIX copia e cola";
-    btn.classList.remove("btn-copiado");
-  }, 3000);
-}
-// toque no botão = código copiado na hora. Se o aparelho bloquear a cópia automática, o código
-// aparece na tela já selecionado, pra pessoa só copiar.
-el("btnCopiarPix").addEventListener("click", async () => {
-  const texto = formulario.pix.chave;
-  try {
-    await navigator.clipboard.writeText(texto);
-    marcarPixCopiado();
-    return;
-  } catch { /* tenta o jeito antigo abaixo */ }
-  try {
-    const campo = document.createElement("textarea");
-    campo.value = texto;
-    campo.setAttribute("readonly", "");
-    campo.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
-    document.body.appendChild(campo);
-    campo.select();
-    campo.setSelectionRange(0, texto.length);
-    const copiou = document.execCommand("copy");
-    campo.remove();
-    if (copiou) { marcarPixCopiado(); return; }
-  } catch { /* cai no último recurso */ }
-  const caixa = el("pixChave");
-  caixa.classList.remove("oculto");
-  const range = document.createRange();
-  range.selectNodeContents(caixa);
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-  mostrarToast("Não consegui copiar sozinho — o código está selecionado, é só copiar.");
-});
+el("btnEnviadoOk").addEventListener("click", () => fechar(modalEnviado));
 
 /* ---------- Lista que fecha enquanto a pessoa ainda está nela ---------- */
 function encerrarListaAberta() {

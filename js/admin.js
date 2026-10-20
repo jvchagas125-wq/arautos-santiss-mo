@@ -1283,7 +1283,6 @@ function configurarIntencoes() {
   });
 
   // PIX / QR Code
-  const pixAtivo = document.getElementById("pixAtivo");
   const pixPreview = document.getElementById("pixPreview");
   const pixArquivo = document.getElementById("pixArquivo");
   const btnPixEscolher = document.getElementById("btnPixEscolher");
@@ -1320,14 +1319,12 @@ function configurarIntencoes() {
     temposEdicao = f.temposFalecimento.map((t) => ({ ...t }));
     desenharCategorias();
     desenharTempos();
-    pixAtivo.checked = f.pix.ativo;
     pixQrUrl = f.pix.qrCodeUrl;
     mostrarQr();
     document.getElementById("pixChaveCampo").value = f.pix.chave;
     document.getElementById("pixBeneficiarioCampo").value = f.pix.beneficiario;
     document.getElementById("pixMensagemCampo").value = f.pix.mensagem;
     document.getElementById("textoEnviadoCampo").value = f.textos.enviado;
-    document.getElementById("textoPerguntaCampo").value = f.textos.pergunta;
   }
 
   let formularioPreenchido = false;
@@ -1352,16 +1349,11 @@ function configurarIntencoes() {
       return;
     }
     const pix = {
-      ativo: pixAtivo.checked,
       chave: document.getElementById("pixChaveCampo").value.trim(),
       qrCodeUrl: pixQrUrl,
       beneficiario: document.getElementById("pixBeneficiarioCampo").value.trim(),
       mensagem: document.getElementById("pixMensagemCampo").value.trim()
     };
-    if (pix.ativo && !pix.qrCodeUrl && !pix.chave) {
-      mostrarToast("Para ligar o PIX, envie a imagem do QR Code ou cole o código copia e cola.");
-      return;
-    }
     const btn = document.getElementById("btnSalvarFormulario");
     btn.disabled = true;
     btn.textContent = "Salvando...";
@@ -1369,8 +1361,7 @@ function configurarIntencoes() {
       const salvo = await salvarFormularioIntencoes({
         categorias, temposFalecimento: tempos, pix,
         textos: {
-          enviado: document.getElementById("textoEnviadoCampo").value.trim(),
-          pergunta: document.getElementById("textoPerguntaCampo").value.trim()
+          enviado: document.getElementById("textoEnviadoCampo").value.trim()
         }
       });
       preencherFormulario(salvo); // mostra já como ficou (textos vazios voltam ao padrão, etc.)

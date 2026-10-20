@@ -381,12 +381,7 @@
               <button type="button" class="btn btn-contorno btn-pequeno" id="btnAddTempo">+ Adicionar opção</button>
 
               <h3 class="formulario-secao">PIX da contribuição</h3>
-              <div class="campo campo-checkbox-simples" style="margin-top:0;">
-                <label>
-                  <input type="checkbox" id="pixAtivo" />
-                  <span>Perguntar se a pessoa quer contribuir (mostrar o PIX) depois que ela enviar a lista</span>
-                </label>
-              </div>
+              <p class="formulario-ajuda">Aparece na página <strong>Contatos</strong> do site, no quadro "Faça a Sua Contribuição!". Se não houver QR Code nem código, o quadro fica escondido.</p>
               <div class="campo">
                 <label>QR Code do PIX</label>
                 <div class="pix-upload">
@@ -411,14 +406,10 @@
                 <textarea id="pixMensagemCampo" rows="2"></textarea>
               </div>
 
-              <h3 class="formulario-secao">Textos da janela depois de enviar</h3>
+              <h3 class="formulario-secao">Mensagem da janela depois de enviar</h3>
               <div class="campo">
-                <label for="textoEnviadoCampo">Mensagem de lista enviada</label>
-                <input type="text" id="textoEnviadoCampo" />
-              </div>
-              <div class="campo">
-                <label for="textoPerguntaCampo">Pergunta sobre contribuir</label>
-                <input type="text" id="textoPerguntaCampo" />
+                <label for="textoEnviadoCampo">Mensagem de lista enviada <small>(a primeira linha vira o título; as outras ficam abaixo)</small></label>
+                <textarea id="textoEnviadoCampo" rows="3"></textarea>
               </div>
 
               <button type="submit" class="btn btn-dourado" id="btnSalvarFormulario">Salvar formulário</button>
