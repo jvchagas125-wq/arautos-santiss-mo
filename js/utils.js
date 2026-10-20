@@ -615,8 +615,47 @@ function inserirNavegacaoEntrePaginas(paginaAtual) {
   }
 }
 
+/* ---------- Widget flutuante discreto: leva à página Contatos (contribuição) ----------
+   Um botãozinho redondo no canto da tela. Na primeira vez da visita ele abre o texto por uns
+   segundos ("Entre em contato conosco e dê a sua colaboração") e depois encolhe só pro ícone.
+   Quem fechar no "×" não vê de novo por 7 dias. Não aparece em Contatos nem no painel admin. */
+const CHAVE_WIDGET_FECHADO = "arautos_widget_colabore_fechado";
+const CHAVE_WIDGET_VISTO = "arautos_widget_colabore_visto";
+function iniciarWidgetColaboracao(paginaAtual) {
+  if (paginaAtual === "contatos" || paginaAtual === "admin") return;
+  try {
+    const fechadoAte = Number(localStorage.getItem(CHAVE_WIDGET_FECHADO)) || 0;
+    if (Date.now() < fechadoAte) return;
+  } catch { /* sem armazenamento: mostra normalmente */ }
+  let jaViu = false;
+  try { jaViu = sessionStorage.getItem(CHAVE_WIDGET_VISTO) === "1"; } catch { /* ignora */ }
+
+  const caixa = document.createElement("div");
+  caixa.className = "widget-colabore";
+  caixa.innerHTML = `
+    <a class="widget-colabore__link" href="contatos" aria-label="Entre em contato conosco e dê a sua colaboração">
+      <svg class="widget-colabore__icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2Z"/></svg>
+      <span class="widget-colabore__texto">Entre em contato e colabore</span>
+    </a>
+    <button type="button" class="widget-colabore__fechar" aria-label="Esconder este aviso">&times;</button>`;
+  document.body.appendChild(caixa);
+
+  const recolher = () => caixa.classList.remove("aberto");
+  caixa.querySelector(".widget-colabore__fechar").addEventListener("click", () => {
+    caixa.remove();
+    try { localStorage.setItem(CHAVE_WIDGET_FECHADO, String(Date.now() + 7 * 24 * 60 * 60 * 1000)); } catch { /* ignora */ }
+  });
+  requestAnimationFrame(() => caixa.classList.add("visivel"));
+  if (!jaViu) {
+    setTimeout(() => caixa.classList.add("aberto"), 2200);
+    setTimeout(recolher, 9000);
+    try { sessionStorage.setItem(CHAVE_WIDGET_VISTO, "1"); } catch { /* ignora */ }
+  }
+}
+
 export function inicializarNavegacao(paginaAtual) {
   aplicarConfigVisualEmCache();
+  iniciarWidgetColaboracao(paginaAtual);
   // faixa vermelha embaixo (só aparece em celulares cuja barra de navegação deixa o app ocupar a tela toda)
   if (!document.querySelector(".barra-inferior-app")) {
     document.body.insertAdjacentHTML("beforeend", '<div class="barra-inferior-app" aria-hidden="true"></div>');
