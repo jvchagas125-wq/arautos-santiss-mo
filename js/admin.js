@@ -1229,7 +1229,7 @@ function configurarIntencoes() {
       topo.className = "linha-form__topo";
       topo.appendChild(campoTexto(cat.rotulo, "Nome da categoria", (v) => { cat.rotulo = v; }));
       const tipo = document.createElement("select");
-      tipo.innerHTML = `<option value="nome">Só nomes</option><option value="falecimento">Falecimento (com tempo)</option>`;
+      tipo.innerHTML = `<option value="nome">Só nomes</option><option value="falecimento">Falecimento (com tempo)</option><option value="aniversario">Aniversário (Natalício, Matrimônio, Batismo, Outros)</option>`;
       tipo.value = cat.tipo;
       tipo.addEventListener("change", () => { cat.tipo = tipo.value; });
       topo.appendChild(tipo);

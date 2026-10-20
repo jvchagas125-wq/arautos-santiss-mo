@@ -7,7 +7,7 @@
 // (no navegador ela vem do <script> do admin.html em window.docx; no servidor, do npm).
 // O documento é EDITÁVEL: as linhas em branco pra acrescentar nomes à mão são parágrafos comuns
 // com uma linha embaixo, e todo o texto é texto normal do Word.
-import { CATEGORIAS_PADRAO, formatarDataComDiaSemana } from "./utils.js";
+import { CATEGORIAS_PADRAO, formatarDataComDiaSemana, separarNomesDoItem } from "./utils.js";
 
 // Fonte que todo computador com Word tem — o documento não embute fonte nenhuma.
 const FONTE = "Times New Roman";
@@ -44,7 +44,7 @@ export function nomeArquivoDocx(rotulo) {
 // no navegador com docx.Packer.toBlob(doc), no servidor com docx.Packer.toBuffer(doc).
 export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
   const docx = opcoes.docx || window.docx;
-  const { Document, Paragraph, TextRun, AlignmentType, BorderStyle, Footer, Table, TableRow, TableCell, WidthType } = docx;
+  const { Document, Paragraph, TextRun, AlignmentType, BorderStyle, Footer, SectionType } = docx;
   // categorias editáveis no painel; sem elas (ou nos testes), as de fábrica
   const categorias = Array.isArray(opcoes.categorias) && opcoes.categorias.length ? opcoes.categorias : CATEGORIAS_PADRAO;
 
@@ -57,7 +57,12 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
     bottom: { style: BorderStyle.SINGLE, size: espessura, color: cor, space: espaco }
   });
 
-  const filhos = [];
+  // O documento é uma sequência de "blocos" (seções contínuas do Word): os blocos de 1 coluna levam
+  // títulos, linhas em branco etc.; os de 2 ou 3 colunas levam só os nomes, que o próprio Word
+  // distribui (um embaixo do outro, coluna por coluna) e equilibra no fim do bloco.
+  const blocos = [{ colunas: 1, filhos: [] }];
+  const novoBloco = (colunas) => { blocos.push({ colunas, filhos: [] }); };
+  const filhos = { push: (...itens) => blocos[blocos.length - 1].filhos.push(...itens) };
 
   filhos.push(new Paragraph({
     alignment: AlignmentType.CENTER, spacing: { after: 60 },
@@ -99,44 +104,42 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
     (c) => c.textoFixo || itensDe(c.chave).length > 0
   );
 
-  // Nomes em colunas (um embaixo do outro, preenchendo coluna por coluna) pra não ocupar várias
-  // páginas: até 4 nomes ficam numa coluna só, até 8 em duas e acima disso em três.
-  const SEM_BORDA = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-  const bordasNenhuma = { top: SEM_BORDA, bottom: SEM_BORDA, left: SEM_BORDA, right: SEM_BORDA };
-  const LARGURA_UTIL = 11906 - 2 * 1000 - RECUO; // área de texto da página menos o recuo da lista
-  function tabelaDeNomes(doGrupo) {
-    const nomes = doGrupo
-      .map((it) => ({ texto: (it.texto || "").trim().replace(/[.,;:]+$/, ""), negrito: it.destaque === true }))
-      .filter((n) => n.texto);
-    if (nomes.length === 0) return null;
-    const colunas = nomes.length <= 4 ? 1 : nomes.length <= 8 ? 2 : 3;
-    const porColuna = Math.ceil(nomes.length / colunas);
-    const larguraColuna = Math.floor(LARGURA_UTIL / colunas);
-    const celulas = [];
-    for (let c = 0; c < colunas; c++) {
-      const fatia = nomes.slice(c * porColuna, (c + 1) * porColuna);
-      celulas.push(new TableCell({
-        width: { size: larguraColuna, type: WidthType.DXA },
-        borders: bordasNenhuma,
-        margins: { top: 0, bottom: 0, left: 0, right: 120 },
-        children: fatia.length
-          ? fatia.map((n) => new Paragraph({
-              spacing: { after: 80, line: 276 },
-              children: [run(n.texto, n.negrito ? { bold: true } : {})]
-            }))
-          : [new Paragraph({ children: [run("")] })]
-      }));
-    }
-    return new Table({
-      width: { size: LARGURA_UTIL, type: WidthType.DXA },
-      columnWidths: Array.from({ length: colunas }, () => larguraColuna),
-      indent: { size: RECUO, type: WidthType.DXA },
-      borders: { ...bordasNenhuma, insideHorizontal: SEM_BORDA, insideVertical: SEM_BORDA },
-      rows: [new TableRow({ cantSplit: false, children: celulas })]
+  // Nomes em colunas de verdade do Word (um embaixo do outro, coluna por coluna) pra não ocupar
+  // várias páginas. Falecimento/nomes: até 4 nomes numa coluna, até 8 em duas, acima disso três.
+  // Aniversários têm textos mais longos (ex.: "Fulano e Fulana (25 anos de casados – Bodas de Prata)"):
+  // uma coluna, ou duas quando são muitos.
+  const LARGURA_UTIL = 11906 - 2 * 1000 - RECUO;
+  const ESPACO_COLUNAS = 360;
+  function nomesDoGrupo(doGrupo, tipo) {
+    // Categoria de falecimento: se alguém colocou vários nomes numa intenção só (separados por
+    // vírgula), cada nome vira uma linha própria — também nas intenções antigas.
+    const textos = doGrupo.flatMap((it) => {
+      const destaque = it.destaque === true;
+      const partes = tipo === "falecimento" ? separarNomesDoItem(it.texto) : [(it.texto || "").trim().replace(/[.,;:]+$/, "")];
+      return partes.map((texto) => ({ texto, negrito: destaque }));
     });
+    return textos.filter((n) => n.texto);
+  }
+  function colunasPara(tipo, quantidade) {
+    if (tipo === "aniversario") return quantidade <= 8 ? 1 : 2;
+    return quantidade <= 4 ? 1 : quantidade <= 8 ? 2 : 3;
+  }
+  // Devolve true se colocou os nomes (num bloco próprio de colunas).
+  function colocarNomes(doGrupo, tipo) {
+    const nomes = nomesDoGrupo(doGrupo, tipo);
+    if (nomes.length === 0) return false;
+    const colunas = colunasPara(tipo, nomes.length);
+    if (colunas > 1) novoBloco(colunas);
+    nomes.forEach((n) => filhos.push(new Paragraph({
+      spacing: { after: 80, line: 276 }, indent: { left: colunas > 1 ? 0 : RECUO }, keepLines: true,
+      children: [run(n.texto, n.negrito ? { bold: true } : {})]
+    })));
+    if (colunas > 1) novoBloco(1);
+    filhos.push(new Paragraph({ spacing: { before: 0, after: 60 }, children: [run("", { size: 4 })] }));
+    return true;
   }
 
-  categoriasComItens.forEach(({ chave, rotulo: rotuloCategoria, textoFixo }, indice) => {
+  categoriasComItens.forEach(({ chave, rotulo: rotuloCategoria, textoFixo, tipo }, indice) => {
     const doGrupo = itensDe(chave);
 
     // o título de uma categoria nunca fica sozinho no fim de uma página
@@ -145,11 +148,7 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
       children: [run(rotuloCategoria, { bold: true, size: 24, color: VINHO })]
     }));
 
-    const tabela = tabelaDeNomes(doGrupo);
-    if (tabela) {
-      filhos.push(tabela);
-      filhos.push(new Paragraph({ spacing: { before: 0, after: 60 }, children: [run("", { size: 4 })] }));
-    }
+    colocarNomes(doGrupo, tipo);
 
     if (textoFixo) {
       // 1ª linha reservada: fica em branco, pra escreverem à mão na hora da missa, se precisar.
@@ -182,21 +181,29 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
   // sempre no horário de Brasília — no servidor (que roda em UTC) o carimbo sairia 3h adiantado
   const carimbo = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
+  const pagina = { size: { width: 11906, height: 16838 }, margin: { top: 1000, bottom: 1000, left: 1000, right: 1000 } };
+  const rodape = new Footer({
+    children: [new Paragraph({ children: [new TextRun({ text: `Gerado em ${carimbo}`, font: FONTE, size: 16, color: "8C7864" })] })]
+  });
+  const secoes = blocos
+    .filter((b) => b.filhos.length > 0)
+    .map((b, i) => ({
+      properties: {
+        // A4, margens de 50pt (1000 twips) como no modelo antigo
+        page: pagina,
+        // seções seguintes continuam na mesma página (só muda o número de colunas)
+        ...(i > 0 ? { type: SectionType.CONTINUOUS } : {}),
+        ...(b.colunas > 1 ? { column: { count: b.colunas, space: ESPACO_COLUNAS, equalWidth: true } } : {})
+      },
+      // o rodapé é do documento inteiro: só a primeira seção o define, as outras herdam
+      ...(i === 0 ? { footers: { default: rodape } } : {}),
+      children: b.filhos
+    }));
+
   return new Document({
     creator: "Arautos do Evangelho Campos",
     title: `Intenções da Santa Missa — ${rotulo}`,
     styles: { default: { document: { run: { font: FONTE, size: 22 } } } },
-    sections: [{
-      properties: {
-        // A4, margens de 50pt (1000 twips) como no modelo antigo
-        page: { size: { width: 11906, height: 16838 }, margin: { top: 1000, bottom: 1000, left: 1000, right: 1000 } }
-      },
-      footers: {
-        default: new Footer({
-          children: [new Paragraph({ children: [new TextRun({ text: `Gerado em ${carimbo}`, font: FONTE, size: 16, color: "8C7864" })] })]
-        })
-      },
-      children: filhos
-    }]
+    sections: secoes
   });
 }

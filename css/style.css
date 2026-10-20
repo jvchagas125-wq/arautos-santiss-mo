@@ -1437,3 +1437,6 @@ body.tela-fundo{ background: transparent; } /* a foto de fundo (::before) aparec
 .widget-colabore.aberto .widget-colabore__fechar{ display:inline-flex; }
 @media (hover:hover){ .widget-colabore__link:hover .widget-colabore__texto{ max-width:240px; opacity:1; margin-left:8px; } }
 @media print{ .widget-colabore{ display:none; } }
+
+.campo-dica{ display:block; margin-top:5px; font-size:.78rem; line-height:1.4; color: var(--texto-suave); }
+.editor-intencao .campo input[type="text"]{ width:100%; }

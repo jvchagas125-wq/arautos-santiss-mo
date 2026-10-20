@@ -2,7 +2,8 @@ import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast,
   formatarDataBR, formatarDataComDiaSemana, dataParaIso, hojeIso, criarCalendario,
-  horariosDoDia, statusMissaEspecifica, textoDaIntencao, normalizarFormularioIntencoes
+  horariosDoDia, statusMissaEspecifica, textoDaIntencao, normalizarFormularioIntencoes,
+  dividirNomes, ANIVERSARIO_OPCOES, textoDeAniversario
 } from "./utils.js";
 import {
   obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirFormularioIntencoes,
@@ -208,7 +209,8 @@ function criarItem(categoria, nome, tempo = "") {
 function recalcularItem(item) {
   const t = item.tempo ? tempoPorChave(item.tempo) : null;
   item.texto = textoDaIntencao(item.nome, item.tempo, formulario.temposFalecimento);
-  item.destaque = !!(t && t.sufixo);
+  // intenções de aniversário (sem "tempo") guardam o negrito do jeito que foi criado
+  if (item.tempo) item.destaque = !!(t && t.sufixo);
 }
 
 // "Assinatura" do conteúdo: serve pra saber se o que está na tela já foi enviado ou não.
@@ -273,7 +275,8 @@ async function abrirLista(hora) {
 }
 
 function editorVazio() {
-  return { categoria: null, tempo: null, valor: "" };
+  // tempo = opção de falecimento; aniv = opção de aniversário; valor2 = nome da noiva; anos = idade/anos (opcional)
+  return { categoria: null, tempo: null, valor: "", aniv: null, valor2: "", anos: "" };
 }
 
 /* ---------- Rascunho: salva sozinho a cada mudança ---------- */
@@ -424,6 +427,7 @@ function renderizarEditor({ rolar = false } = {}) {
 
   if (cat) {
     if (cat.tipo === "falecimento") montarEditorFalecimento(caixa, cat);
+    else if (cat.tipo === "aniversario") montarEditorAniversario(caixa, cat);
     else montarEditorNome(caixa, cat);
   }
 
@@ -535,17 +539,160 @@ function montarEditorFalecimento(caixa, cat) {
   caixa.appendChild(btnMais);
 }
 
+/* ---------- Aniversários: Natalício, Matrimônio, Batismo ou Outros ---------- */
+function criarCampoSimples({ rotulo, dica = "", placeholder = "", valor = "", linhas = 0, numerico = false, aoDigitar, aoEnter }) {
+  const campo = document.createElement("div");
+  campo.className = "campo";
+  campo.innerHTML = `<label></label>${linhas ? `<textarea rows="${linhas}"></textarea>` : `<input type="text" autocomplete="off" />`}`;
+  campo.querySelector("label").textContent = rotulo;
+  const entrada = campo.querySelector("textarea, input");
+  entrada.placeholder = placeholder;
+  entrada.value = valor;
+  if (numerico) { entrada.inputMode = "numeric"; entrada.maxLength = 3; }
+  entrada.addEventListener("input", () => {
+    if (numerico) entrada.value = entrada.value.replace(/\D/g, "");
+    aoDigitar(entrada.value);
+  });
+  entrada.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); aoEnter?.(); }
+  });
+  if (dica) {
+    const d = document.createElement("small");
+    d.className = "campo-dica";
+    d.textContent = dica;
+    campo.appendChild(d);
+  }
+  return { campo, entrada };
+}
+
+function montarEditorAniversario(caixa, cat) {
+  const ed = lista.editor;
+  const rotulo = document.createElement("p");
+  rotulo.className = "campo-legenda";
+  rotulo.textContent = "Qual é o aniversário?";
+  caixa.appendChild(rotulo);
+
+  const opcoes = document.createElement("div");
+  opcoes.className = "opcoes-tempo";
+  ANIVERSARIO_OPCOES.forEach((o) => {
+    const rotuloOpcao = document.createElement("label");
+    rotuloOpcao.className = "opcao-tempo";
+    rotuloOpcao.classList.toggle("marcada", ed.aniv === o.chave);
+    rotuloOpcao.innerHTML = `<input type="checkbox" /><span class="opcao-tempo__texto"></span>`;
+    rotuloOpcao.querySelector(".opcao-tempo__texto").textContent = o.rotulo;
+    const marca = rotuloOpcao.querySelector("input");
+    marca.checked = ed.aniv === o.chave;
+    marca.addEventListener("change", () => {
+      // escolher outra opção guarda o que já tinha sido digitado (se estava completo) como intenção
+      if (ed.aniv && ed.aniv !== o.chave) commitarEditor();
+      ed.aniv = marca.checked ? o.chave : null;
+      ed.valor = ""; ed.valor2 = ""; ed.anos = "";
+      alterouLista();
+      renderizarEditor();
+      el("editorIntencao").querySelector("textarea, input[type=text]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    opcoes.appendChild(rotuloOpcao);
+  });
+  caixa.appendChild(opcoes);
+
+  if (ed.aniv) {
+    let primeiro = null;
+    const adicionar = () => btnAdicionar.click();
+    const campos = [];
+    if (ed.aniv === "matrimonio") {
+      const noivo = criarCampoSimples({ rotulo: "Nome completo do noivo", placeholder: "Digite o nome completo do noivo", valor: ed.valor, aoDigitar: (v) => { ed.valor = v; } });
+      const noiva = criarCampoSimples({ rotulo: "Nome completo da noiva", placeholder: "Digite o nome completo da noiva", valor: ed.valor2, aoDigitar: (v) => { ed.valor2 = v; } });
+      const anos = criarCampoSimples({
+        rotulo: "Anos de casados (opcional)", placeholder: "Ex.: 25", valor: ed.anos,
+        dica: "Se quiser, informe os anos de casados. As bodas (prata, ouro...) aparecem automaticamente.",
+        aoDigitar: (v) => { ed.anos = v; }, aoEnter: adicionar
+      });
+      campos.push(noivo, noiva, anos);
+      primeiro = noivo.entrada;
+    } else if (ed.aniv === "outros") {
+      const livre = criarCampoSimples({
+        rotulo: "Adicionar Nome", linhas: 3, valor: ed.valor,
+        placeholder: "Digite o nome da pessoa e, entre parênteses, o aniversário de quê. Ex.: Padre José (aniversário de ordenação)",
+        aoDigitar: (v) => { ed.valor = v; }, aoEnter: adicionar
+      });
+      campos.push(livre);
+      primeiro = livre.entrada;
+    } else {
+      const ehBatismo = ed.aniv === "batismo";
+      const nome = criarCampoSimples({
+        rotulo: "Adicionar Nome", linhas: 2, valor: ed.valor,
+        placeholder: "Digite o nome completo da pessoa",
+        aoDigitar: (v) => { ed.valor = v; }
+      });
+      const anos = criarCampoSimples({
+        rotulo: ehBatismo ? "Anos de batismo (opcional)" : "Idade (opcional)", placeholder: "Ex.: 50", valor: ed.anos, numerico: true,
+        dica: ehBatismo ? "Se quiser, informe quantos anos de batismo." : "Se quiser, informe a idade da pessoa.",
+        aoDigitar: (v) => { ed.anos = v; }, aoEnter: adicionar
+      });
+      campos.push(nome, anos);
+      primeiro = nome.entrada;
+    }
+    campos.forEach((c) => caixa.appendChild(c.campo));
+    const btnAdicionar = document.createElement("button");
+    btnAdicionar.type = "button";
+    btnAdicionar.className = "btn btn-contorno btn-full btn-adicionar-nome";
+    btnAdicionar.textContent = "Adicionar";
+    btnAdicionar.addEventListener("click", () => {
+      if (ed.aniv === "matrimonio" && !((ed.valor || "").trim() && (ed.valor2 || "").trim())) {
+        mostrarToast("Digite o nome do noivo e o da noiva antes de adicionar.");
+        (!(ed.valor || "").trim() ? primeiro : campos[1].entrada).focus();
+        return;
+      }
+      if (!commitarEditor()) { mostrarToast("Digite o nome antes de adicionar."); primeiro.focus(); return; }
+      alterouLista();
+      renderizarEditor();
+    });
+    caixa.appendChild(btnAdicionar);
+    setTimeout(() => primeiro.focus({ preventScroll: true }), 50);
+  }
+
+  const btnMais = document.createElement("button");
+  btnMais.type = "button";
+  btnMais.className = "btn btn-dourado btn-full btn-mais";
+  btnMais.textContent = "+ Adicionar mais intenções";
+  btnMais.addEventListener("click", () => {
+    commitarEditor();
+    lista.editor = editorVazio();
+    alterouLista();
+    renderizarEditor({ rolar: true });
+  });
+  caixa.appendChild(btnMais);
+}
+
 // Se o campo tem um nome digitado, vira uma intenção da lista. Retorna true quando adicionou algo.
+// Categoria de falecimento: vários nomes separados por vírgula viram uma intenção cada (um embaixo do outro).
 function commitarEditor() {
   const ed = lista.editor;
   const nome = (ed.valor || "").trim();
-  if (!ed.categoria || !nome) return false;
+  if (!ed.categoria) return false;
   const cat = categoriaPorChave(ed.categoria);
   if (!cat) return false;
+  if (cat.tipo === "aniversario") return commitarAniversario(ed, cat);
+  if (!nome) return false;
   const tempo = cat.tipo === "falecimento" ? ed.tempo : "";
   if (cat.tipo === "falecimento" && !tempo) return false;
-  lista.itens.push(criarItem(ed.categoria, nome, tempo || ""));
+  const nomes = cat.tipo === "falecimento" ? dividirNomes(nome) : [nome];
+  if (nomes.length === 0) return false;
+  nomes.forEach((n) => lista.itens.push(criarItem(ed.categoria, n, tempo || "")));
   ed.valor = "";
+  return true;
+}
+
+// Aniversário: o texto final já sai pronto (ex.: "Maria (50 anos)", "João e Ana (25 anos de casados – Bodas de Prata)").
+function commitarAniversario(ed, cat) {
+  if (!ed.aniv) return false;
+  const nome = (ed.valor || "").trim();
+  const nome2 = (ed.valor2 || "").trim();
+  if (!nome) return false;
+  if (ed.aniv === "matrimonio" && !nome2) return false;
+  const { texto, destaque } = textoDeAniversario({ tipo: ed.aniv, nome, nome2, anos: ed.anos });
+  lista.itens.push({ id: novoId(), categoria: cat.chave, nome: texto, tempo: "", texto, destaque });
+  ed.valor = ""; ed.valor2 = ""; ed.anos = ""; ed.aniv = null;
   return true;
 }
 
@@ -567,7 +714,7 @@ function abrirCategorias() {
     btn.addEventListener("click", () => {
       // trocar de categoria guarda o que já estava digitado
       commitarEditor();
-      lista.editor = { categoria: cat.chave, tempo: null, valor: "" };
+      lista.editor = { ...editorVazio(), categoria: cat.chave };
       fechar(modalCategorias);
       alterouLista();
       renderizarEditor();

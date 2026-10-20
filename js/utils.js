@@ -299,7 +299,7 @@ export const CATEGORIAS_PADRAO = [
     placeholder: "Digite o nome completo da pessoa e clique em \"Adicionar\"",
     textoFixo: INTENCAO_FIXA_ALMA
   },
-  { chave: "aniversarios", rotulo: "Aniversários de", tipo: "nome", placeholder: PLACEHOLDER_NOME_PADRAO, textoFixo: "" }
+  { chave: "aniversarios", rotulo: "Aniversários", tipo: "aniversario", placeholder: PLACEHOLDER_NOME_PADRAO, textoFixo: "" }
 ];
 
 // Mantido por compatibilidade (outros arquivos importam este nome).
@@ -355,7 +355,10 @@ export function normalizarFormularioIntencoes(dados) {
       let chave = chaveSegura(c.chave, `cat${i + 1}`);
       while (usadas.has(chave)) chave += "x";
       usadas.add(chave);
-      const tipo = c.tipo === "falecimento" ? "falecimento" : "nome";
+      // "aniversario" = Natalício / Matrimônio / Batismo / Outros. A categoria de fábrica "aniversarios"
+      // que foi salva antes dessas opções existirem (como "Só nomes") passa a usar o tipo novo.
+      let tipo = c.tipo === "falecimento" ? "falecimento" : c.tipo === "aniversario" ? "aniversario" : "nome";
+      if (tipo === "nome" && c.chave === "aniversarios") tipo = "aniversario";
       categorias.push({
         chave, rotulo, tipo,
         placeholder: textoLimpo(c.placeholder, tipo === "falecimento" ? CATEGORIAS_PADRAO[2].placeholder : PLACEHOLDER_NOME_PADRAO),
@@ -394,6 +397,73 @@ export function normalizarFormularioIntencoes(dados) {
   };
 
   return { categorias, temposFalecimento: tempos, pix, textos };
+}
+
+// Separa vários nomes digitados juntos ("Ana, Maria; José") em nomes soltos. Só vírgula, ponto e vírgula
+// e quebra de linha separam — nomes com "e" ou "/" continuam inteiros.
+export function dividirNomes(texto) {
+  return String(texto || "").split(/[,;\n]+/).map((n) => n.trim().replace(/[.]+$/, "").trim()).filter(Boolean);
+}
+
+// Para intenções já enviadas (inclusive as antigas) de uma categoria "falecimento": se o texto traz
+// vários nomes separados por vírgula, devolve um texto por nome. O "(7 dias)" do final, se houver,
+// vale para todos os nomes.
+export function separarNomesDoItem(texto) {
+  const t = String(texto || "").trim();
+  const m = t.match(/^(.*?)\s*\(([^()]*)\)\s*$/s);
+  const corpo = m ? m[1] : t;
+  const nomes = dividirNomes(corpo);
+  if (nomes.length <= 1) return [t.replace(/[.,;:]+$/, "").trim()].filter(Boolean);
+  return nomes.map((n) => (m ? `${n} (${m[2]})` : n));
+}
+
+/* ---------- Intenções de "Aniversários": Natalício, Matrimônio, Batismo e Outros ---------- */
+export const ANIVERSARIO_OPCOES = [
+  { chave: "natalicio", rotulo: "Natalício" },
+  { chave: "matrimonio", rotulo: "Matrimônio" },
+  { chave: "batismo", rotulo: "Batismo" },
+  { chave: "outros", rotulo: "Outros" }
+];
+
+const BODAS = {
+  1: "Algodão", 2: "Papel", 3: "Couro", 4: "Flores", 5: "Madeira", 6: "Açúcar", 7: "Lã", 8: "Barro", 9: "Cerâmica",
+  10: "Estanho", 11: "Aço", 12: "Seda", 13: "Renda", 14: "Marfim", 15: "Cristal", 20: "Porcelana", 25: "Prata",
+  30: "Pérola", 35: "Coral", 40: "Rubi", 45: "Safira", 50: "Ouro", 55: "Esmeralda", 60: "Diamante",
+  65: "Platina", 70: "Vinho", 75: "Brilhante"
+};
+export function nomeDasBodas(anos) {
+  const n = Number(anos);
+  return BODAS[n] ? `Bodas de ${BODAS[n]}` : "";
+}
+const umOuMais = (n, singular, plural) => `${n} ${Number(n) === 1 ? singular : plural}`;
+
+// Monta o texto final (e se sai em negrito no Word) de uma intenção de aniversário.
+//   natalício  → "Nome (50 anos)" ou, sem idade, "Nome (Natalício)"
+//   matrimônio → "Noivo e Noiva (25 anos de casados – Bodas de Prata)" (negrito)
+//   batismo    → "Nome (10 anos de batismo)" ou "Nome (Batismo)" (negrito)
+//   outros     → exatamente o que a pessoa escreveu
+export function textoDeAniversario({ tipo, nome = "", nome2 = "", anos = "" }) {
+  const n1 = String(nome).trim().replace(/[.,;:]+$/, "");
+  const n2 = String(nome2).trim().replace(/[.,;:]+$/, "");
+  const a = String(anos).trim();
+  const soNumero = /^\d{1,3}$/.test(a) ? Number(a) : null;
+  if (tipo === "natalicio") {
+    return { texto: `${n1} (${soNumero ? umOuMais(soNumero, "ano", "anos") : "Natalício"})`, destaque: false };
+  }
+  if (tipo === "batismo") {
+    return { texto: `${n1} (${soNumero ? `${umOuMais(soNumero, "ano", "anos")} de batismo` : "Batismo"})`, destaque: true };
+  }
+  if (tipo === "matrimonio") {
+    let detalhe = "Matrimônio";
+    if (soNumero) {
+      const bodas = nomeDasBodas(soNumero);
+      detalhe = `${umOuMais(soNumero, "ano", "anos")} de casados${bodas ? ` – ${bodas}` : ""}`;
+    } else if (a) {
+      detalhe = a.charAt(0).toUpperCase() + a.slice(1); // a pessoa escreveu algo como "bodas de prata"
+    }
+    return { texto: `${n1} e ${n2} (${detalhe})`, destaque: true };
+  }
+  return { texto: n1, destaque: false };
 }
 
 // Texto final de uma intenção de falecimento: "Nome (7 dias)" — ou só "Nome" quando o tempo não tem sufixo.
