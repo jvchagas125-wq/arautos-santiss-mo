@@ -1443,16 +1443,16 @@ body.tela-fundo{ background: transparent; } /* a foto de fundo (::before) aparec
 
 /* ============ MICROFONE NOS CAMPOS DE TEXTO (ditado por voz) ============ */
 .campo-voz{ position:relative; display:block; width:100%; min-width:0; flex:1 1 180px; }
-.campo-voz > input, .campo-voz > textarea{ padding-right:48px !important; width:100% !important; min-width:0 !important; box-sizing:border-box; }
+.campo-voz > input, .campo-voz > textarea{ padding-right:42px !important; width:100% !important; min-width:0 !important; box-sizing:border-box; }
 .campo-voz__botao{
-  position:absolute; right:7px; top:50%; transform: translateY(-50%);
-  width:34px; height:34px; padding:0; border-radius:50%; cursor:pointer;
+  position:absolute; right:8px; top:50%; transform: translateY(-50%);
+  width:28px; height:28px; padding:0; border-radius:50%; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   color: var(--dourado-escuro); background: rgba(205,164,52,.14); border:1px solid rgba(157,122,31,.35);
   transition: background .2s ease, color .2s ease, box-shadow .2s ease;
 }
-.campo-voz--area .campo-voz__botao{ top:8px; transform:none; }
-.campo-voz__botao svg{ width:18px; height:18px; }
+.campo-voz--area .campo-voz__botao{ top:9px; transform:none; }
+.campo-voz__botao svg{ width:15px; height:15px; }
 .campo-voz__botao:hover{ background: rgba(205,164,52,.28); }
 .campo-voz__botao.ouvindo{
   color:#fff; background: var(--vermelho); border-color: var(--vermelho);

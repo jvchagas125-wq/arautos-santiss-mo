@@ -1,7 +1,8 @@
 // Ditado por voz: um microfone dentro de cada campo de texto do site público. A pessoa toca no
 // microfone, fala, e o que foi dito aparece escrito no campo — depois ela pode editar ou apagar
-// como qualquer texto. Usa o reconhecimento de voz do próprio navegador (Chrome/Edge/Safari);
-// onde ele não existe, nenhum microfone aparece.
+// como qualquer texto. Usa o reconhecimento de voz do próprio navegador (Chrome/Edge/Safari).
+// O microfone aparece sempre; onde o navegador não tem esse recurso, ao tocar a pessoa é orientada
+// a usar o microfone do teclado do celular.
 //
 // Campos que recebem o microfone: <textarea> e <input type="text"/"search">. Ficam de fora os
 // somente-leitura, desabilitados, numéricos/telefone/senha/e-mail e os marcados com data-sem-voz.
@@ -47,6 +48,10 @@ function escrever(campo, antes, depois, texto) {
 }
 
 function iniciar(campo, botao) {
+  if (!Reconhecimento) {
+    aviso("Este aparelho não permite ditado aqui. Use o microfone do teclado do celular para falar.");
+    return;
+  }
   if (ativo && ativo.campo === campo) { pararAtivo(); return; } // tocar de novo = parar
   pararAtivo();
 
@@ -136,7 +141,6 @@ function varrer(raiz) {
 }
 
 export function iniciarVoz({ aviso: funcaoAviso } = {}) {
-  if (!Reconhecimento) return;
   if (funcaoAviso) aviso = funcaoAviso;
   varrer(document.body);
   // campos criados depois (janelas, editor de intenções, cadastro...) também ganham o microfone

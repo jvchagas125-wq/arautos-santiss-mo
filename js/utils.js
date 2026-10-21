@@ -426,10 +426,8 @@ export const ANIVERSARIO_OPCOES = [
 ];
 
 const BODAS = {
-  1: "Algodão", 2: "Papel", 3: "Couro", 4: "Flores", 5: "Madeira", 6: "Açúcar", 7: "Lã", 8: "Barro", 9: "Cerâmica",
-  10: "Estanho", 11: "Aço", 12: "Seda", 13: "Renda", 14: "Marfim", 15: "Cristal", 20: "Porcelana", 25: "Prata",
-  30: "Pérola", 35: "Coral", 40: "Rubi", 45: "Safira", 50: "Ouro", 55: "Esmeralda", 60: "Diamante",
-  65: "Platina", 70: "Vinho", 75: "Brilhante"
+  1: "Papel", 5: "Madeira ou Ferro", 10: "Estanho ou Zinco", 15: "Cristal", 20: "Porcelana", 25: "Prata",
+  30: "Pérola", 40: "Rubi", 50: "Ouro", 60: "Diamante", 75: "Brilhante", 100: "Jequitibá"
 };
 export function nomeDasBodas(anos) {
   const n = Number(anos);
