@@ -476,7 +476,7 @@ function montarEditorFalecimento(caixa, cat) {
   const ed = lista.editor;
   const rotulo = document.createElement("p");
   rotulo.className = "campo-legenda";
-  rotulo.textContent = "Há quanto tempo a pessoa faleceu?";
+  rotulo.textContent = "Tempo de falecimento:";
   caixa.appendChild(rotulo);
 
   const opcoes = document.createElement("div");
