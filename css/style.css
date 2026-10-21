@@ -1440,3 +1440,26 @@ body.tela-fundo{ background: transparent; } /* a foto de fundo (::before) aparec
 
 .campo-dica{ display:block; margin-top:5px; font-size:.78rem; line-height:1.4; color: var(--texto-suave); }
 .editor-intencao .campo input[type="text"]{ width:100%; }
+
+/* ============ MICROFONE NOS CAMPOS DE TEXTO (ditado por voz) ============ */
+.campo-voz{ position:relative; display:block; width:100%; min-width:0; flex:1 1 180px; }
+.campo-voz > input, .campo-voz > textarea{ padding-right:48px !important; width:100% !important; min-width:0 !important; box-sizing:border-box; }
+.campo-voz__botao{
+  position:absolute; right:7px; top:50%; transform: translateY(-50%);
+  width:34px; height:34px; padding:0; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  color: var(--dourado-escuro); background: rgba(205,164,52,.14); border:1px solid rgba(157,122,31,.35);
+  transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.campo-voz--area .campo-voz__botao{ top:8px; transform:none; }
+.campo-voz__botao svg{ width:18px; height:18px; }
+.campo-voz__botao:hover{ background: rgba(205,164,52,.28); }
+.campo-voz__botao.ouvindo{
+  color:#fff; background: var(--vermelho); border-color: var(--vermelho);
+  animation: voz-pulso 1.3s ease-out infinite;
+}
+@keyframes voz-pulso{
+  0%{ box-shadow: 0 0 0 0 rgba(122,12,30,.45); }
+  100%{ box-shadow: 0 0 0 11px rgba(122,12,30,0); }
+}
+@media (prefers-reduced-motion: reduce){ .campo-voz__botao.ouvindo{ animation:none; } }

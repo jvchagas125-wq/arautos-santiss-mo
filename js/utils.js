@@ -726,6 +726,8 @@ function iniciarWidgetColaboracao(paginaAtual) {
 export function inicializarNavegacao(paginaAtual) {
   aplicarConfigVisualEmCache();
   iniciarWidgetColaboracao(paginaAtual);
+  // microfone (ditado por voz) nos campos de texto do site público — carregado à parte, sem atrasar a página
+  if (paginaAtual !== "admin") import("./voz.js").then((m) => m.iniciarVoz({ aviso: mostrarToast })).catch(() => {});
   // faixa vermelha embaixo (só aparece em celulares cuja barra de navegação deixa o app ocupar a tela toda)
   if (!document.querySelector(".barra-inferior-app")) {
     document.body.insertAdjacentHTML("beforeend", '<div class="barra-inferior-app" aria-hidden="true"></div>');
