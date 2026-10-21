@@ -347,13 +347,22 @@
             <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </div>
           <div id="corpoArquivoListas" class="oculto">
-            <p class="formulario-intro">
-              Aqui ficam guardadas as listas que já foram enviadas por e-mail há mais de 2 dias. Elas saem da lista
-              principal para o painel ficar organizado, mas <strong>continuam salvas</strong> — você pode abrir, baixar o
-              documento Word ou apagar quando quiser.
-            </p>
-            <p class="mensagem-vazia" id="avisoSemArquivo">Nenhuma lista arquivada ainda.</p>
-            <div id="listaQuadrosArquivo"></div>
+            <div class="abas-arquivo" role="tablist">
+              <button type="button" class="aba-arquivo ativa" role="tab" aria-selected="true" data-aba="listas">Listas arquivadas</button>
+              <button type="button" class="aba-arquivo" role="tab" aria-selected="false" data-aba="crm">Contatos (CRM)</button>
+            </div>
+            <div id="abaArquivoListas">
+              <p class="formulario-intro">
+                Aqui ficam guardadas as listas que já foram enviadas por e-mail há mais de 2 dias. Elas saem da lista
+                principal para o painel ficar organizado, mas <strong>continuam salvas</strong> — você pode abrir, baixar o
+                documento Word ou apagar quando quiser.
+              </p>
+              <p class="mensagem-vazia" id="avisoSemArquivo">Nenhuma lista arquivada ainda.</p>
+              <div id="listaQuadrosArquivo"></div>
+            </div>
+            <div id="abaArquivoCrm" class="oculto" role="tabpanel">
+              <div id="crmRaiz"></div>
+            </div>
           </div>
         </div>
 

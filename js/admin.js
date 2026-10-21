@@ -15,7 +15,7 @@ import {
   obterFormularioIntencoes, ouvirFormularioIntencoes, salvarFormularioIntencoes, limparRascunhosVencidos,
   ouvirTodasIntencoes, excluirListaIntencoes,
   obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes,
-  criarIntencao, atualizarIntencao, excluirIntencao,
+  criarIntencao, atualizarIntencao, excluirIntencao, ouvirContatosCrm, salvarContatoCrm,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
@@ -25,6 +25,7 @@ import {
 } from "./dados.js";
 import { criarCredenciais, conferirSenha, chaveConfere, TAMANHO_MINIMO_SENHA } from "./contas.js";
 import { CATALOGO_ACESSOS, PAGINA_ADMINISTRADORES, temAcesso, normalizarAcessos, resumoDeAcessos } from "./acessos.js";
+import { criarCrm } from "./crm-contatos.js";
 import { extrairTextosCategoria, construirDocxIntencoes, nomeArquivoDocx, rotuloListaIntencao } from "./docx-intencoes.js";
 
 /* ---------------- Contas e login do painel ----------------
@@ -1713,11 +1714,43 @@ function configurarIntencoes() {
     arquivadas.forEach((chave) => listaQuadrosArquivo.appendChild(montarQuadro(chave)));
   }
 
-  ouvirTodasIntencoes(renderizarQuadros);
+  /* ---------- CRM de contatos (aba dentro do Histórico de listas) ---------- */
+  let usuariosCrm = [];
+  const crm = criarCrm({
+    raiz: document.getElementById("crmRaiz"),
+    obterEntradas: () => ultimasEntradas,
+    ehArquivada: (dataMissa, horaMissa) =>
+      listaArquivada(enviosPorLista[`${dataMissa}|${horaMissa}`], dataMissa, Number(horaMissa), new Date()),
+    obterUsuarios: () => usuariosCrm,
+    obterCategorias: () => categoriasAtuais,
+    rotuloLista: tituloLista,
+    salvarContato: salvarContatoCrm
+  });
+  document.querySelectorAll(".aba-arquivo").forEach((botao) => {
+    botao.addEventListener("click", () => {
+      const crmAtiva = botao.dataset.aba === "crm";
+      document.querySelectorAll(".aba-arquivo").forEach((b) => {
+        const on = b === botao;
+        b.classList.toggle("ativa", on);
+        b.setAttribute("aria-selected", String(on));
+      });
+      document.getElementById("abaArquivoListas").classList.toggle("oculto", crmAtiva);
+      document.getElementById("abaArquivoCrm").classList.toggle("oculto", !crmAtiva);
+      crm.definirAtivo(crmAtiva);
+    });
+  });
+  ouvirContatosCrm((mapa) => crm.definirAnotacoes(mapa));
+  ouvirTodosUsuarios((lista_) => { usuariosCrm = lista_; crm.atualizar(); });
+
+  ouvirTodasIntencoes((entradas) => {
+    renderizarQuadros(entradas);
+    crm.atualizar();
+  });
   ouvirEnviosIntencoes((envios) => {
     enviosPorLista = envios;
     renderizarQuadros(ultimasEntradas);
     renderizarHistoricoEnvios(envios);
+    crm.atualizar();
   });
 
   /* ---------- Envio automático por e-mail ---------- */

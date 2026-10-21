@@ -524,6 +524,26 @@ export function ouvirTodasIntencoes(callback) {
   });
 }
 
+/* ---------------- CRM de contatos (anotações e etiquetas por pessoa) ---------------- */
+
+// Cada documento de "contatosCrm" guarda o que o painel anota sobre uma pessoa: { notas, etiquetas[] }.
+// O id é o telefone (só dígitos) da pessoa. Nada daqui aparece no site público.
+export function ouvirContatosCrm(callback) {
+  return onSnapshot(collection(db, "contatosCrm"), (snap) => {
+    const mapa = {};
+    snap.docs.forEach((d) => { mapa[d.id] = d.data(); });
+    callback(mapa);
+  });
+}
+
+export async function salvarContatoCrm(id, { notas, etiquetas }) {
+  await setDoc(doc(db, "contatosCrm", id), {
+    notas: notas || "",
+    etiquetas: Array.isArray(etiquetas) ? etiquetas : [],
+    atualizadoEm: serverTimestamp()
+  }, { merge: true });
+}
+
 // Atualiza o texto de uma intenção já enviada — usado quando o painel administrativo edita uma intenção.
 export async function atualizarIntencao(id, dadosParciais) {
   await updateDoc(doc(db, "intencoes", id), dadosParciais);
