@@ -93,7 +93,7 @@ export function criarCrm(opcoes) {
     <div class="campo crm-mensagem">
       <label for="crmMensagem">Mensagem inicial do WhatsApp (opcional)</label>
       <input type="text" id="crmMensagem" maxlength="300" autocomplete="off"
-        placeholder="Ex.: Paz de Cristo, {nome}! Aqui é da equipe dos Arautos." />
+        placeholder="Ex.: Salve Maria, {nome}! Aqui é da equipe dos Arautos." />
       <span class="campo-dica">Use <strong>{nome}</strong> para colocar o primeiro nome da pessoa. Ao tocar no botão verde, a conversa abre já com essa mensagem — você só confere e envia.</span>
     </div>
     <div id="crmLista"></div>
