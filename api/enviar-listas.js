@@ -29,6 +29,7 @@ import {
   criarClienteFirestore, processarListasFechadas, montarEEnviarLista,
   normalizarConfigEnvio, idDocEnvio
 } from "../servidor/envio-listas.js";
+import { enviarAvisoDoCurso } from "../servidor/avisos-curso.js";
 
 async function gerarDocumento(rotulo, itens, opcoes = {}) {
   return docx.Packer.toBuffer(construirDocxIntencoes(rotulo, itens, { docx, categorias: opcoes.categorias, categoriasPermitidas: opcoes.categoriasPermitidas }));
@@ -50,14 +51,18 @@ function criarEnviadorDeEmail() {
     auth: { user: usuario, pass: senha }
   });
   const remetente = process.env.EMAIL_REMETENTE || usuario;
-  return async ({ para, assunto, texto, anexo }) => {
-    await transporte.sendMail({
-      from: `"Arautos do Evangelho - Intenções para a Santa Missa" <${remetente}>`,
-      to: para.join(", "),
+  // Sem "copiaOculta": manda para a lista "para" (intenções). Com "copiaOculta": o "Para" é o próprio
+  // remetente e os destinatários vão em cópia oculta (avisos de cursos — ninguém vê o e-mail dos outros).
+  return async ({ para = [], assunto, texto, anexo, copiaOculta, nomeRemetente }) => {
+    const mensagem = {
+      from: `"${String(nomeRemetente || "Arautos do Evangelho - Intenções para a Santa Missa").replace(/["\r\n]/g, "")}" <${remetente}>`,
+      to: copiaOculta ? remetente : para.join(", "),
       subject: assunto,
-      text: texto,
-      attachments: [{ filename: anexo.nome, content: anexo.conteudo, contentType: anexo.tipo }]
-    });
+      text: texto
+    };
+    if (copiaOculta) mensagem.bcc = copiaOculta.join(", ");
+    if (anexo) mensagem.attachments = [{ filename: anexo.nome, content: anexo.conteudo, contentType: anexo.tipo }];
+    await transporte.sendMail(mensagem);
   };
 }
 
@@ -125,6 +130,16 @@ export default async function handler(req, res) {
       await new Promise((r) => setTimeout(r, 800)); // dificulta tentar adivinhar
       return res.status(401).json({ ok: false, erro: "Sessão inválida. Entre de novo no painel." });
     }
+
+    /* ---------- aviso de curso (painel "Inscrições de cursos") ---------- */
+    if (corpo.acao === "avisoCurso") {
+      if (!temAcesso(conta, "inscricoes", "avisos")) {
+        return res.status(403).json({ ok: false, erro: "Você não tem permissão para usar esta função." });
+      }
+      const resultado = await enviarAvisoDoCurso({ avisoId: corpo.avisoId }, { firestore, criarEnviador: criarEnviadorDeEmail });
+      return res.status(resultado.ok ? 200 : 400).json(resultado);
+    }
+
     const parteNecessaria = corpo.acao === "teste" ? "email" : "listas";
     if (!temAcesso(conta, "intencoes", parteNecessaria)) {
       return res.status(403).json({ ok: false, erro: "Você não tem permissão para usar esta função." });

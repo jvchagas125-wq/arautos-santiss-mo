@@ -36,6 +36,14 @@ export const CATALOGO_ACESSOS = [
     ]
   },
   {
+    pagina: "inscricoes", titulo: "Inscrições de cursos", emoji: "🎓",
+    partes: [
+      { id: "cursos", titulo: "Cadastrar cursos e eventos" },
+      { id: "inscritos", titulo: "Inscritos (painel CRM e exportação)" },
+      { id: "avisos", titulo: "Avisos para inscritos" }
+    ]
+  },
+  {
     pagina: "contatos", titulo: "Contatos", emoji: "📇",
     partes: [
       { id: "info", titulo: "Informações de contato do site público" },

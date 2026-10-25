@@ -4,6 +4,7 @@ import {
   collection, query, where, getDocs, onSnapshot, orderBy,
   serverTimestamp
 } from "./firebase-init.js";
+import { normalizarCurso, idInscricao } from "./cursos-comum.js";
 import {
   normalizarConfigIntencoes, normalizarFormularioIntencoes, horariosPorDiaParaFirestore,
   normalizarHorariosEspeciais, normalizarCategoriasPorMissa, statusMissaEspecifica
@@ -681,4 +682,110 @@ export async function trocarOrdemBanners(bannerA, bannerB) {
 
 export async function excluirBanner(id) {
   await deleteDoc(doc(db, "banners", id));
+}
+
+
+/* ---------------- Inscrições de cursos e eventos ---------------- */
+// cursos/{id}: o curso/evento com o formulário (dados pedidos + perguntas); ver js/cursos-comum.js.
+// inscricoes/{cursoId_telefone}: o que cada pessoa respondeu (uma por pessoa e curso; refazer = atualizar).
+// avisosCursos/{id}: quadro de avisos de cada curso.
+
+// Lista (em tempo real) de cursos, na ordem em que o administrador os organizou (os mais novos por último).
+export function ouvirCursos(callback) {
+  return onSnapshot(collection(db, "cursos"), (snap) => {
+    const lista = snap.docs.map((d) => ({ ...normalizarCurso(d.id, d.data()), criadoEmMs: d.data().criadoEmMs || 0 }));
+    lista.sort((a, b) => (a.ordem - b.ordem) || (a.criadoEmMs - b.criadoEmMs));
+    callback(lista);
+  });
+}
+
+export async function salvarCurso(id, dados) {
+  const limpo = normalizarCurso(id, dados);
+  const { id: _ignorar, ...campos } = limpo;
+  if (id) {
+    await setDoc(doc(db, "cursos", id), campos, { merge: true });
+    return id;
+  }
+  const ref = doc(collection(db, "cursos"));
+  const agora = Date.now();
+  await setDoc(ref, { ...campos, ordem: agora, criadoEmMs: agora, criadoEm: serverTimestamp() });
+  return ref.id;
+}
+
+export async function alterarAberturaDoCurso(id, ativo) {
+  await updateDoc(doc(db, "cursos", id), { ativo: !!ativo });
+}
+
+// Apaga o curso, as inscrições e os avisos dele.
+export async function excluirCurso(id) {
+  const [insc, avs] = await Promise.all([
+    getDocs(query(collection(db, "inscricoes"), where("cursoId", "==", id))),
+    getDocs(query(collection(db, "avisosCursos"), where("cursoId", "==", id)))
+  ]);
+  await Promise.all([
+    ...insc.docs.map((d) => deleteDoc(d.ref)),
+    ...avs.docs.map((d) => deleteDoc(d.ref))
+  ]);
+  await deleteDoc(doc(db, "cursos", id));
+}
+
+export async function obterInscricao(cursoId, telefoneDigits) {
+  const snap = await getDoc(doc(db, "inscricoes", idInscricao(cursoId, telefoneDigits)));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
+// Telefones já inscritos em cada curso (sem dados pessoais) — usado pelo site público para saber
+// "em quais cursos eu já estou". Busca só as inscrições da própria pessoa.
+export async function inscricoesDaPessoa(telefoneDigits) {
+  const snap = await getDocs(query(collection(db, "inscricoes"), where("telefoneDigits", "==", telefoneDigits)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function salvarInscricao(dados) {
+  const id = idInscricao(dados.cursoId, dados.telefoneDigits);
+  const ref = doc(db, "inscricoes", id);
+  const existente = await getDoc(ref);
+  await setDoc(ref, {
+    ...dados,
+    criadoEm: existente.exists() ? (existente.data().criadoEm || serverTimestamp()) : serverTimestamp(),
+    criadoEmMs: existente.exists() ? (existente.data().criadoEmMs || Date.now()) : Date.now(),
+    atualizadoEm: serverTimestamp()
+  });
+  return id;
+}
+
+export async function excluirInscricao(id) {
+  await deleteDoc(doc(db, "inscricoes", id));
+}
+
+// Painel: todas as inscrições de todos os cursos (agrupadas na tela)
+export function ouvirTodasInscricoes(callback) {
+  return onSnapshot(collection(db, "inscricoes"), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
+// Avisos de um curso (quadro de avisos): do mais novo para o mais antigo
+export function ouvirAvisosDoCurso(cursoId, callback) {
+  return onSnapshot(query(collection(db, "avisosCursos"), where("cursoId", "==", cursoId)), (snap) => {
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    lista.sort((a, b) => (b.criadoEmMs || 0) - (a.criadoEmMs || 0));
+    callback(lista);
+  });
+}
+export function ouvirTodosAvisosDosCursos(callback) {
+  return onSnapshot(collection(db, "avisosCursos"), (snap) => {
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    lista.sort((a, b) => (b.criadoEmMs || 0) - (a.criadoEmMs || 0));
+    callback(lista);
+  });
+}
+export async function criarAvisoDoCurso({ cursoId, titulo, texto }) {
+  const ref = doc(collection(db, "avisosCursos"));
+  const agora = Date.now();
+  await setDoc(ref, { cursoId, titulo, texto, criadoEmMs: agora, criadoEm: serverTimestamp() });
+  return ref.id;
+}
+export async function excluirAvisoDoCurso(id) {
+  await deleteDoc(doc(db, "avisosCursos", id));
 }

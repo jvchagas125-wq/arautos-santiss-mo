@@ -1484,3 +1484,59 @@ body.tela-fundo{ background: transparent; } /* a foto de fundo (::before) aparec
   display:block; margin:12px auto 0; background:none; border:none; cursor:pointer;
   color: var(--texto-suave); font-size:.82rem; text-decoration:underline; padding:4px 8px;
 }
+
+/* ---------- Inscrições de cursos (página pública) ---------- */
+.cursos-intro{ text-align:center; color: var(--texto-suave); margin: 0 auto 18px; max-width:520px; line-height:1.55; }
+.lista-cursos{ display:flex; flex-direction:column; gap:12px; max-width:640px; margin:0 auto; width:100%; }
+.curso-card{
+  border:1.5px solid rgba(157,122,31,.35); border-radius:14px; background:#fffefb; overflow:hidden;
+  box-shadow: 0 4px 14px rgba(74,7,17,.07);
+}
+.curso-card__cab{
+  display:flex; align-items:center; gap:12px; width:100%; padding:12px 14px; background:none; border:none;
+  cursor:pointer; text-align:left; font:inherit; color:inherit;
+}
+.curso-card__mini{ width:54px; height:54px; border-radius:10px; object-fit:cover; flex-shrink:0; border:1px solid rgba(157,122,31,.3); }
+.curso-card__titulos{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+.curso-card__nome{ font-family:'Cinzel'; font-size:.95rem; color: var(--vermelho-escuro); line-height:1.35; overflow-wrap:anywhere; }
+.curso-card__selo{
+  align-self:flex-start; font-size:.68rem; font-family:'Cinzel'; letter-spacing:.02em; padding:2px 9px; border-radius:999px;
+  background: rgba(205,164,52,.18); color: var(--dourado-escuro);
+}
+.curso-card__selo--ok{ background: rgba(46,125,50,.14); color:#2e7d32; }
+.curso-card__seta{ width:18px; height:18px; flex-shrink:0; color: var(--vermelho); transition: transform .2s ease; }
+.curso-card.aberto .curso-card__seta{ transform: rotate(180deg); }
+.curso-card__corpo{ padding: 4px 16px 18px; border-top:1px solid rgba(157,122,31,.22); }
+.curso-card__imagem{ width:100%; max-height:320px; object-fit:cover; border-radius:12px; margin: 12px 0 10px; display:block; }
+.curso-card__obs{ white-space:pre-line; line-height:1.55; font-size:.92rem; margin: 10px 0 14px; color: var(--texto); }
+.curso-form{ display:flex; flex-direction:column; gap:4px; margin-top:6px; }
+.curso-form .campo{ margin-bottom:10px; text-align:left; }
+.curso-form .campo > label{ display:block; margin-bottom:5px; }
+.curso-form textarea{
+  width:100%; box-sizing:border-box; font:inherit; padding:11px 12px; border:1.5px solid rgba(157,122,31,.4);
+  border-radius:10px; background:#fffefb; color: var(--texto); resize:vertical;
+}
+.curso-pergunta--extra{ margin-left:12px; padding-left:12px; border-left:3px solid rgba(205,164,52,.5); }
+.curso-opcoes{ display:flex; flex-wrap:wrap; gap:8px; }
+.curso-opcao{
+  display:inline-flex; align-items:center; gap:8px; padding:9px 14px; border:1.5px solid rgba(157,122,31,.4);
+  border-radius:999px; cursor:pointer; background:#fffefb; font-size:.9rem; margin:0 !important;
+}
+.curso-opcao{ text-transform:none !important; letter-spacing:0 !important; font-family:'EB Garamond', serif !important; color: var(--texto); }
+.curso-form .curso-opcao input{ accent-color: var(--vermelho); width:18px; height:18px; margin:0 !important; padding:0 !important; align-self:center; position:static !important; border:none; box-shadow:none; background:none; flex-shrink:0; }
+.curso-opcao:has(input:checked){ background: linear-gradient(135deg, var(--dourado-claro), var(--dourado)); border-color: var(--dourado-escuro); color: var(--vermelho-escuro); font-weight:600; }
+.curso-form__nota{ font-size:.76rem; color: var(--texto-suave); margin:2px 0 8px; line-height:1.45; }
+.curso-form__botoes{ display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+.curso-inscrito__titulo{ font-family:'Cinzel'; color:#2e7d32; margin:6px 0 10px; font-size:.95rem; }
+.curso-inscrito__resumo{ list-style:none; padding:12px 14px; margin:0 0 14px; background: rgba(205,164,52,.1); border-radius:10px; font-size:.88rem; line-height:1.5; display:flex; flex-direction:column; gap:4px; }
+.curso-confirma__texto{ margin:0; text-align:center; font-size:.9rem; }
+.curso-avisos{ margin-top:20px; padding-top:14px; border-top:1px dashed rgba(157,122,31,.4); }
+.curso-avisos__titulo{ font-family:'Cinzel'; font-size:.9rem; color: var(--vermelho-escuro); margin:0 0 10px; }
+.curso-avisos__vazio{ font-size:.85rem; color: var(--texto-suave); font-style:italic; margin:0; }
+.curso-avisos__lista{ display:flex; flex-direction:column; gap:10px; }
+.curso-aviso{ padding:10px 12px; border-radius:10px; background:#fff8e8; border:1px solid rgba(205,164,52,.4); }
+.curso-aviso__titulo{ display:block; font-family:'Cinzel'; font-size:.84rem; color: var(--vermelho-escuro); }
+.curso-aviso__data{ display:block; font-size:.72rem; color: var(--texto-suave); margin-bottom:4px; }
+.curso-aviso__texto{ margin:0; white-space:pre-line; font-size:.88rem; line-height:1.5; overflow-wrap:anywhere; }
+
+.campo.invalido textarea{ border-color: var(--vermelho); }

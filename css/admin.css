@@ -586,3 +586,85 @@
 .crm-historico__quando{ font-size:.74rem; color: var(--texto-suave); font-family:'Cinzel'; }
 .crm-historico__texto{ overflow-wrap:anywhere; }
 .crm-mais{ display:block; margin: 6px auto 0; }
+
+/* ---------- Inscrições de cursos (painel) ---------- */
+.modal--curso{
+  max-width: 640px; width: 100%; text-align:left; display:flex; flex-direction:column;
+  max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px);
+}
+.modal--curso h3{ text-align:center; flex-shrink:0; }
+.curso-editor{ padding: 2px 4px 10px 0; }
+.curso-editor .campo{ margin-bottom:14px; }
+.curso-editor input[type="text"], .curso-editor textarea, .curso-editor select, .curso-pergunta-adm input[type="text"], .curso-pergunta-adm textarea, .curso-pergunta-adm select, .curso-aviso-form input[type="text"], .curso-aviso-form textarea{
+  width:100%; box-sizing:border-box; font:inherit; font-size:.92rem; padding:10px 12px; color: var(--texto);
+  border:1.5px solid rgba(157,122,31,.4); border-radius:10px; background:#fffefb;
+}
+.curso-editor textarea, .curso-aviso-form textarea{ resize:vertical; }
+.curso-editor__preview{ display:block; max-width:100%; max-height:200px; border-radius:10px; margin:0 0 10px; object-fit:cover; border:1px solid rgba(157,122,31,.35); }
+.curso-editor__linha{ display:flex; gap:8px; flex-wrap:wrap; }
+.curso-editor__secao{ margin-top:20px; padding-top:14px; border-top:1px dashed rgba(157,122,31,.4); }
+.curso-editor .campo-checkbox-simples label{ text-transform:none; font-family:inherit; letter-spacing:0; font-size:.95rem; display:flex; gap:8px; align-items:center; cursor:pointer; }
+.curso-editor .campo-checkbox-simples input{ accent-color: var(--vermelho); width:18px; height:18px; flex-shrink:0; }
+
+.curso-campos-padrao{ display:flex; flex-direction:column; gap:2px; margin-bottom:14px; }
+.curso-campo-padrao{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:6px 4px; border-bottom:1px solid rgba(157,122,31,.14); }
+.curso-campo-padrao__nome, .curso-campo-padrao__obrig{ display:flex; align-items:center; gap:8px; font-size:.92rem; cursor:pointer; text-transform:none; font-family:inherit; letter-spacing:0; }
+.curso-campo-padrao__obrig{ font-size:.82rem; color: var(--texto-suave); }
+.curso-campo-padrao__obrig.desativado{ opacity:.4; pointer-events:none; }
+.curso-campo-padrao input[type="checkbox"], .curso-pergunta-adm__obrig input{ accent-color: var(--vermelho); width:17px; height:17px; flex-shrink:0; }
+.curso-campo-padrao__fixo{ font-size:.92rem; color: var(--vermelho-escuro); font-weight:600; }
+
+.curso-pergunta-adm{
+  border:1.5px solid rgba(157,122,31,.35); border-radius:12px; padding:12px; margin-bottom:10px; background:#fffefb;
+  display:flex; flex-direction:column; gap:10px;
+}
+.curso-pergunta-adm--extra{ margin-left:18px; border-left:4px solid var(--dourado); background: rgba(205,164,52,.08); }
+.curso-pergunta-adm__topo{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.curso-pergunta-adm__num{ font-family:'Cinzel'; font-size:.78rem; color: var(--vermelho-escuro); text-transform:uppercase; letter-spacing:.04em; }
+.curso-pergunta-adm__acoes{ display:flex; gap:6px; }
+.curso-pergunta-adm__linha{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.curso-pergunta-adm__linha select{ flex:1; min-width:160px; width:auto; }
+.curso-pergunta-adm__obrig{ display:flex; align-items:center; gap:6px; font-size:.86rem; cursor:pointer; text-transform:none; font-family:inherit; letter-spacing:0; }
+.curso-pergunta-adm__cond{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-size:.86rem; color: var(--texto-suave); }
+.curso-pergunta-adm__cond select{ width:auto; max-width:100%; flex:1 1 140px; padding:7px 10px; font-size:.86rem; }
+.curso-pergunta-adm__extra{ align-self:flex-start; }
+.curso-mini-btn{
+  border:1px solid rgba(157,122,31,.5); background:#fff; color: var(--vermelho-escuro); border-radius:8px;
+  padding:4px 10px; font:inherit; font-size:.8rem; cursor:pointer; min-height:30px;
+}
+.curso-mini-btn:hover{ background: rgba(205,164,52,.2); }
+.curso-mini-btn--apagar{ color: var(--vermelho); border-color: rgba(122,12,30,.5); }
+.curso-vazio{ font-size:.84rem; color: var(--texto-suave); font-style:italic; margin:0 0 10px; }
+
+.curso-resumo__imagem{ display:block; max-width:100%; max-height:180px; border-radius:10px; margin:0 0 10px; object-fit:cover; }
+.curso-resumo__obs{ white-space:pre-wrap; font-size:.9rem; margin:0 0 10px; overflow-wrap:anywhere; }
+.curso-resumo__linha{ font-size:.88rem; margin:0 0 8px; display:block; }
+.curso-resumo__perguntas{ margin:0 0 12px; padding-left:20px; font-size:.88rem; }
+.curso-resumo__perguntas li.extra{ list-style:circle; margin-left:14px; color: var(--texto-suave); }
+.curso-resumo__perguntas small{ color: var(--texto-suave); }
+
+.crm-exportar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.crm-exportar__rotulo{ font-family:'Cinzel'; font-size:.78rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:.04em; }
+.crm-respostas{ margin:0; display:flex; flex-direction:column; gap:8px; }
+.crm-respostas dt{ font-family:'Cinzel'; font-size:.74rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:.03em; }
+.crm-respostas dd{ margin:0; font-size:.92rem; overflow-wrap:anywhere; white-space:pre-wrap; }
+.crm-email{
+  flex-shrink:0; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background: var(--vermelho); color:#fff; text-decoration:none; font-size:1.05rem; transition: transform .2s ease;
+}
+.crm-email:hover{ transform: scale(1.08); }
+.crm-email.desativado{ background: rgba(90,70,54,.18); color: rgba(90,70,54,.5); cursor:not-allowed; }
+
+.curso-aviso-form{ display:flex; flex-direction:column; gap:10px; margin-bottom:16px; padding:12px; border:1.5px dashed rgba(157,122,31,.45); border-radius:12px; }
+.curso-aviso-form__email{ display:flex; align-items:center; gap:8px; font-size:.88rem; cursor:pointer; text-transform:none; font-family:inherit; letter-spacing:0; }
+.curso-aviso-form__email input{ accent-color: var(--vermelho); width:18px; height:18px; flex-shrink:0; }
+.curso-aviso-adm{ border:1px solid rgba(157,122,31,.3); border-radius:10px; padding:12px; margin-bottom:10px; background:#fff; }
+.curso-aviso-adm__cab{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.curso-aviso-adm__cab strong{ font-family:'Cinzel'; color: var(--vermelho-escuro); font-size:.92rem; }
+.curso-aviso-adm__data{ font-size:.76rem; color: var(--texto-suave); }
+.curso-aviso-adm__texto{ white-space:pre-wrap; font-size:.9rem; margin:6px 0 10px; overflow-wrap:anywhere; }
+.curso-aviso-adm__rodape{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+#btnNovoCurso{ margin-bottom:16px; }
+#listaCursosAdmin .quadro-intencao__cabecalho{ flex-wrap:wrap; row-gap:6px; }
+#listaCursosAdmin .quadro-intencao__titulo{ flex:1 1 120px; }
+#listaCursosAdmin .quadro-intencao__selo{ order:9; margin-left:27px; }

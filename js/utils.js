@@ -660,6 +660,7 @@ export const ORDEM_PAGINAS = [
   { chave: "agendamento", label: "Agendar Adoração", href: "agendamento" },
   { chave: "meus-agendamentos", label: "Meus agendamentos da Adoração", href: "meus-agendamentos" },
   { chave: "intencoes", label: "Intenções para a Santa Missa", href: "intencoes" },
+  { chave: "cursos", label: "Inscrições de cursos", href: "cursos" },
   { chave: "avisos", label: "Agenda da semana", href: "avisos" },
   { chave: "contatos", label: "Contatos", href: "contatos" },
   { chave: "sobre", label: "Sobre", href: "sobre" }

@@ -101,6 +101,7 @@
         <a href="#intencoes" data-secao="intencoes"><span class="emoji">🙏</span> Intenções</a>
         <a href="#avisos" data-secao="avisos"><span class="emoji">📢</span> Avisos</a>
         <a href="#acompanhamento" data-secao="acompanhamento"><span class="emoji">📋</span> Acompanhamento</a>
+        <a href="#inscricoes" data-secao="inscricoes"><span class="emoji">🎓</span> Inscrições de cursos</a>
         <a href="#contatos" data-secao="contatos"><span class="emoji">📇</span> Contatos</a>
         <a href="#administradores" data-secao="administradores"><span class="emoji">👥</span> Administradores <span class="menu-selo oculto" id="seloPendentesMenu"></span></a>
         <a href="#configuracoes" data-secao="configuracoes"><span class="emoji">⚙️</span> Configurações</a>
@@ -556,6 +557,61 @@
             <button type="button" class="btn btn-contorno btn-pequeno" id="btnLimparCanceladosAdmin">Limpar cancelados</button>
           </div>
           <div id="listaCancelados" class="lista-agendamentos"><div class="spinner"></div></div>
+        </div>
+      </section>
+
+      <!-- INSCRIÇÕES DE CURSOS -->
+      <section class="admin-secao oculto" id="secao-inscricoes">
+        <h1 class="titulo-pagina">Inscrições de cursos</h1>
+        <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+
+        <div class="painel" id="painelCursos">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoCursos" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🎓</span> Cursos e eventos
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoCursos" class="oculto">
+            <p class="formulario-intro">
+              Cadastre aqui os cursos e eventos que aparecem na página <strong>Inscrições de cursos</strong> do site. Para cada um você escolhe
+              a imagem, as observações, quais dados a pessoa preenche (nome, e-mail, CPF, telefone...) e as perguntas do formulário.
+            </p>
+            <button type="button" class="btn btn-dourado" id="btnNovoCurso">+ Adicionar curso ou evento</button>
+            <p class="mensagem-vazia" id="avisoSemCursosAdmin">Nenhum curso ou evento cadastrado ainda.</p>
+            <div id="listaCursosAdmin"></div>
+          </div>
+        </div>
+
+        <div class="painel" id="painelInscritos">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoInscritos" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">📇</span> Inscritos (CRM)
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoInscritos" class="oculto">
+            <p class="formulario-intro">
+              As pessoas inscritas em cada curso, em ordem alfabética. Abra uma pessoa para ver tudo o que ela respondeu, fale com ela
+              pelo WhatsApp ou e-mail e baixe a lista em Excel, Word ou PDF.
+            </p>
+            <p class="mensagem-vazia" id="avisoSemInscritos">Cadastre um curso para receber inscrições.</p>
+            <div id="listaInscritosAdmin"></div>
+          </div>
+        </div>
+
+        <div class="painel" id="painelAvisosCursos">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoAvisosCursos" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">📣</span> Avisos para inscritos
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoAvisosCursos" class="oculto">
+            <p class="formulario-intro">
+              Cada curso tem o seu quadro de avisos: quem está inscrito vê os avisos na página do curso no site e, se você quiser,
+              também recebe o aviso por e-mail.
+            </p>
+            <p class="mensagem-vazia" id="avisoSemCursosAvisos">Cadastre um curso para criar avisos.</p>
+            <div id="listaAvisosCursosAdmin"></div>
+          </div>
         </div>
       </section>
 
@@ -1033,6 +1089,62 @@
       <div class="modal__acoes">
         <button class="btn btn-contorno btn-full" id="btnVoltarExcluirAviso">Voltar</button>
         <button class="btn btn-vermelho btn-full" id="btnConfirmarExcluirAviso">Apagar aviso</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: criar/editar curso ou evento -->
+  <div class="modal-overlay" id="modalCurso">
+    <div class="modal modal--largo modal--curso">
+      <button class="modal--fechar" id="fecharModalCurso" aria-label="Fechar">&times;</button>
+      <h3 id="tituloModalCurso">Novo curso ou evento</h3>
+      <div class="especial-corpo curso-editor" id="cursoEditor">
+        <div class="campo">
+          <label for="cursoNome">Nome do curso ou evento *</label>
+          <input type="text" id="cursoNome" maxlength="160" placeholder="Ex.: Curso de Crisma" autocomplete="off" />
+        </div>
+        <div class="campo">
+          <label>Imagem do curso</label>
+          <img id="cursoImagemPreview" class="curso-editor__preview oculto" alt="" />
+          <div class="curso-editor__linha">
+            <button type="button" class="btn btn-contorno btn-pequeno" id="btnCursoEscolherImagem">Escolher imagem</button>
+            <button type="button" class="btn btn-contorno btn-pequeno oculto" id="btnCursoRemoverImagem">Remover imagem</button>
+          </div>
+          <input type="file" id="cursoImagemArquivo" accept="image/*" hidden />
+        </div>
+        <div class="campo">
+          <label for="cursoObservacoes">Observações (aparecem para quem abrir o curso)</label>
+          <textarea id="cursoObservacoes" rows="4" maxlength="4000" placeholder="Datas, horário, local, o que levar..."></textarea>
+        </div>
+        <div class="campo campo-checkbox-simples">
+          <label><input type="checkbox" id="cursoAtivo" checked /> <span>Inscrições abertas (aparece no site)</span></label>
+        </div>
+
+        <p class="campo-legenda curso-editor__secao">Dados que a pessoa preenche</p>
+        <p class="especial-dica especial-dica--curta">O nome completo é sempre pedido. Marque os outros dados que você quer e, se for o caso, se são obrigatórios.</p>
+        <div id="cursoCamposPadrao" class="curso-campos-padrao"></div>
+
+        <p class="campo-legenda curso-editor__secao">Perguntas do formulário</p>
+        <p class="especial-dica especial-dica--curta">Em perguntas de Sim/Não ou de escolher opções, use <strong>"+ Pergunta extra"</strong> para abrir outra pergunta só quando a pessoa der uma resposta específica.</p>
+        <div id="cursoPerguntas"></div>
+        <button type="button" class="btn btn-contorno btn-pequeno" id="btnCursoAddPergunta">+ Adicionar pergunta</button>
+      </div>
+      <div class="especial-acoes">
+        <button type="button" class="btn btn-dourado btn-full" id="btnSalvarCurso">Salvar curso</button>
+        <button type="button" class="btn btn-contorno btn-full" id="btnCancelarCurso">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: confirmação (apagar curso, inscrição, aviso) -->
+  <div class="modal-overlay" id="modalConfirmaCursos">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalConfirmaCursos" aria-label="Fechar">&times;</button>
+      <h3 id="tituloConfirmaCursos">Confirmar</h3>
+      <p id="textoConfirmaCursos">—</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnVoltarConfirmaCursos">Voltar</button>
+        <button class="btn btn-vermelho btn-full" id="btnOkConfirmaCursos">Apagar</button>
       </div>
     </div>
   </div>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Inscrições de cursos - Arautos do Evangelho Campos dos Goytacazes</title>
+<meta name="description" content="Inscreva-se nos cursos e eventos dos Arautos do Evangelho em Campos dos Goytacazes (RJ): crisma, formações e muito mais." />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<link rel="canonical" href="https://www.arautoscampos.org.br/cursos" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="pt_BR" />
+<meta property="og:site_name" content="Arautos do Evangelho - Campos dos Goytacazes" />
+<meta property="og:title" content="Inscrições de cursos - Arautos do Evangelho Campos dos Goytacazes" />
+<meta property="og:description" content="Inscreva-se nos cursos e eventos dos Arautos do Evangelho em Campos dos Goytacazes (RJ): crisma, formações e muito mais." />
+<meta property="og:url" content="https://www.arautoscampos.org.br/cursos" />
+<meta property="og:image" content="https://www.arautoscampos.org.br/assets/og-imagem.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Inscrições de cursos - Arautos do Evangelho Campos dos Goytacazes" />
+<meta name="twitter:description" content="Inscreva-se nos cursos e eventos dos Arautos do Evangelho em Campos dos Goytacazes (RJ): crisma, formações e muito mais." />
+<meta name="twitter:image" content="https://www.arautoscampos.org.br/assets/og-imagem.png" />
+<link rel="icon" href="assets/favicon.png?v=2" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#7a0c1e" />
+<link rel="apple-touch-icon" href="assets/icone-app-180.png?v=2" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" /></noscript>
+<link rel="stylesheet" href="css/style.css" />
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js" />
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js" />
+<link rel="modulepreload" href="js/firebase-config.js" />
+<link rel="modulepreload" href="js/firebase-init.js" />
+<link rel="modulepreload" href="js/utils.js" />
+<link rel="modulepreload" href="js/dados.js" />
+<link rel="modulepreload" href="js/auth.js" />
+</head>
+<body class="pagina-clara">
+
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="menu-lateral" id="menuLateral">
+    <div class="menu-lateral__topo">
+      <img src="assets/logo.png" alt="Arautos do Evangelho" class="js-logo" />
+      <button class="menu-lateral__fechar" id="btnFecharMenu" aria-label="Fechar menu">&times;</button>
+    </div>
+    <nav>
+      <a href="/" data-pagina="index"><span class="emoji">🏠</span> Início</a>
+      <a href="agendamento" data-pagina="agendamento"><span class="emoji">📅</span> Agendar Adoração</a>
+      <a href="meus-agendamentos" data-pagina="meus-agendamentos"><span class="emoji">🗓️</span> Meus agendamentos da Adoração</a>
+      <a href="intencoes" data-pagina="intencoes"><span class="emoji">🙏</span> Intenções para a Santa Missa</a>
+      <a href="cursos" data-pagina="cursos"><span class="emoji">🎓</span> Inscrições de cursos</a>
+      <a href="avisos" data-pagina="avisos"><span class="emoji">📢</span> Agenda da semana</a>
+      <a href="contatos" data-pagina="contatos"><span class="emoji">📍</span> Contatos</a>
+      <a href="sobre" data-pagina="sobre"><span class="emoji">ℹ️</span> Sobre</a>
+    </nav>
+    <div class="menu-lateral__rodape">
+      <a href="admin" class="menu-lateral__admin-btn"><span class="emoji">🔐</span> Painel administrativo</a>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <button class="topbar__btn topbar__menu" id="btnMenu" aria-label="Abrir menu">
+      <span class="icone-hamburguer"><span></span><span></span><span></span></span>
+    </button>
+    <img src="assets/logo.png" alt="Arautos do Evangelho" class="topbar__logo js-logo" />
+    <button class="topbar__btn topbar__perfil" id="btnPerfil" aria-label="Meu perfil">
+      <svg class="icone-perfil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="dropdown-perfil" id="dropdownPerfil">
+    <div class="dropdown-perfil__avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.4-4 4.2-6 7.5-6s6.1 2 7.5 6"/>
+      </svg>
+    </div>
+    <div class="dropdown-perfil__nome" id="perfilNome">—</div>
+    <div class="dropdown-perfil__tel" id="perfilTelefone">—</div>
+    <hr/>
+    <a href="meus-agendamentos">🗓️ Meus agendamentos da Adoração</a>
+    <button id="btnSair">🚪 Sair</button>
+  </div>
+
+  <main class="conteudo">
+    <h1 class="titulo-pagina">Inscrições de cursos</h1>
+    <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+    <p class="cursos-intro">Toque em um curso ou evento para ver os detalhes e fazer a sua inscrição.</p>
+
+    <div id="listaCursos" class="lista-cursos"><div class="spinner"></div></div>
+    <p class="mensagem-vazia oculto" id="avisoSemCursos">No momento não há cursos ou eventos com inscrições abertas.</p>
+
+    <p class="rodape-simples">Arautos do Evangelho Campos - RJ</p>
+  </main>
+
+  <script type="module" src="js/cursos.js"></script>
+  <script type="module" src="js/instalar-app.js"></script>
+</body>
+</html>

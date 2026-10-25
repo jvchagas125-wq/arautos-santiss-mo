@@ -26,6 +26,7 @@ import {
 import { criarCredenciais, conferirSenha, chaveConfere, TAMANHO_MINIMO_SENHA } from "./contas.js";
 import { CATALOGO_ACESSOS, PAGINA_ADMINISTRADORES, temAcesso, normalizarAcessos, resumoDeAcessos } from "./acessos.js";
 import { criarCrm } from "./crm-contatos.js";
+import { iniciarCursosAdmin } from "./cursos-admin.js";
 import { extrairTextosCategoria, construirDocxIntencoes, nomeArquivoDocx, rotuloListaIntencao } from "./docx-intencoes.js";
 
 /* ---------------- Contas e login do painel ----------------
@@ -262,6 +263,11 @@ const ALVOS_PARTES = {
     agendados: () => [document.querySelector('.admin-aba[data-aba="agendados"]'), document.getElementById("painelAgendados")],
     cancelados: () => [document.querySelector('.admin-aba[data-aba="cancelados"]'), document.getElementById("painelCancelados")]
   },
+  inscricoes: {
+    cursos: painelDe("cabecalhoCursos"),
+    inscritos: painelDe("cabecalhoInscritos"),
+    avisos: painelDe("cabecalhoAvisosCursos")
+  },
   contatos: {
     info: () => [document.getElementById("quadroInfoContato")],
     cadastrar: () => [document.getElementById("painelFormContato")],
@@ -339,6 +345,11 @@ function iniciarPainel() {
   configurarAcompanhamento();
   configurarInfoContato();
   configurarContatos();
+  iniciarCursosAdmin({
+    enviarImagem: enviarImagemParaCloudinary,
+    chamarApiEnvio,
+    podeAvisar: () => temAcesso(contaAtual, "inscricoes", "avisos")
+  });
   configurarAdministradores();
   configurarBanners();
   configurarConfiguracoes();
@@ -1872,26 +1883,6 @@ function configurarIntencoes() {
     return "";
   }
 
-  // Chama a função do servidor (api/enviar-listas.js) usando a senha do painel como prova de que é o admin.
-  async function chamarApiEnvio(corpo) {
-    let resposta;
-    try {
-      resposta = await fetch("/api/enviar-listas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...corpo, usuarioId: contaAtual?.id, chave: chaveSessao })
-      });
-    } catch {
-      throw new Error("Sem conexão com o servidor. Verifique a internet e tente de novo.");
-    }
-    let dados = null;
-    try { dados = await resposta.json(); } catch { /* resposta sem JSON */ }
-    if (!resposta.ok || !dados?.ok) {
-      if (resposta.status === 404) throw new Error("O envio por e-mail ainda não foi ativado no site (falta publicar a atualização).");
-      throw new Error(dados?.erro || "Não foi possível enviar o e-mail.");
-    }
-    return dados;
-  }
 
   function criarLinhaEmail(valor = "") {
     const linha = document.createElement("div");
@@ -2922,6 +2913,27 @@ function configurarInfoContato() {
 }
 
 /* ---------------- Contatos (pessoas cadastradas) ---------------- */
+// Chama a função do servidor (api/enviar-listas.js) usando a senha do painel como prova de que é o admin.
+async function chamarApiEnvio(corpo) {
+  let resposta;
+  try {
+    resposta = await fetch("/api/enviar-listas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...corpo, usuarioId: contaAtual?.id, chave: chaveSessao })
+    });
+  } catch {
+    throw new Error("Sem conexão com o servidor. Verifique a internet e tente de novo.");
+  }
+  let dados = null;
+  try { dados = await resposta.json(); } catch { /* resposta sem JSON */ }
+  if (!resposta.ok || !dados?.ok) {
+    if (resposta.status === 404) throw new Error("O envio por e-mail ainda não foi ativado no site (falta publicar a atualização).");
+    throw new Error(dados?.erro || "Não foi possível enviar o e-mail.");
+  }
+  return dados;
+}
+
 function configurarContatos() {
   const campoBusca = document.getElementById("buscaContatos");
   const lista = document.getElementById("listaContatos");

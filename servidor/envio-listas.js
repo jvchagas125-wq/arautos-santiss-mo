@@ -166,6 +166,25 @@ export function criarClienteFirestore({ projectId, apiKey, fetchFn = fetch }) {
       return true;
     },
 
+    // Todos os documentos de uma coleção em que "campo" == valor (texto). Devolve [{ id, ...dados }].
+    async consultarColecao(colecao, campo, valor) {
+      const r = await chamar(`${base}:runQuery?${sufixoChave}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: colecao }],
+            where: { fieldFilter: { field: { fieldPath: campo }, op: "EQUAL", value: { stringValue: String(valor) } } }
+          }
+        })
+      });
+      if (!r.ok) throw new Error(`Firestore (consultar ${colecao}) respondeu ${r.status}: ${r.json?.error?.message || ""}`);
+      return (r.json || []).filter((x) => x.document).map((x) => ({
+        id: String(x.document.name || "").split("/").pop(),
+        ...decodificarCampos(x.document.fields || {})
+      }));
+    },
+
     // Todas as intenções de uma lista (data + hora).
     async intencoesDaLista(dataMissa, horaMissa) {
       const r = await chamar(`${base}:runQuery?${sufixoChave}`, {
