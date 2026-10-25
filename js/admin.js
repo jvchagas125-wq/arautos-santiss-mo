@@ -1,7 +1,7 @@
 import { listaArquivada, inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
-  MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS,
+  MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS, categoriasPermitidasDaMissa,
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais,
@@ -947,7 +947,7 @@ function configurarIntencoes() {
   });
 
   /* ---------- Dias com horário diferente (calendário + janela de horários) ---------- */
-  let configIntencoes = { horariosPorDia: [[], [], [], [], [], [], []], horasAntes: 3, horariosEspeciais: {} };
+  let configIntencoes = { horariosPorDia: [[], [], [], [], [], [], []], horasAntes: 3, horariosEspeciais: {}, categoriasPorMissa: {} };
   const modalEspecial = document.getElementById("modalHorarioEspecial");
   const gradeEspecial = document.getElementById("especialGrade");
   const calendarioEspeciaisEl = document.getElementById("calendarioEspeciais");
@@ -958,8 +958,68 @@ function configurarIntencoes() {
   for (let h = 0; h < 24; h++) {
     const label = document.createElement("label");
     label.innerHTML = `<input type="checkbox" value="${h}" /> ${String(h).padStart(2, "0")}h`;
-    label.querySelector("input").addEventListener("change", (e) => label.classList.toggle("marcado", e.target.checked));
+    label.querySelector("input").addEventListener("change", (e) => {
+      label.classList.toggle("marcado", e.target.checked);
+      renderizarCategoriasDoModal();
+    });
     gradeEspecial.appendChild(label);
+  }
+
+  // Categorias de cada missa do dia (só valem em dia com horário diferente): { hora: Set(chaves) }.
+  // Começa com todas marcadas — "todas" = sem restrição.
+  const blocoCategoriasEspecial = document.getElementById("especialCategorias");
+  const listaCategoriasEspecial = document.getElementById("especialCategoriasLista");
+  let selecaoCategorias = {};
+  const todasAsChaves = () => categoriasAtuais.map((c) => c.chave);
+  function renderizarCategoriasDoModal() {
+    const horas = horasDaGradeEspecial();
+    listaCategoriasEspecial.innerHTML = "";
+    blocoCategoriasEspecial.classList.toggle("oculto", horas.length === 0 || categoriasAtuais.length < 2);
+    horas.forEach((hora) => {
+      if (!selecaoCategorias[hora]) selecaoCategorias[hora] = new Set(todasAsChaves());
+      const marcadas = selecaoCategorias[hora];
+      const caixa = document.createElement("div");
+      caixa.className = "especial-missa";
+      const topo = document.createElement("div");
+      topo.className = "especial-missa__topo";
+      const titulo = document.createElement("span");
+      titulo.className = "especial-missa__hora";
+      titulo.textContent = `Missa das ${String(hora).padStart(2, "0")}h`;
+      topo.appendChild(titulo);
+      if (horas.length > 1) {
+        const copiar = document.createElement("button");
+        copiar.type = "button";
+        copiar.className = "especial-missa__copiar";
+        copiar.textContent = "Usar o mesmo nas outras missas";
+        copiar.addEventListener("click", () => {
+          horas.forEach((h) => { if (h !== hora) selecaoCategorias[h] = new Set(marcadas); });
+          renderizarCategoriasDoModal();
+        });
+        topo.appendChild(copiar);
+      }
+      caixa.appendChild(topo);
+      const cats = document.createElement("div");
+      cats.className = "especial-missa__cats";
+      categoriasAtuais.forEach((cat) => {
+        const label = document.createElement("label");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = marcadas.has(cat.chave);
+        cb.addEventListener("change", () => { if (cb.checked) marcadas.add(cat.chave); else marcadas.delete(cat.chave); });
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(cat.rotulo));
+        cats.appendChild(label);
+      });
+      caixa.appendChild(cats);
+      listaCategoriasEspecial.appendChild(caixa);
+    });
+  }
+  // texto curto com as categorias liberadas de cada missa que tem restrição (para a lista de dias)
+  function resumoCategoriasDoDia(iso) {
+    const porHora = (configIntencoes.categoriasPorMissa || {})[iso] || {};
+    const rotulos = new Map(categoriasAtuais.map((c) => [c.chave, c.rotulo]));
+    return Object.keys(porHora).map(Number).sort((a, b) => a - b).map((h) =>
+      `${String(h).padStart(2, "0")}h: só ${porHora[String(h)].map((k) => rotulos.get(k) || k).join(", ")}`).join(" · ");
   }
   function marcarGradeEspecial(horas) {
     const ativos = new Set(horas || []);
@@ -979,6 +1039,14 @@ function configurarIntencoes() {
     const atual = configIntencoes.horariosEspeciais[iso];
     const temEspecial = Array.isArray(atual);
     marcarGradeEspecial(temEspecial ? atual : horasPadraoDaSemana(iso));
+    // categorias já definidas para as missas deste dia (as que não têm restrição começam com todas marcadas)
+    selecaoCategorias = {};
+    const salvasDoDia = (configIntencoes.categoriasPorMissa || {})[iso] || {};
+    Object.entries(salvasDoDia).forEach(([hora, chaves]) => {
+      const validas = chaves.filter((k) => todasAsChaves().includes(k));
+      selecaoCategorias[Number(hora)] = new Set(validas.length ? validas : todasAsChaves());
+    });
+    renderizarCategoriasDoModal();
     document.getElementById("especialData").textContent = formatarDataComDiaSemana(iso);
     document.getElementById("especialAviso").textContent = temEspecial
       ? "Este dia já tem um horário diferente do padrão."
@@ -989,11 +1057,17 @@ function configurarIntencoes() {
   function fecharHorarioEspecial() { fecharModal(modalEspecial); diaEspecialEditando = null; }
 
   // guarda o mapa inteiro de dias especiais; datas que já passaram são descartadas (não servem mais pra nada)
-  async function gravarHorariosEspeciais(mapa) {
+  async function gravarHorariosEspeciais(mapa, categorias = configIntencoes.categoriasPorMissa) {
     const hoje = hojeIso();
     const limpo = {};
     Object.entries(mapa).forEach(([iso, horas]) => { if (iso >= hoje) limpo[iso] = horas; });
-    await salvarHorariosEspeciais(limpo);
+    await salvarHorariosEspeciais(limpo, categorias || {});
+  }
+  // mapa de categorias sem a data "iso" (quando o dia volta ao padrão)
+  function categoriasSemDia(iso) {
+    const c = { ...(configIntencoes.categoriasPorMissa || {}) };
+    delete c[iso];
+    return c;
   }
 
   document.getElementById("fecharModalHorarioEspecial").addEventListener("click", fecharHorarioEspecial);
@@ -1006,14 +1080,30 @@ function configurarIntencoes() {
     const mapa = { ...configIntencoes.horariosEspeciais };
     const padrao = horasPadraoDaSemana(iso);
     const igualAoPadrao = horas.length === padrao.length && horas.every((h, i) => h === padrao[i]);
+    // categorias de cada missa: só guarda a missa que tem restrição (todas marcadas = sem restrição)
+    const chaves = todasAsChaves();
+    const restritas = {};
+    for (const hora of horas) {
+      const marcadas = selecaoCategorias[hora];
+      if (!marcadas || categoriasAtuais.length < 2) continue;
+      const lista_ = chaves.filter((k) => marcadas.has(k));
+      if (lista_.length === 0) {
+        mostrarToast(`Marque ao menos uma categoria na missa das ${String(hora).padStart(2, "0")}h.`);
+        return;
+      }
+      if (lista_.length < chaves.length) restritas[String(hora)] = lista_;
+    }
+    const categorias = categoriasSemDia(iso);
+    const temRestricao = Object.keys(restritas).length > 0;
+    if (temRestricao) categorias[iso] = restritas;
     let aviso;
-    if (igualAoPadrao) { delete mapa[iso]; aviso = "Esses são os horários padrão da semana — este dia voltou ao normal."; }
+    if (igualAoPadrao && !temRestricao) { delete mapa[iso]; aviso = "Esses são os horários padrão da semana — este dia voltou ao normal."; }
     else { mapa[iso] = horas; aviso = horas.length ? "Horários do dia salvos!" : "Salvo: este dia ficou sem missa."; }
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
-      await gravarHorariosEspeciais(mapa);
-      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa };
+      await gravarHorariosEspeciais(mapa, categorias);
+      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias };
       renderizarEspeciais();
       fecharHorarioEspecial();
       mostrarToast(aviso);
@@ -1031,10 +1121,11 @@ function configurarIntencoes() {
     if (!iso) return;
     const mapa = { ...configIntencoes.horariosEspeciais };
     delete mapa[iso];
+    const categorias = categoriasSemDia(iso);
     btn.disabled = true;
     try {
-      await gravarHorariosEspeciais(mapa);
-      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa };
+      await gravarHorariosEspeciais(mapa, categorias);
+      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias };
       renderizarEspeciais();
       fecharHorarioEspecial();
       mostrarToast("Este dia voltou ao horário padrão da semana.");
@@ -1074,7 +1165,7 @@ function configurarIntencoes() {
         if (Array.isArray(especial)) {
           btn.classList.add("especial");
           if (especial.length === 0) btn.classList.add("sem-missa");
-          btn.title = especial.length ? `Missa às ${textoHoras(especial)}` : "Sem missa neste dia";
+          btn.title = especial.length ? `Missa às ${textoHoras(especial)}${resumoCategoriasDoDia(iso) ? ` — ${resumoCategoriasDoDia(iso)}` : ""}` : "Sem missa neste dia";
         }
         btn.addEventListener("click", () => abrirHorarioEspecial(iso));
       }
@@ -1111,6 +1202,13 @@ function configurarIntencoes() {
       forte.textContent = formatarDataComDiaSemana(iso);
       texto.appendChild(forte);
       texto.appendChild(document.createTextNode(horas.length ? `Missa às ${textoHoras(horas)}` : "Sem missa neste dia"));
+      const resumoCats = resumoCategoriasDoDia(iso);
+      if (resumoCats && horas.length) {
+        const linhaCats = document.createElement("span");
+        linhaCats.className = "item-especial__cats";
+        linhaCats.textContent = resumoCats;
+        texto.appendChild(linhaCats);
+      }
       const acoes = document.createElement("span");
       acoes.className = "item-especial__acoes";
       const btnEditar = criarBotaoIcone("intencao-item__btn--editar", "Editar horários deste dia", ICONE_LAPIS);
@@ -1119,9 +1217,10 @@ function configurarIntencoes() {
       btnApagar.addEventListener("click", async () => {
         const mapa = { ...configIntencoes.horariosEspeciais };
         delete mapa[iso];
+        const categorias = categoriasSemDia(iso);
         try {
-          await gravarHorariosEspeciais(mapa);
-          configIntencoes = { ...configIntencoes, horariosEspeciais: mapa };
+          await gravarHorariosEspeciais(mapa, categorias);
+          configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias };
           renderizarEspeciais();
           mostrarToast("Este dia voltou ao horário padrão da semana.");
         } catch (err) {
@@ -1142,6 +1241,7 @@ function configurarIntencoes() {
   ouvirConfigIntencoes((config) => {
     configIntencoes = config;
     renderizarEspeciais();
+    renderizarQuadros(ultimasEntradas); // as categorias de cada missa podem ter mudado
     // rascunhos de listas que já fecharam não servem mais: apaga (uma vez por abertura do painel)
     if (!rascunhosLimpos) {
       rascunhosLimpos = true;
@@ -1383,8 +1483,8 @@ function configurarIntencoes() {
   // Gera um documento Word (.docx, editável) com as intenções de uma lista específica, organizadas por categoria (mesma
   // ordem/agrupamento exibido na tela), pronto pra imprimir e levar pra missa. A montagem em si
   // (o desenho do documento) é compartilhada com o envio automático por e-mail — ver js/docx-intencoes.js.
-  async function gerarDocumentoIntencoes(rotulo, itens) {
-    const documento = construirDocxIntencoes(rotulo, itens, { categorias: categoriasAtuais });
+  async function gerarDocumentoIntencoes(rotulo, itens, categoriasPermitidas = null) {
+    const documento = construirDocxIntencoes(rotulo, itens, { categorias: categoriasAtuais, categoriasPermitidas });
     const blob = await window.docx.Packer.toBlob(documento);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1658,9 +1758,14 @@ function configurarIntencoes() {
       const corpo = document.createElement("div");
       corpo.className = "quadro-intencao__corpo";
       corpo.classList.toggle("oculto", !estaAberto);
+      // dia com categorias liberadas só para algumas: as outras só aparecem aqui se já tiverem intenções
+      // (marcadas, pois não saem na lista do site nem no Word)
+      const liberadas = categoriasPermitidasDaMissa(configIntencoes, dataMissa, horaMissa);
       categoriasAtuais.forEach(({ chave: chaveCategoria, rotulo: rotuloCategoria }) => {
         const doGrupo = itens.filter((it) => it.categoria === chaveCategoria);
-        corpo.appendChild(criarBlocoCategoria(chaveCategoria, rotuloCategoria, doGrupo, dataMissa, horaMissa, chave));
+        const fora = liberadas && !liberadas.includes(chaveCategoria);
+        if (fora && doGrupo.length === 0) return;
+        corpo.appendChild(criarBlocoCategoria(chaveCategoria, fora ? `${rotuloCategoria} (fora desta missa — não sai no Word)` : rotuloCategoria, doGrupo, dataMissa, horaMissa, chave));
       });
       const conhecidas = new Set(categoriasAtuais.map((c) => c.chave));
       const orfas = itens.filter((it) => !conhecidas.has(it.categoria));
@@ -1679,7 +1784,7 @@ function configurarIntencoes() {
           return;
         }
         try {
-          await gerarDocumentoIntencoes(rotulo, itens);
+          await gerarDocumentoIntencoes(rotulo, itens, categoriasPermitidasDaMissa(configIntencoes, dataMissa, horaMissa));
         } catch (err) {
           console.error(err);
           mostrarToast("Não foi possível gerar o documento. Tente novamente.");

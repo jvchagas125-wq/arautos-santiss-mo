@@ -31,7 +31,7 @@ import {
 } from "../servidor/envio-listas.js";
 
 async function gerarDocumento(rotulo, itens, opcoes = {}) {
-  return docx.Packer.toBuffer(construirDocxIntencoes(rotulo, itens, { docx, categorias: opcoes.categorias }));
+  return docx.Packer.toBuffer(construirDocxIntencoes(rotulo, itens, { docx, categorias: opcoes.categorias, categoriasPermitidas: opcoes.categoriasPermitidas }));
 }
 
 function criarEnviadorDeEmail() {

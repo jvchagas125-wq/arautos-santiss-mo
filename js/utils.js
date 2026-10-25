@@ -496,26 +496,53 @@ export function normalizarHorariosEspeciais(bruto) {
   return limpo;
 }
 
+// Categorias liberadas em cada missa de um dia especial: { "aaaa-mm-dd": { "8": ["porAlma", ...] } }.
+// Missa sem entrada aqui = todas as categorias do formulário (o comportamento de sempre).
+export function normalizarCategoriasPorMissa(bruto) {
+  const limpo = {};
+  if (bruto && typeof bruto === "object" && !Array.isArray(bruto)) {
+    Object.entries(bruto).forEach(([iso, porHora]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || !porHora || typeof porHora !== "object" || Array.isArray(porHora)) return;
+      const dia = {};
+      Object.entries(porHora).forEach(([hora, chaves]) => {
+        const h = Number(hora);
+        if (!Number.isInteger(h) || h < 0 || h > 23 || !Array.isArray(chaves)) return;
+        const lista = [...new Set(chaves.filter((c) => typeof c === "string" && c))];
+        if (lista.length) dia[String(h)] = lista;
+      });
+      if (Object.keys(dia).length) limpo[iso] = dia;
+    });
+  }
+  return limpo;
+}
+
+// Chaves das categorias liberadas para a missa de "iso" às "hora" — ou null quando vale tudo.
+export function categoriasPermitidasDaMissa(config, iso, hora) {
+  const lista = config && config.categoriasPorMissa && config.categoriasPorMissa[iso] && config.categoriasPorMissa[iso][String(Number(hora))];
+  return Array.isArray(lista) && lista.length ? lista : null;
+}
+
 // Aceita o formato atual (mapa), o formato "lista de 7 listas" (salvo antes) e o formato bem antigo
 // (horariosSemana/horariosDomingo), sempre devolvendo { horariosPorDia, horasAntes, horariosEspeciais }.
 export function normalizarConfigIntencoes(dados) {
   if (!dados || typeof dados !== "object") {
-    return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), horasAntes: HORAS_ANTES_PADRAO, horariosEspeciais: {} };
+    return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), horasAntes: HORAS_ANTES_PADRAO, horariosEspeciais: {}, categoriasPorMissa: {} };
   }
   const horasAntes = Number(dados.horasAntes) > 0 ? Number(dados.horasAntes) : HORAS_ANTES_PADRAO;
   const horariosEspeciais = normalizarHorariosEspeciais(dados.horariosEspeciais);
+  const categoriasPorMissa = normalizarCategoriasPorMissa(dados.categoriasPorMissa);
   const bruto = dados.horariosPorDia;
   const ehLista = Array.isArray(bruto) && bruto.length === 7;
   const ehMapa = bruto && typeof bruto === "object" && !Array.isArray(bruto) && [0, 1, 2, 3, 4, 5, 6].some((d) => Array.isArray(bruto[d]));
   if (ehLista || ehMapa) {
-    return { horariosPorDia: [0, 1, 2, 3, 4, 5, 6].map((d) => listaDeHoras(bruto[d])), horasAntes, horariosEspeciais };
+    return { horariosPorDia: [0, 1, 2, 3, 4, 5, 6].map((d) => listaDeHoras(bruto[d])), horasAntes, horariosEspeciais, categoriasPorMissa };
   }
   if (Array.isArray(dados.horariosSemana) || Array.isArray(dados.horariosDomingo)) {
     const semana = listaDeHoras(dados.horariosSemana);
     const domingo = listaDeHoras(dados.horariosDomingo);
-    return { horariosPorDia: [domingo, semana, semana, semana, semana, semana, semana], horasAntes, horariosEspeciais };
+    return { horariosPorDia: [domingo, semana, semana, semana, semana, semana, semana], horasAntes, horariosEspeciais, categoriasPorMissa };
   }
-  return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), horasAntes, horariosEspeciais };
+  return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), horasAntes, horariosEspeciais, categoriasPorMissa };
 }
 
 // Converte a lista de 7 listas para o formato aceito pelo Firestore (mapa "0".."6").

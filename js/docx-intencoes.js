@@ -46,7 +46,13 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
   const docx = opcoes.docx || window.docx;
   const { Document, Paragraph, TextRun, AlignmentType, BorderStyle, Footer, SectionType } = docx;
   // categorias editáveis no painel; sem elas (ou nos testes), as de fábrica
-  const categorias = Array.isArray(opcoes.categorias) && opcoes.categorias.length ? opcoes.categorias : CATEGORIAS_PADRAO;
+  let categorias = Array.isArray(opcoes.categorias) && opcoes.categorias.length ? opcoes.categorias : CATEGORIAS_PADRAO;
+  // missa com categorias liberadas só para algumas (dias com horário diferente): o documento mostra apenas elas
+  if (Array.isArray(opcoes.categoriasPermitidas) && opcoes.categoriasPermitidas.length) {
+    const liberadas = new Set(opcoes.categoriasPermitidas);
+    categorias = categorias.filter((c) => liberadas.has(c.chave));
+    itens = itens.filter((it) => liberadas.has(it.categoria));
+  }
 
   const VINHO = "7A0C1E", DOURADO = "CDA434", MARROM = "5A4636", TEXTO = "281810", LINHA = "C4B29E";
   const RECUO = 240; // 12pt, como no modelo antigo

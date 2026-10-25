@@ -8,7 +8,7 @@
 // menos "horas antes") e ainda não foram enviadas, gera o documento Word de cada uma e manda por e-mail
 // pros endereços cadastrados no painel administrativo. Cada lista é enviada uma única vez —
 // o "carimbo" de envio fica guardado no Firestore (coleção configuracoes, doc "envio_DATA_HORA").
-import { horariosDoDia, normalizarConfigIntencoes, normalizarFormularioIntencoes } from "../js/utils.js";
+import { horariosDoDia, normalizarConfigIntencoes, normalizarFormularioIntencoes, categoriasPermitidasDaMissa } from "../js/utils.js";
 import { rotuloListaIntencao, nomeArquivoDocx } from "../js/docx-intencoes.js";
 
 // Brasil não tem mais horário de verão desde 2019: Brasília é sempre UTC-3.
@@ -211,8 +211,15 @@ export async function montarEEnviarLista({ dataMissa, horaMissa, destinatarios, 
     const docForm = await firestore.lerDocumento("configuracoes/intencoesForm");
     categorias = normalizarFormularioIntencoes(docForm?.dados).categorias;
   } catch { categorias = normalizarFormularioIntencoes(null).categorias; }
-  const arquivo = await gerarDocumento(rotulo, itens, { categorias });
-  const total = itens.length;
+  // categorias liberadas só para esta missa (dias com horário diferente); sem restrição = todas
+  let categoriasPermitidas = null;
+  try {
+    const docConfigMissa = await firestore.lerDocumento("configuracoes/intencoes");
+    categoriasPermitidas = categoriasPermitidasDaMissa(normalizarConfigIntencoes(docConfigMissa?.dados), dataMissa, horaMissa);
+  } catch { categoriasPermitidas = null; }
+  const arquivo = await gerarDocumento(rotulo, itens, { categorias, categoriasPermitidas });
+  const liberadas = categoriasPermitidas ? new Set(categoriasPermitidas) : null;
+  const total = liberadas ? itens.filter((it) => liberadas.has(it.categoria)).length : itens.length;
   const assunto = `${teste ? "[TESTE] " : ""}Intenções da Santa Missa — ${rotulo}`;
   const texto = [
     teste ? "Este é um e-mail de TESTE (a lista abaixo é só um exemplo)." : "A lista de intenções abaixo acabou de fechar.",

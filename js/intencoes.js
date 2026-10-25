@@ -3,7 +3,7 @@ import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast,
   formatarDataBR, formatarDataComDiaSemana, dataParaIso, hojeIso, criarCalendario,
   horariosDoDia, statusMissaEspecifica, textoDaIntencao, normalizarFormularioIntencoes,
-  dividirNomes, ANIVERSARIO_OPCOES, textoDeAniversario
+  dividirNomes, ANIVERSARIO_OPCOES, textoDeAniversario, categoriasPermitidasDaMissa
 } from "./utils.js";
 import {
   obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirFormularioIntencoes,
@@ -189,6 +189,25 @@ let lista = null; // { iso, hora, itens: [], assinaturaEnviada, editor: {...}, e
 let contadorId = 0;
 const novoId = () => `i${Date.now().toString(36)}${(contadorId++).toString(36)}`;
 
+// Categorias que esta missa aceita. Em dia com horário diferente, o padre pode liberar só algumas
+// (ex.: apenas "Por alma"); sem restrição, valem todas as do formulário.
+function categoriasDaLista() {
+  if (!lista || !configAtual) return formulario.categorias;
+  const liberadas = categoriasPermitidasDaMissa(configAtual, lista.iso, lista.hora);
+  return liberadas ? formulario.categorias.filter((c) => liberadas.includes(c.chave)) : formulario.categorias;
+}
+// Tira da lista o que não é mais permitido nesta missa (rascunho antigo ou regra mudada pelo padre).
+// Devolve true se removeu algo.
+function descartarCategoriasNaoLiberadas() {
+  if (!lista || !configAtual) return false;
+  const liberadas = categoriasPermitidasDaMissa(configAtual, lista.iso, lista.hora);
+  if (!liberadas) return false;
+  const antes = lista.itens.length;
+  lista.itens = lista.itens.filter((i) => liberadas.includes(i.categoria));
+  if (lista.editor.categoria && !liberadas.includes(lista.editor.categoria)) lista.editor = editorVazio();
+  return lista.itens.length !== antes;
+}
+
 function categoriaPorChave(chave) {
   return formulario.categorias.find((c) => c.chave === chave) || null;
 }
@@ -271,6 +290,13 @@ async function abrirLista(hora) {
     console.error(err);
     mostrarToast("Não foi possível carregar suas intenções. Verifique sua conexão.");
   }
+  if (descartarCategoriasNaoLiberadas()) {
+    alterouLista();
+    mostrarToast("Algumas intenções foram retiradas: esta missa aceita só algumas categorias.");
+  }
+  // missa que aceita uma categoria só: já abre nela, sem pedir pra escolher
+  const unica = configAtual && categoriasPermitidasDaMissa(configAtual, lista.iso, lista.hora) ? categoriasDaLista() : [];
+  if (unica.length === 1 && !lista.editor.categoria) lista.editor = { ...editorVazio(), categoria: unica[0].chave };
   renderizarLista();
 }
 
@@ -706,7 +732,7 @@ function renderizarLista() {
 function abrirCategorias() {
   const caixa = el("categoriasOpcoes");
   caixa.innerHTML = "";
-  formulario.categorias.forEach((cat) => {
+  categoriasDaLista().forEach((cat) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn btn-dourado btn-full";
@@ -848,6 +874,15 @@ ouvirConfigIntencoes((config) => {
   configAtual = config;
   renderizarDia();
   conferirPrazoDaListaAberta();
+  // o padre pode mudar as categorias liberadas com a lista aberta
+  if (lista && descartarCategoriasNaoLiberadas()) {
+    alterouLista();
+    mostrarToast("O padre liberou só algumas categorias para esta missa; as demais intenções foram retiradas.");
+    renderizarLista();
+  } else if (lista && lista.editor.categoria && !categoriasDaLista().some((c) => c.chave === lista.editor.categoria)) {
+    lista.editor = editorVazio();
+    renderizarLista();
+  }
   // apaga os rascunhos das listas que já fecharam (uma vez por abertura da página)
   if (!limpezaFeita) {
     limpezaFeita = true;

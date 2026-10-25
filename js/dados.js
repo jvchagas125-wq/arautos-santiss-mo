@@ -6,7 +6,7 @@ import {
 } from "./firebase-init.js";
 import {
   normalizarConfigIntencoes, normalizarFormularioIntencoes, horariosPorDiaParaFirestore,
-  normalizarHorariosEspeciais, statusMissaEspecifica
+  normalizarHorariosEspeciais, normalizarCategoriasPorMissa, statusMissaEspecifica
 } from "./utils.js";
 
 /* ---------------- Configurações gerais (frase do dia, logo, fundo) ---------------- */
@@ -372,11 +372,17 @@ export async function salvarConfigIntencoes({ horariosPorDia, horasAntes }) {
 // Salva TODOS os dias com horário diferente de uma vez ({ "aaaa-mm-dd": [horas] }). Usa updateDoc
 // (que troca o campo inteiro) pra que um dia removido realmente suma — setDoc com merge só
 // acrescentaria chaves.
-export async function salvarHorariosEspeciais(mapa) {
+export async function salvarHorariosEspeciais(mapa, categoriasPorMissa = {}) {
   const limpo = normalizarHorariosEspeciais(mapa);
+  // só guarda categorias de datas que continuam como dia especial
+  const categorias = {};
+  Object.entries(normalizarCategoriasPorMissa(categoriasPorMissa)).forEach(([iso, porHora]) => {
+    if (limpo[iso]) categorias[iso] = porHora;
+  });
+  const dados = { horariosEspeciais: limpo, categoriasPorMissa: categorias };
   const snap = await getDoc(REF_INTENCOES_CONFIG);
-  if (snap.exists()) await updateDoc(REF_INTENCOES_CONFIG, { horariosEspeciais: limpo });
-  else await setDoc(REF_INTENCOES_CONFIG, { horariosEspeciais: limpo }, { merge: true });
+  if (snap.exists()) await updateDoc(REF_INTENCOES_CONFIG, dados);
+  else await setDoc(REF_INTENCOES_CONFIG, dados, { merge: true });
 }
 
 /* ---------- Formulário das intenções (categorias, tempos de falecimento, PIX) ----------
