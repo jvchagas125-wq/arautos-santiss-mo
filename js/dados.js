@@ -51,6 +51,21 @@ export async function salvarConfiguracoesGerais(dadosParciais) {
   await setDoc(REF_CONFIG_GERAL, dadosParciais, { merge: true });
 }
 
+/* ---------------- Páginas do site público que o administrador escondeu ----------------
+   Doc configuracoes/paginas: { ocultas: { agendamento: true, cursos: false, ... } } */
+const REF_PAGINAS_SITE = doc(db, "configuracoes", "paginas");
+
+const chavesOcultas = (dados) => Object.entries((dados && dados.ocultas) || {}).filter(([, v]) => v === true).map(([k]) => k);
+
+// Chama o callback com a lista de chaves das páginas ocultas, na hora em que mudar (tempo real).
+export function ouvirPaginasOcultas(callback) {
+  return onSnapshot(REF_PAGINAS_SITE, (snap) => callback(chavesOcultas(snap.exists() ? snap.data() : null)), () => {});
+}
+
+export async function salvarPaginaOculta(chave, oculta) {
+  await setDoc(REF_PAGINAS_SITE, { ocultas: { [chave]: !!oculta } }, { merge: true });
+}
+
 /* ---------------- Frase do dia (até 30 frases, uma por dia em rotação) ---------------- */
 
 const PADRAO_FRASES = {

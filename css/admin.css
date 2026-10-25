@@ -668,3 +668,27 @@
 #listaCursosAdmin .quadro-intencao__cabecalho{ flex-wrap:wrap; row-gap:6px; }
 #listaCursosAdmin .quadro-intencao__titulo{ flex:1 1 120px; }
 #listaCursosAdmin .quadro-intencao__selo{ order:9; margin-left:27px; }
+
+/* ---------- Páginas do site público (liga/desliga) ---------- */
+.paginas-site{ display:flex; flex-direction:column; gap:8px; }
+.pagina-site{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; cursor:pointer;
+  border:1.5px solid rgba(157,122,31,.3); border-radius:12px; background:#fffefb; position:relative;
+}
+.pagina-site.desligada{ background: rgba(90,70,54,.06); }
+.pagina-site__textos{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.pagina-site__nome{ font-family:'Cinzel'; font-size:.88rem; color: var(--vermelho-escuro); overflow-wrap:anywhere; }
+.pagina-site__estado{ font-size:.78rem; color: var(--texto-suave); }
+.pagina-site.desligada .pagina-site__nome{ color: var(--texto-suave); text-decoration:line-through; }
+.pagina-site__chave{ position:absolute; opacity:0; width:100%; height:100%; left:0; top:0; margin:0; cursor:pointer; }
+.pagina-site__trilho{
+  flex-shrink:0; width:46px; height:26px; border-radius:999px; background: rgba(90,70,54,.3); position:relative; transition: background .2s ease;
+}
+.pagina-site__trilho::after{
+  content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3); transition: transform .2s ease;
+}
+.pagina-site__chave:checked ~ .pagina-site__trilho{ background: #2e8b57; }
+.pagina-site__chave:checked ~ .pagina-site__trilho::after{ transform: translateX(20px); }
+.pagina-site__chave:focus-visible ~ .pagina-site__trilho{ outline:2px solid var(--dourado); outline-offset:2px; }
+.pagina-site__chave:disabled ~ .pagina-site__trilho{ opacity:.6; }

@@ -1540,3 +1540,10 @@ body.tela-fundo{ background: transparent; } /* a foto de fundo (::before) aparec
 .curso-aviso__texto{ margin:0; white-space:pre-line; font-size:.88rem; line-height:1.5; overflow-wrap:anywhere; }
 
 .campo.invalido textarea{ border-color: var(--vermelho); }
+
+/* ---------- Páginas escondidas pelo administrador ---------- */
+.pagina-oculta, [hidden].pagina-oculta{ display:none !important; }
+body.pagina-indisponivel main.conteudo > *:not(.pagina-indisponivel__aviso){ display:none !important; }
+.pagina-indisponivel__aviso{ text-align:center; padding: 40px 12px; }
+.pagina-indisponivel__icone{ font-size:3rem; margin-bottom:8px; }
+.pagina-indisponivel__aviso p{ color: var(--texto-suave); line-height:1.6; margin: 10px 0 24px; }

@@ -55,6 +55,7 @@ export const CATALOGO_ACESSOS = [
   {
     pagina: "configuracoes", titulo: "Configurações", emoji: "⚙️",
     partes: [
+      { id: "paginas", titulo: "Páginas do site público" },
       { id: "logo", titulo: "Logo padrão" },
       { id: "fundo", titulo: "Foto de fundo do site" },
       { id: "banners", titulo: "Banners da página inicial" }

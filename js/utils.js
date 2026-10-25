@@ -670,14 +670,16 @@ export const ORDEM_PAGINAS = [
 // que levam para a página vizinha nesse ciclo. Páginas fora da lista (ex.: admin) não recebem nada.
 function inserirNavegacaoEntrePaginas(paginaAtual) {
   if (paginaAtual === "index") return; // página inicial não mostra "Anterior / Próxima"
-  const indice = ORDEM_PAGINAS.findIndex((p) => p.chave === paginaAtual);
-  if (indice === -1) return;
-
   const main = document.querySelector("main.conteudo");
-  if (!main || main.querySelector(".navegacao-paginas")) return;
+  if (!main) return;
+  main.querySelector(".navegacao-paginas")?.remove();
+  // só entram no ciclo as páginas que o administrador não escondeu
+  const visiveis = ORDEM_PAGINAS.filter((p) => p.chave === paginaAtual || !paginasOcultas.has(p.chave));
+  const indice = visiveis.findIndex((p) => p.chave === paginaAtual);
+  if (indice === -1 || visiveis.length < 2 || paginasOcultas.has(paginaAtual)) return;
 
-  const anterior = ORDEM_PAGINAS[(indice - 1 + ORDEM_PAGINAS.length) % ORDEM_PAGINAS.length];
-  const proxima = ORDEM_PAGINAS[(indice + 1) % ORDEM_PAGINAS.length];
+  const anterior = visiveis[(indice - 1 + visiveis.length) % visiveis.length];
+  const proxima = visiveis[(indice + 1) % visiveis.length];
 
   const seta = (direcao) => `
     <svg class="navegacao-paginas__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -749,6 +751,66 @@ function iniciarWidgetColaboracao(paginaAtual) {
   }
 }
 
+/* ---------- Páginas escondidas pelo administrador (Configurações > Páginas do site) ----------
+   A lista vem do Firestore em tempo real; a última lista vista fica guardada no aparelho para
+   já aparecer certa ao abrir (sem "piscar" o menu). Esconder = some do menu, dos atalhos e dos
+   botões "Anterior / Próxima"; quem abrir o endereço direto vê um aviso de página indisponível. */
+const CHAVE_PAGINAS_OCULTAS = "arautos_paginas_ocultas";
+let paginasOcultas = new Set();
+
+function lerPaginasOcultasEmCache() {
+  try {
+    const lista = JSON.parse(localStorage.getItem(CHAVE_PAGINAS_OCULTAS) || "[]");
+    return Array.isArray(lista) ? lista.filter((c) => typeof c === "string") : [];
+  } catch { return []; }
+}
+
+function caminhoDoLink(a) {
+  try { return new URL(a.getAttribute("href") || "", location.href).pathname.replace(/\/+$/, "").replace(/\.html$/, ""); }
+  catch { return ""; }
+}
+
+function aplicarPaginasOcultas(paginaAtual) {
+  const caminhos = new Map(ORDEM_PAGINAS.filter((p) => p.chave !== "index")
+    .map((p) => ["/" + p.href.replace(/^\/+/, ""), p.chave]));
+  // links do menu, dos atalhos da página inicial e do menu da conta
+  document.querySelectorAll("#menuLateral nav a, .atalho-card, #dropdownPerfil a").forEach((a) => {
+    const chave = a.dataset.pagina || caminhos.get(caminhoDoLink(a));
+    if (!chave || chave === "index") return;
+    a.hidden = paginasOcultas.has(chave);
+    a.classList.toggle("pagina-oculta", paginasOcultas.has(chave));
+  });
+  // "Colabore" leva para Contatos
+  const colabore = document.querySelector(".widget-colabore");
+  if (colabore) colabore.classList.toggle("pagina-oculta", paginasOcultas.has("contatos"));
+
+  inserirNavegacaoEntrePaginas(paginaAtual);
+
+  // esta própria página foi escondida: troca o conteúdo por um aviso (e volta ao normal se for liberada de novo)
+  const main = document.querySelector("main.conteudo");
+  const escondida = paginaAtual !== "index" && paginasOcultas.has(paginaAtual);
+  document.body.classList.toggle("pagina-indisponivel", escondida);
+  if (main) {
+    const aviso = main.querySelector(".pagina-indisponivel__aviso");
+    if (escondida && !aviso) {
+      const div = document.createElement("div");
+      div.className = "pagina-indisponivel__aviso";
+      div.innerHTML = '<div class="pagina-indisponivel__icone">🕊️</div><h1 class="titulo-pagina">Página indisponível</h1><p>Esta página não está disponível no momento. Volte em breve.</p><a class="btn btn-dourado" href="/">Voltar ao início</a>';
+      main.prepend(div);
+    } else if (!escondida && aviso) aviso.remove();
+  }
+}
+
+function iniciarPaginasOcultas(paginaAtual) {
+  paginasOcultas = new Set(lerPaginasOcultasEmCache());
+  aplicarPaginasOcultas(paginaAtual);
+  import("./dados.js").then((m) => m.ouvirPaginasOcultas((lista) => {
+    paginasOcultas = new Set(lista);
+    try { localStorage.setItem(CHAVE_PAGINAS_OCULTAS, JSON.stringify(lista)); } catch { /* sem armazenamento */ }
+    aplicarPaginasOcultas(paginaAtual);
+  })).catch(() => {});
+}
+
 export function inicializarNavegacao(paginaAtual) {
   aplicarConfigVisualEmCache();
   iniciarWidgetColaboracao(paginaAtual);
@@ -816,7 +878,8 @@ export function inicializarNavegacao(paginaAtual) {
     window.location.href = "/";
   });
 
-  inserirNavegacaoEntrePaginas(paginaAtual);
+  if (paginaAtual !== "admin") iniciarPaginasOcultas(paginaAtual);
+  else inserirNavegacaoEntrePaginas(paginaAtual);
 }
 
 /* ---------- Aplica logo e fundo dinâmicos vindos da configuração ----------

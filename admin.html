@@ -738,6 +738,22 @@
         <h1 class="titulo-pagina">Configurações</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
+        <div class="painel" id="painelPaginasSite">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoPaginasSite" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🧭</span> Páginas do site público
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoPaginasSite" class="oculto">
+            <p class="formulario-intro">
+              Escolha quais páginas aparecem no site e no aplicativo. Ao desligar uma página, ela some do menu, dos atalhos e dos botões
+              "Anterior / Próxima" — e quem abrir o endereço dela vê um aviso de página indisponível. A mudança vale na hora, para quem
+              estiver com o site aberto. A página inicial sempre fica visível.
+            </p>
+            <div id="listaPaginasSite" class="paginas-site"></div>
+          </div>
+        </div>
+
         <div class="painel">
           <div class="painel__titulo"><span class="emoji">🖼️</span> Logo padrão</div>
           <div class="admin-preview"><img id="previewLogo" src="assets/logo.png" alt="Logo atual" /></div>

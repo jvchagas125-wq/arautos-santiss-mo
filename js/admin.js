@@ -4,7 +4,7 @@ import { listaArquivada, inicializarNavegacao, aplicarLogo, mostrarToast, abrirM
   MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS, categoriasPermitidasDaMissa,
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
-  obterConfiguracoesGerais, salvarConfiguracoesGerais,
+  obterConfiguracoesGerais, salvarConfiguracoesGerais, ouvirPaginasOcultas, salvarPaginaOculta,
   obterFrases, salvarFrases,
   obterDiasHorarios, salvarDiasHorarios, ouvirDiasHorarios, salvarAlteracoesAgenda,
   ouvirTodosAgendamentos, ouvirTodosUsuarios, obterUsuario, cadastrarOuAtualizarUsuario, editarUsuario,
@@ -276,6 +276,7 @@ const ALVOS_PARTES = {
   configuracoes: {
     logo: painelDe("previewLogo"),
     fundo: painelDe("previewFundo"),
+    paginas: painelDe("cabecalhoPaginasSite"),
     banners: () => [
       document.getElementById("campoBannerDestino")?.closest(".painel"),
       document.getElementById("cabecalhoBannersAdmin")?.closest(".painel")
@@ -353,6 +354,7 @@ function iniciarPainel() {
   configurarAdministradores();
   configurarBanners();
   configurarConfiguracoes();
+  configurarPaginasDoSite();
 }
 
 function configurarMenuSecoes() {
@@ -3537,6 +3539,75 @@ function configurarConfiguracoes() {
       console.error(err);
       mostrarToast("Não foi possível salvar (arquivo muito grande). Tente uma imagem menor ou um link.");
     }
+  });
+}
+
+/* ---------------- Páginas do site público (ligar / desligar, em tempo real) ---------------- */
+function configurarPaginasDoSite() {
+  const cabecalho = document.getElementById("cabecalhoPaginasSite");
+  const corpo = document.getElementById("corpoPaginasSite");
+  const lista = document.getElementById("listaPaginasSite");
+  const alternar = () => {
+    const abrir = corpo.classList.contains("oculto");
+    corpo.classList.toggle("oculto", !abrir);
+    cabecalho.classList.toggle("recolhido", !abrir);
+    cabecalho.setAttribute("aria-expanded", String(abrir));
+  };
+  cabecalho.addEventListener("click", alternar);
+  cabecalho.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); } });
+
+  const paginas = ORDEM_PAGINAS.filter((p) => p.chave !== "index");
+  const caixas = new Map();
+  paginas.forEach((pg) => {
+    const linha = document.createElement("label");
+    linha.className = "pagina-site";
+    const nome = document.createElement("span");
+    nome.className = "pagina-site__nome";
+    nome.textContent = pg.label;
+    const estado = document.createElement("span");
+    estado.className = "pagina-site__estado";
+    const chave = document.createElement("input");
+    chave.type = "checkbox";
+    chave.className = "pagina-site__chave";
+    chave.dataset.pagina = pg.chave;
+    chave.setAttribute("role", "switch");
+    chave.addEventListener("change", async () => {
+      const ligada = chave.checked;
+      estado.textContent = ligada ? "Aparece no site" : "Escondida";
+      linha.classList.toggle("desligada", !ligada);
+      chave.disabled = true;
+      try {
+        await salvarPaginaOculta(pg.chave, !ligada);
+        mostrarToast(ligada ? `"${pg.label}" voltou ao site.` : `"${pg.label}" foi escondida do site.`);
+      } catch (err) {
+        console.error(err);
+        chave.checked = !ligada;
+        estado.textContent = chave.checked ? "Aparece no site" : "Escondida";
+        linha.classList.toggle("desligada", !chave.checked);
+        mostrarToast("Não foi possível salvar. Tente novamente.");
+      } finally {
+        chave.disabled = false;
+      }
+    });
+    const trilho = document.createElement("span");
+    trilho.className = "pagina-site__trilho";
+    trilho.setAttribute("aria-hidden", "true");
+    const textos = document.createElement("span");
+    textos.className = "pagina-site__textos";
+    textos.append(nome, estado);
+    linha.append(textos, chave, trilho);
+    lista.appendChild(linha);
+    caixas.set(pg.chave, { chave, estado, linha });
+  });
+
+  // reflete o que está salvo (e mudanças feitas por outro administrador) na hora
+  ouvirPaginasOcultas((ocultas) => {
+    caixas.forEach(({ chave, estado, linha }, k) => {
+      const ligada = !ocultas.includes(k);
+      chave.checked = ligada;
+      estado.textContent = ligada ? "Aparece no site" : "Escondida";
+      linha.classList.toggle("desligada", !ligada);
+    });
   });
 }
 
