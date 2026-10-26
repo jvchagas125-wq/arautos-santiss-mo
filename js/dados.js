@@ -1,8 +1,8 @@
 // Camada de acesso aos dados no Firestore — usada por todas as páginas do site
 import {
-  db, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc,
+  db, doc, getDoc, setDoc as setDocFirestore, updateDoc as updateDocFirestore, addDoc, deleteDoc,
   collection, query, where, getDocs, onSnapshot, orderBy,
-  serverTimestamp
+  serverTimestamp, Timestamp
 } from "./firebase-init.js";
 import { normalizarCurso, idInscricao } from "./cursos-comum.js";
 import {
@@ -33,6 +33,105 @@ const REF_FRASES = doc(db, "configuracoes", "frases");
 const REF_INTENCOES_CONFIG = doc(db, "configuracoes", "intencoes");
 const REF_ENVIO_INTENCOES = doc(db, "configuracoes", "envioIntencoes");
 
+
+/* =========================================================
+   Cache local — tudo aparece NA HORA, sem tela de carregamento
+   A última resposta de cada consulta fica guardada neste aparelho. Ao abrir uma página (ou o painel)
+   o conteúdo já aparece com o que foi visto da última vez e, em seguida, a conexão em tempo real com o
+   banco confirma/atualiza — sem piscar, sem spinner. Só a primeiríssima visita de todas precisa esperar.
+   ========================================================= */
+const PREFIXO_CACHE = "arautos_dados_v1_";
+const LIMITE_CACHE_BYTES = 700000; // consultas gigantes não entram no cache (não valem o custo de ler/gravar)
+
+// Datas do Firestore (Timestamp) viram um marcador simples no JSON e voltam a ser Timestamp ao ler.
+function substituirTimestamp(_chave, valor) {
+  if (valor && typeof valor === "object" && typeof valor.toMillis === "function" && typeof valor.seconds === "number" && typeof valor.nanoseconds === "number") {
+    return { __ts: [valor.seconds, valor.nanoseconds] };
+  }
+  return valor;
+}
+function reviverTimestamp(_chave, valor) {
+  if (valor && typeof valor === "object" && Array.isArray(valor.__ts) && valor.__ts.length === 2) return new Timestamp(valor.__ts[0], valor.__ts[1]);
+  return valor;
+}
+function lerCacheDados(chave) {
+  try {
+    const bruto = localStorage.getItem(PREFIXO_CACHE + chave);
+    return bruto === null ? undefined : JSON.parse(bruto, reviverTimestamp);
+  } catch { return undefined; }
+}
+function gravarCacheDados(chave, valor) {
+  try {
+    const texto = JSON.stringify(valor === undefined ? null : valor, substituirTimestamp);
+    if (texto.length > LIMITE_CACHE_BYTES) { localStorage.removeItem(PREFIXO_CACHE + chave); return; }
+    localStorage.setItem(PREFIXO_CACHE + chave, texto);
+  } catch { /* sem espaço ou sem localStorage: só perde a otimização */ }
+}
+// Chamada ao sair do painel: apaga do aparelho o que era só do painel (contatos, intenções, inscrições...).
+export function limparCacheDoPainel() {
+  try {
+    Object.keys(localStorage).filter((k) => k.startsWith(PREFIXO_CACHE + "adm_")).forEach((k) => localStorage.removeItem(k));
+  } catch { /* nada a limpar */ }
+}
+
+// Para os "ouvir...": devolve um callback que (1) já entrega, no mesmo instante, o que estava guardado
+// e (2) guarda cada resposta nova do banco. Usado assim:  callback = cacheado("chave", callback);
+function cacheado(chave, callback) {
+  let chegouDoBanco = false;
+  const guardado = lerCacheDados(chave);
+  if (guardado !== undefined) {
+    Promise.resolve().then(() => { if (!chegouDoBanco) callback(guardado); });
+  }
+  return (valor) => {
+    chegouDoBanco = true;
+    gravarCacheDados(chave, valor);
+    callback(valor);
+  };
+}
+
+// Para os "obter...": devolve na hora o que estava guardado e confere no banco por trás (atualizando o
+// cache). Se o banco trouxer algo diferente do que foi entregue, chama aoAtualizar(valorNovo) — assim
+// quem quiser mostrar a versão nova (formulários do painel, por exemplo) pode fazê-lo sem recarregar.
+async function obterCacheado(chave, buscar, aoAtualizar) {
+  const guardado = lerCacheDados(chave);
+  const busca = buscar().then((novo) => {
+    const diferente = guardado !== undefined && JSON.stringify(novo, substituirTimestamp) !== JSON.stringify(guardado, substituirTimestamp);
+    gravarCacheDados(chave, novo);
+    if (diferente && aoAtualizar) aoAtualizar(novo);
+    return novo;
+  });
+  if (guardado === undefined) return busca;
+  busca.catch(() => {}); // já mostramos o que estava guardado; falha de conexão não atrapalha
+  return guardado;
+}
+
+
+// Toda gravação de uma configuração renova o que está guardado no aparelho (a próxima abertura já vem certa).
+const CACHES_POR_DOCUMENTO = {
+  "configuracoes/geral": ["config_geral", () => obterConfiguracoesGerais()],
+  "configuracoes/frases": ["frases", () => obterFrases()],
+  "configuracoes/diasHorarios": ["dias_horarios", () => obterDiasHorarios()],
+  "configuracoes/intencoes": ["config_intencoes", () => obterConfigIntencoes()],
+  "configuracoes/intencoesForm": ["form_intencoes", () => obterFormularioIntencoes()],
+  "configuracoes/envioIntencoes": ["adm_config_envio", () => obterConfigEnvioIntencoes()]
+};
+function renovarCachePorCaminho(caminho) {
+  const item = CACHES_POR_DOCUMENTO[caminho];
+  if (!item) return;
+  try { localStorage.removeItem(PREFIXO_CACHE + item[0]); } catch { /* ok */ }
+  Promise.resolve().then(item[1]).catch(() => {});
+}
+async function setDoc(ref, ...resto) {
+  const resultado = await setDocFirestore(ref, ...resto);
+  renovarCachePorCaminho(ref && ref.path);
+  return resultado;
+}
+async function updateDoc(ref, ...resto) {
+  const resultado = await updateDocFirestore(ref, ...resto);
+  renovarCachePorCaminho(ref && ref.path);
+  return resultado;
+}
+
 const PADRAO_CONFIG_GERAL = {
   tituloIgreja: "Arautos do Evangelho",
   fraseDoDia: "Não omitais nunca a visita a cada dia ao Santíssimo Sacramento, ainda que seja muito breve, mas contanto que seja constante.",
@@ -50,13 +149,16 @@ const PADRAO_CONFIG_GERAL = {
   contatoInstagramLink: "https://www.instagram.com/arautoscampos"
 };
 
-export async function obterConfiguracoesGerais() {
-  const snap = await getDoc(REF_CONFIG_GERAL);
-  if (!snap.exists()) return { ...PADRAO_CONFIG_GERAL };
-  return { ...PADRAO_CONFIG_GERAL, ...snap.data() };
+export async function obterConfiguracoesGerais(aoAtualizar) {
+  return obterCacheado("config_geral", async () => {
+    const snap = await getDoc(REF_CONFIG_GERAL);
+    if (!snap.exists()) return { ...PADRAO_CONFIG_GERAL };
+    return { ...PADRAO_CONFIG_GERAL, ...snap.data() };
+  }, aoAtualizar);
 }
 
 export function ouvirConfiguracoesGerais(callback) {
+  callback = cacheado("config_geral", callback);
   return onSnapshot(REF_CONFIG_GERAL, (snap) => {
     callback(snap.exists() ? { ...PADRAO_CONFIG_GERAL, ...snap.data() } : { ...PADRAO_CONFIG_GERAL });
   });
@@ -74,6 +176,7 @@ const chavesOcultas = (dados) => Object.entries((dados && dados.ocultas) || {}).
 
 // Chama o callback com a lista de chaves das páginas ocultas, na hora em que mudar (tempo real).
 export function ouvirPaginasOcultas(callback) {
+  callback = cacheado("paginas_ocultas", callback);
   return onSnapshot(REF_PAGINAS_SITE, (snap) => callback(chavesOcultas(snap.exists() ? snap.data() : null)), () => {});
 }
 
@@ -87,13 +190,15 @@ const PADRAO_FRASES = {
   lista: Array.from({ length: 30 }, () => ({ frase: "", autor: "" }))
 };
 
-export async function obterFrases() {
-  const snap = await getDoc(REF_FRASES);
-  if (!snap.exists() || !Array.isArray(snap.data().lista)) return { ...PADRAO_FRASES, lista: [...PADRAO_FRASES.lista] };
-  // garante sempre 30 posições, mesmo que o documento salvo tenha menos
-  const lista = [...snap.data().lista];
-  while (lista.length < 30) lista.push({ frase: "", autor: "" });
-  return { lista: lista.slice(0, 30) };
+export async function obterFrases(aoAtualizar) {
+  return obterCacheado("frases", async () => {
+    const snap = await getDoc(REF_FRASES);
+    if (!snap.exists() || !Array.isArray(snap.data().lista)) return { ...PADRAO_FRASES, lista: [...PADRAO_FRASES.lista] };
+    // garante sempre 30 posições, mesmo que o documento salvo tenha menos
+    const lista = [...snap.data().lista];
+    while (lista.length < 30) lista.push({ frase: "", autor: "" });
+    return { lista: lista.slice(0, 30) };
+  }, aoAtualizar);
 }
 
 export async function salvarFrases(lista) {
@@ -111,13 +216,16 @@ const PADRAO_DIAS_HORARIOS = {
   horaFimUltimoDia: "" // "HH:MM" opcional — restringe os horários do último dia (dataFim) até (antes de) esse horário
 };
 
-export async function obterDiasHorarios() {
-  const snap = await getDoc(REF_DIAS_HORARIOS);
-  if (!snap.exists()) return { ...PADRAO_DIAS_HORARIOS };
-  return { ...PADRAO_DIAS_HORARIOS, ...snap.data() };
+export async function obterDiasHorarios(aoAtualizar) {
+  return obterCacheado("dias_horarios", async () => {
+    const snap = await getDoc(REF_DIAS_HORARIOS);
+    if (!snap.exists()) return { ...PADRAO_DIAS_HORARIOS };
+    return { ...PADRAO_DIAS_HORARIOS, ...snap.data() };
+  }, aoAtualizar);
 }
 
 export function ouvirDiasHorarios(callback) {
+  callback = cacheado("dias_horarios", callback);
   return onSnapshot(REF_DIAS_HORARIOS, (snap) => {
     callback(snap.exists() ? { ...PADRAO_DIAS_HORARIOS, ...snap.data() } : { ...PADRAO_DIAS_HORARIOS });
   });
@@ -161,6 +269,7 @@ export async function listarAdministradores() {
 }
 
 export function ouvirAdministradores(callback) {
+  callback = cacheado("adm_administradores", callback);
   return onSnapshot(collection(db, COLECAO_ADMINS), (snap) => callback(snap.docs.map(contaDoSnap)));
 }
 
@@ -212,6 +321,7 @@ export async function cadastrarOuAtualizarUsuario(telefoneDigits, nome, telefone
 
 // Lista (em tempo real) todas as pessoas cadastradas, para o painel admin
 export function ouvirTodosUsuarios(callback) {
+  callback = cacheado("adm_usuarios", callback);
   return onSnapshot(collection(db, "usuarios"), (snap) => {
     const lista = snap.docs.map((d) => d.data());
     lista.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
@@ -271,6 +381,7 @@ export async function obterHorariosOcupados(data) {
 // Retorna os agendamentos já feitos numa data, com nome/telefone de quem agendou
 // (usado para mostrar "Ver detalhes" em horários ocupados na tela de agendamento)
 export function ouvirAgendamentosDaData(data, callback) {
+  callback = cacheado(`agendamentos_data_${data}`, callback);
   const q = query(
     collection(db, "agendamentos"),
     where("data", "==", data),
@@ -328,6 +439,7 @@ export async function marcarAgendamentoExtra(agendamentoId, extra) {
 }
 
 export function ouvirAgendamentosDoUsuario(telefoneDigits, callback) {
+  callback = cacheado(`agendamentos_usuario_${telefoneDigits}`, callback);
   const q = query(
     collection(db, "agendamentos"),
     where("telefoneDigits", "==", telefoneDigits)
@@ -361,6 +473,7 @@ export async function ocultarCanceladosDoUsuario(telefoneDigits) {
 }
 
 export function ouvirTodosAgendamentos(status, callback) {
+  callback = cacheado(`agendamentos_todos_${status}`, callback);
   const q = query(
     collection(db, "agendamentos"),
     where("status", "==", status)
@@ -377,12 +490,15 @@ export function ouvirTodosAgendamentos(status, callback) {
 // Configuração dos horários (doc configuracoes/intencoes). Em memória: { horariosPorDia: [7 listas],
 // horasAntes, horariosEspeciais: { "aaaa-mm-dd": [horas] } } — a leitura tolerante (formato atual e antigos)
 // fica em js/utils.js (normalizarConfigIntencoes), a mesma usada pelo servidor.
-export async function obterConfigIntencoes() {
-  const snap = await getDoc(REF_INTENCOES_CONFIG);
-  return normalizarConfigIntencoes(snap.exists() ? snap.data() : null);
+export async function obterConfigIntencoes(aoAtualizar) {
+  return obterCacheado("config_intencoes", async () => {
+    const snap = await getDoc(REF_INTENCOES_CONFIG);
+    return normalizarConfigIntencoes(snap.exists() ? snap.data() : null);
+  }, aoAtualizar);
 }
 
 export function ouvirConfigIntencoes(callback) {
+  callback = cacheado("config_intencoes", callback);
   return onSnapshot(REF_INTENCOES_CONFIG, (snap) => {
     callback(normalizarConfigIntencoes(snap.exists() ? snap.data() : null));
   });
@@ -420,12 +536,15 @@ export async function salvarHorariosEspeciais(mapa, categoriasPorMissa = {}) {
    Doc configuracoes/intencoesForm — editado no painel, lido pelo site público e pelo servidor. */
 const REF_FORM_INTENCOES = doc(db, "configuracoes", "intencoesForm");
 
-export async function obterFormularioIntencoes() {
-  const snap = await getDoc(REF_FORM_INTENCOES);
-  return normalizarFormularioIntencoes(snap.exists() ? snap.data() : null);
+export async function obterFormularioIntencoes(aoAtualizar) {
+  return obterCacheado("form_intencoes", async () => {
+    const snap = await getDoc(REF_FORM_INTENCOES);
+    return normalizarFormularioIntencoes(snap.exists() ? snap.data() : null);
+  }, aoAtualizar);
 }
 
 export function ouvirFormularioIntencoes(callback) {
+  callback = cacheado("form_intencoes", callback);
   return onSnapshot(REF_FORM_INTENCOES, (snap) => {
     callback(normalizarFormularioIntencoes(snap.exists() ? snap.data() : null));
   });
@@ -451,9 +570,11 @@ function normalizarConfigEnvio(dados) {
   };
 }
 
-export async function obterConfigEnvioIntencoes() {
-  const snap = await getDoc(REF_ENVIO_INTENCOES);
-  return normalizarConfigEnvio(snap.exists() ? snap.data() : null);
+export async function obterConfigEnvioIntencoes(aoAtualizar) {
+  return obterCacheado("adm_config_envio", async () => {
+    const snap = await getDoc(REF_ENVIO_INTENCOES);
+    return normalizarConfigEnvio(snap.exists() ? snap.data() : null);
+  }, aoAtualizar);
 }
 
 export async function salvarConfigEnvioIntencoes({ ativo, emails, enviarVazias }) {
@@ -462,6 +583,7 @@ export async function salvarConfigEnvioIntencoes({ ativo, emails, enviarVazias }
 
 // Escuta o histórico de envios registrados pelo servidor. Devolve um objeto { "aaaa-mm-dd|hora": {...} }.
 export function ouvirEnviosIntencoes(callback) {
+  callback = cacheado("adm_envios_intencoes", callback);
   const q = query(collection(db, "configuracoes"), where("status", "in", ["enviando", "enviado", "erro"]));
   return onSnapshot(q, (snap) => {
     const envios = {};
@@ -500,13 +622,22 @@ export function idRascunho(dataMissa, horaMissa, telefoneDigits) {
   return `rasc_${dataMissa}_${String(horaMissa).padStart(2, "0")}_${telefoneDigits}`;
 }
 
-export async function obterRascunho(dataMissa, horaMissa, telefoneDigits) {
-  const snap = await getDoc(doc(db, "intencoes", idRascunho(dataMissa, horaMissa, telefoneDigits)));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+const chaveRascunho = (dataMissa, horaMissa, telefoneDigits) => `rascunho_${idRascunho(dataMissa, horaMissa, telefoneDigits)}`;
+const chaveEnviadas = (dataMissa, horaMissa, telefoneDigits) => `enviadas_${dataMissa}_${horaMissa}_${telefoneDigits}`;
+
+// Devolve na hora o que estava guardado (abre a lista sem espera); aoAtualizar(novo) é chamado se o banco trouxer algo diferente.
+export async function obterRascunho(dataMissa, horaMissa, telefoneDigits, aoAtualizar) {
+  return obterCacheado(chaveRascunho(dataMissa, horaMissa, telefoneDigits), async () => {
+    const snap = await getDoc(doc(db, "intencoes", idRascunho(dataMissa, horaMissa, telefoneDigits)));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  }, aoAtualizar);
 }
 
 export async function salvarRascunho({ dataMissa, horaMissa, telefoneDigits, nome, itens, assinaturaEnviada }) {
   const ref = doc(db, "intencoes", idRascunho(dataMissa, horaMissa, telefoneDigits));
+  const chave = chaveRascunho(dataMissa, horaMissa, telefoneDigits);
+  // o cache acompanha o que a pessoa acabou de salvar (a próxima abertura da lista já vem certa)
+  gravarCacheDados(chave, { id: ref.id, tipo: "rascunho", dataMissa, horaMissa, telefoneDigits, nome: nome || "", itens, assinaturaEnviada: assinaturaEnviada || "" });
   await setDoc(ref, {
     tipo: "rascunho", dataMissa, horaMissa, telefoneDigits, nome: nome || "",
     itens, assinaturaEnviada: assinaturaEnviada || "", atualizadoEm: serverTimestamp()
@@ -514,11 +645,17 @@ export async function salvarRascunho({ dataMissa, horaMissa, telefoneDigits, nom
 }
 
 export async function excluirRascunho(dataMissa, horaMissa, telefoneDigits) {
+  gravarCacheDados(chaveRascunho(dataMissa, horaMissa, telefoneDigits), null);
   await deleteDoc(doc(db, "intencoes", idRascunho(dataMissa, horaMissa, telefoneDigits)));
 }
 
-// As intenções que ESTA pessoa já enviou para uma lista (sem contar o rascunho).
-export async function obterIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits) {
+// As intenções que ESTA pessoa já enviou para uma lista (sem contar o rascunho) — com cache (para exibir).
+export async function obterIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits, aoAtualizar) {
+  return obterCacheado(chaveEnviadas(dataMissa, horaMissa, telefoneDigits),
+    () => buscarIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits), aoAtualizar);
+}
+// Mesma consulta, sempre direto no banco (usada antes de gravar/trocar o que a pessoa enviou).
+async function buscarIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits) {
   const q = query(
     collection(db, "intencoes"),
     where("dataMissa", "==", dataMissa),
@@ -533,17 +670,21 @@ export async function obterIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telef
 // rascunho (cada item vira uma intenção separada, como sempre foi). Reenviar depois de editar
 // simplesmente atualiza a lista — enquanto ela estiver aberta.
 export async function enviarIntencoesDaPessoa({ dataMissa, horaMissa, nome, telefoneDigits, itens, assinatura }) {
-  const anteriores = await obterIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits);
+  const anteriores = await buscarIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits);
   await Promise.all(anteriores.map((it) => deleteDoc(doc(db, "intencoes", it.id))));
   await Promise.all(itens.map((it) => criarIntencao({
     dataMissa, horaMissa, categoria: it.categoria, texto: it.texto, nome, telefoneDigits,
     destaque: it.destaque === true, tempo: it.tempo || ""
   })));
   await salvarRascunho({ dataMissa, horaMissa, telefoneDigits, nome, itens, assinaturaEnviada: assinatura });
+  // guarda o que acabou de ser enviado, para a lista abrir já com tudo certo da próxima vez
+  buscarIntencoesEnviadasDaPessoa(dataMissa, horaMissa, telefoneDigits)
+    .then((lista) => gravarCacheDados(chaveEnviadas(dataMissa, horaMissa, telefoneDigits), lista)).catch(() => {});
 }
 
 // Escuta em tempo real as intenções já enviadas para uma lista específica (dataMissa + horaMissa).
 export function ouvirIntencoesDaLista(dataMissa, horaMissa, callback) {
+  callback = cacheado(`adm_intencoes_lista_${dataMissa}_${horaMissa}`, callback);
   const q = query(
     collection(db, "intencoes"),
     where("dataMissa", "==", dataMissa),
@@ -556,6 +697,7 @@ export function ouvirIntencoesDaLista(dataMissa, horaMissa, callback) {
 
 // Usado pelo painel admin: todas as intenções já enviadas, de todas as listas (agrupamento é feito na UI).
 export function ouvirTodasIntencoes(callback) {
+  callback = cacheado("adm_intencoes_todas", callback);
   return onSnapshot(collection(db, "intencoes"), (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((it) => !ehRascunho(it)));
   });
@@ -566,6 +708,7 @@ export function ouvirTodasIntencoes(callback) {
 // Cada documento de "contatosCrm" guarda o que o painel anota sobre uma pessoa: { notas, etiquetas[] }.
 // O id é o telefone (só dígitos) da pessoa. Nada daqui aparece no site público.
 export function ouvirContatosCrm(callback) {
+  callback = cacheado("adm_contatos_crm", callback);
   return onSnapshot(collection(db, "contatosCrm"), (snap) => {
     const mapa = {};
     snap.docs.forEach((d) => { mapa[d.id] = d.data(); });
@@ -629,6 +772,7 @@ function ordemEfetiva(aviso) {
 // Lista (em tempo real) todos os avisos, na ordem manual (ou mais recentes primeiro, por
 // padrão) — para o site público e o painel admin.
 export function ouvirAvisos(callback) {
+  callback = cacheado("avisos", callback);
   return onSnapshot(collection(db, "avisos"), (snap) => {
     const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     lista.sort((a, b) => ordemEfetiva(a) - ordemEfetiva(b));
@@ -675,6 +819,7 @@ export async function excluirAviso(id) {
 // painel admin (botões "subir"/"descer") — usada tanto pelo carrossel público quanto
 // pela lista de gerenciamento em Configurações.
 export function ouvirBanners(callback) {
+  callback = cacheado("banners", callback);
   return onSnapshot(collection(db, "banners"), (snap) => {
     const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     lista.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
@@ -722,6 +867,7 @@ export async function excluirBanner(id) {
 
 // Lista (em tempo real) de cursos, na ordem em que o administrador os organizou (os mais novos por último).
 export function ouvirCursos(callback, aoErro) {
+  callback = cacheado("cursos", callback);
   return onSnapshot(collection(db, "cursos"), (snap) => {
     const lista = snap.docs.map((d) => ({ ...normalizarCurso(d.id, d.data()), criadoEmMs: d.data().criadoEmMs || 0 }));
     lista.sort((a, b) => (a.ordem - b.ordem) || (a.criadoEmMs - b.criadoEmMs));
@@ -790,6 +936,7 @@ export async function excluirInscricao(id) {
 
 // Painel: todas as inscrições de todos os cursos (agrupadas na tela)
 export function ouvirTodasInscricoes(callback) {
+  callback = cacheado("adm_inscricoes", callback);
   return onSnapshot(collection(db, "inscricoes"), (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   }, aoFalharLeitura("inscricoes"));
@@ -797,6 +944,7 @@ export function ouvirTodasInscricoes(callback) {
 
 // Avisos de um curso (quadro de avisos): do mais novo para o mais antigo
 export function ouvirAvisosDoCurso(cursoId, callback) {
+  callback = cacheado(`avisos_curso_${cursoId}`, callback);
   return onSnapshot(query(collection(db, "avisosCursos"), where("cursoId", "==", cursoId)), (snap) => {
     const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     lista.sort((a, b) => (b.criadoEmMs || 0) - (a.criadoEmMs || 0));
@@ -804,6 +952,7 @@ export function ouvirAvisosDoCurso(cursoId, callback) {
   }, aoFalharLeitura("avisosCursos"));
 }
 export function ouvirTodosAvisosDosCursos(callback) {
+  callback = cacheado("adm_avisos_cursos", callback);
   return onSnapshot(collection(db, "avisosCursos"), (snap) => {
     const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     lista.sort((a, b) => (b.criadoEmMs || 0) - (a.criadoEmMs || 0));

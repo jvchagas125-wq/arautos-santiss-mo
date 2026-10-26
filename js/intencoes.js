@@ -6,7 +6,7 @@ import {
   dividirNomes, ANIVERSARIO_OPCOES, textoDeAniversario, categoriasPermitidasDaMissa
 } from "./utils.js";
 import {
-  obterConfiguracoesGerais, ouvirConfigIntencoes, ouvirFormularioIntencoes,
+  ouvirConfiguracoesGerais, ouvirConfigIntencoes, ouvirFormularioIntencoes,
   obterRascunho, salvarRascunho, excluirRascunho, obterIntencoesEnviadasDaPessoa,
   enviarIntencoesDaPessoa, limparRascunhosVencidos
 } from "./dados.js";
@@ -16,7 +16,7 @@ inicializarNavegacao("intencoes");
 // guarda o nome de quem enviou (ver dados.js), pra aparecer no documento extraído pelo padre.
 const usuarioPromise = exigirCadastro();
 
-obterConfiguracoesGerais().then((config) => {
+ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
   aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
 });
@@ -290,40 +290,60 @@ async function abrirListaDe(hora) {
   el("listaTitulo").textContent = `Missa das ${formatarHoraSimples(hora)}`;
   el("listaSubtitulo").textContent = formatarDataComDiaSemana(iso);
   el("listaEntradas").innerHTML = "";
-  el("editorIntencao").innerHTML = `<p class="categoria-intencao__vazio">Carregando suas intenções...</p>`;
+  // só aparece (com atraso) se a lista precisar mesmo esperar a rede — a partir da 2ª vez abre direto
+  el("editorIntencao").innerHTML = '<div class="skeleton-aviso"><div class="skeleton-linha"></div><div class="skeleton-linha"></div><div class="skeleton-linha"></div></div>';
   fecharSemAnimacao(modalEscolherLista);
   abrir(modalLista);
 
-  try {
-    const [rascunho, enviadas] = await Promise.all([
-      obterRascunho(iso, hora, usuarioAtual.telefoneDigits),
-      obterIntencoesEnviadasDaPessoa(iso, hora, usuarioAtual.telefoneDigits)
-    ]);
-    if (!lista || lista.iso !== iso || lista.hora !== hora) return; // trocou de lista enquanto carregava
+  // Rascunho e intenções já enviadas vêm do aparelho NA HORA (da última vez) e o banco confirma em seguida.
+  // Se o banco trouxer algo diferente enquanto a pessoa ainda não mexeu em nada, a tela se atualiza sozinha.
+  const minha = lista;
+  let rascunho = null, enviadas = [];
+  const montarItens = () => {
     if (rascunho && Array.isArray(rascunho.itens)) {
-      lista.itens = rascunho.itens
+      minha.itens = rascunho.itens
         .filter((i) => i && typeof i === "object")
         .map((i) => ({
           id: i.id || novoId(), categoria: i.categoria, nome: String(i.nome || i.texto || ""), tempo: i.tempo || "",
           texto: String(i.texto || i.nome || ""), destaque: i.destaque === true
         }));
-      lista.assinaturaEnviada = rascunho.assinaturaEnviada || "";
+      minha.assinaturaEnviada = rascunho.assinaturaEnviada || "";
     } else {
-      lista.itens = itensDeEnviadas(enviadas);
-      lista.assinaturaEnviada = assinaturaDe(lista.itens);
+      minha.itens = itensDeEnviadas(enviadas);
+      minha.assinaturaEnviada = assinaturaDe(minha.itens);
     }
+  };
+  const pessoaJaMexeu = () => minha.mexeu || (minha.editor && (minha.editor.valor || minha.editor.valor2 || minha.editor.anos));
+  const desenhar = () => {
+    if (descartarCategoriasNaoLiberadas()) {
+      alterouLista();
+      mostrarToast("Algumas intenções foram retiradas: esta missa aceita só algumas categorias.");
+    }
+    // missa que aceita uma categoria só: já abre nela, sem pedir pra escolher
+    const unica = configAtual && categoriasPermitidasDaMissa(configAtual, lista.iso, lista.hora) ? categoriasDaLista() : [];
+    if (unica.length === 1 && !lista.editor.categoria) lista.editor = { ...editorVazio(), categoria: unica[0].chave };
+    renderizarLista();
+  };
+  const tel = usuarioAtual.telefoneDigits;
+  const aindaEstaLista = () => lista === minha;
+  try {
+    [rascunho, enviadas] = await Promise.all([
+      obterRascunho(iso, hora, tel, (novo) => {
+        if (!aindaEstaLista() || pessoaJaMexeu()) return;
+        rascunho = novo; montarItens(); desenhar();
+      }),
+      obterIntencoesEnviadasDaPessoa(iso, hora, tel, (novo) => {
+        if (!aindaEstaLista() || pessoaJaMexeu()) return;
+        enviadas = novo; montarItens(); desenhar();
+      })
+    ]);
+    if (!aindaEstaLista()) return; // trocou de lista enquanto carregava
+    montarItens();
   } catch (err) {
     console.error(err);
     mostrarToast("Não foi possível carregar suas intenções. Verifique sua conexão.");
   }
-  if (descartarCategoriasNaoLiberadas()) {
-    alterouLista();
-    mostrarToast("Algumas intenções foram retiradas: esta missa aceita só algumas categorias.");
-  }
-  // missa que aceita uma categoria só: já abre nela, sem pedir pra escolher
-  const unica = configAtual && categoriasPermitidasDaMissa(configAtual, lista.iso, lista.hora) ? categoriasDaLista() : [];
-  if (unica.length === 1 && !lista.editor.categoria) lista.editor = { ...editorVazio(), categoria: unica[0].chave };
-  renderizarLista();
+  desenhar();
 }
 
 function editorVazio() {
@@ -451,6 +471,7 @@ function criarLinhaItem(item) {
 }
 
 function alterouLista() {
+  if (lista) lista.mexeu = true; // a pessoa já mexeu: atualizações vindas do banco não passam por cima do que ela fez
   renderizarEntradas();
   atualizarSelo();
   agendarSalvamento();

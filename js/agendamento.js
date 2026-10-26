@@ -3,7 +3,7 @@ import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirMod
   isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso,
   horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana, reduzirNomeParaExibicao,
   MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
-import { obterConfiguracoesGerais, obterDiasHorarios, ouvirAgendamentosDaData, ouvirTodosAgendamentos, criarAgendamento } from "./dados.js";
+import { ouvirConfiguracoesGerais, ouvirDiasHorarios, ouvirAgendamentosDaData, ouvirTodosAgendamentos, criarAgendamento } from "./dados.js";
 
 inicializarNavegacao("agendamento");
 
@@ -48,38 +48,77 @@ const calGrandeVazia = document.getElementById("calGrandeVazia");
 // quando os dados realmente terminam de carregar. Isso evita o bug de, no celular, tocar no
 // campo rápido demais (antes da configuração chegar) e ver o calendário abrir vazio, sem os
 // dias nem o mês/ano preenchidos.
+// Os dias e horários vêm em tempo real e já aparecem na hora (da última visita): se o administrador
+// mudar o período ou os horários com a página aberta, o calendário e a grade se atualizam sozinhos.
+let pararEscutaDiasHorarios = null;
+let pararEscutaConfig = null;
+let assinaturaDiasHorarios = "";
+let temporizadorErroPeriodo = null;
+
+function aplicarDiasHorarios(dh) {
+  clearTimeout(temporizadorErroPeriodo);
+  erroCarregarPeriodo.classList.add("oculto");
+  const assinatura = JSON.stringify(dh);
+  if (assinatura === assinaturaDiasHorarios) return; // nada mudou: não redesenha à toa
+  assinaturaDiasHorarios = assinatura;
+  diasHorarios = dh;
+
+  if (!diasHorarios.dataInicio || !diasHorarios.dataFim) {
+    avisoSemPeriodo.classList.remove("oculto");
+    dataInput.disabled = true;
+    iniciarCalendarioAgendamentos(); // mostra a mensagem de "sem período" também no calendário
+    return;
+  }
+  avisoSemPeriodo.classList.add("oculto");
+
+  // Abre no mês de início do período, mas nunca antes do mês atual (senão a pessoa cairia
+  // num mês inteiramente bloqueado por dias já passados). Se já estava navegando, mantém o mês.
+  if (!mesAtual) {
+    const hoje = isoParaData(hojeIso());
+    const inicioPeriodo = isoParaData(diasHorarios.dataInicio);
+    const mesInicial = inicioPeriodo > hoje ? inicioPeriodo : hoje;
+    mesAtual = new Date(mesInicial.getFullYear(), mesInicial.getMonth(), 1);
+  }
+  renderizarCalendario();
+  dataInput.disabled = false;
+  iniciarCalendarioAgendamentos();
+
+  // a data escolhida deixou de valer (período/dia mudou)? limpa; senão só atualiza os horários
+  if (dataSelecionada) {
+    if (!dataDentroDoPeriodo(dataSelecionada)) {
+      dataSelecionada = null; horaSelecionada = null;
+      dataInput.value = "";
+      painelHorarios.style.display = "none";
+      btnConfirmarAgendamento.disabled = true;
+      if (pararEscutaHorarios) { pararEscutaHorarios(); pararEscutaHorarios = null; }
+    } else {
+      renderizarHorarios();
+    }
+  }
+}
+
+// O campo de data começa desabilitado (veja o atributo "disabled" no HTML) — só é liberado
+// quando a configuração chega. Isso evita tocar no campo antes da hora e ver o calendário vazio.
 async function iniciar() {
   avisoSemPeriodo.classList.add("oculto");
   erroCarregarPeriodo.classList.add("oculto");
   dataInput.disabled = true;
 
   if (pararEscutaTodosAgendamentos) { pararEscutaTodosAgendamentos(); pararEscutaTodosAgendamentos = null; }
+  if (pararEscutaDiasHorarios) { pararEscutaDiasHorarios(); pararEscutaDiasHorarios = null; }
+  if (pararEscutaConfig) { pararEscutaConfig(); pararEscutaConfig = null; }
+  assinaturaDiasHorarios = "";
 
   try {
     usuario = await exigirCadastro();
-
-    const config = await comLimiteDeTempo(obterConfiguracoesGerais());
-    aplicarLogo(config.logoUrl);
-    aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
-
-    diasHorarios = await comLimiteDeTempo(obterDiasHorarios());
-
-    if (!diasHorarios.dataInicio || !diasHorarios.dataFim) {
-      avisoSemPeriodo.classList.remove("oculto");
-      iniciarCalendarioAgendamentos(); // mostra a mensagem de "sem período" também no calendário
-      return;
-    }
-
-    // Abre no mês de início do período, mas nunca antes do mês atual (senão a pessoa cairia
-    // num mês inteiramente bloqueado por dias já passados).
-    const hoje = isoParaData(hojeIso());
-    const inicioPeriodo = isoParaData(diasHorarios.dataInicio);
-    const mesInicial = inicioPeriodo > hoje ? inicioPeriodo : hoje;
-    mesAtual = new Date(mesInicial.getFullYear(), mesInicial.getMonth(), 1);
-    renderizarCalendario();
-    dataInput.disabled = false;
-
-    iniciarCalendarioAgendamentos();
+    pararEscutaConfig = ouvirConfiguracoesGerais((config) => {
+      aplicarLogo(config.logoUrl);
+      aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
+    });
+    // se nem do cache nem da rede vier nada em um tempo razoável, oferece tentar de novo
+    clearTimeout(temporizadorErroPeriodo);
+    temporizadorErroPeriodo = setTimeout(() => { if (!diasHorarios) erroCarregarPeriodo.classList.remove("oculto"); }, 15000);
+    pararEscutaDiasHorarios = ouvirDiasHorarios(aplicarDiasHorarios);
   } catch (err) {
     console.error("Erro ao carregar dados de agendamento:", err);
     erroCarregarPeriodo.classList.remove("oculto");
@@ -359,8 +398,13 @@ function selecionarData(iso) {
   renderizarCalendario();
 
   painelHorarios.style.display = "";
-  gradeHorarios.innerHTML = '<div class="spinner"></div>';
   semHorarios.classList.add("oculto");
+  // os horários aparecem NA HORA: já sabemos quem agendou (a grade da semana escuta todos os agendamentos)
+  // e a escuta desta data só confirma/atualiza em seguida
+  horariosOcupados = todosAgendamentosAtivos
+    .filter((a) => a.data === iso)
+    .map((a) => ({ hora: a.hora, nome: a.nome, telefone: a.telefone, telefoneDigits: a.telefoneDigits }));
+  renderizarHorarios();
 
   if (pararEscutaHorarios) pararEscutaHorarios();
   pararEscutaHorarios = ouvirAgendamentosDaData(iso, (ocupados) => {

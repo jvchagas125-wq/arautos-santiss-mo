@@ -21,7 +21,7 @@ import {
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
 import {
-  listarAdministradores, ouvirAdministradores, ouvirAdministrador, obterAdministrador,
+  limparCacheDoPainel, listarAdministradores, ouvirAdministradores, ouvirAdministrador, obterAdministrador,
   criarAdministrador, atualizarAdministrador, excluirAdministrador, removerSenhaAntigaDoPainel
 } from "./dados.js";
 import { criarCredenciais, conferirSenha, chaveConfere, TAMANHO_MINIMO_SENHA } from "./contas.js";
@@ -50,7 +50,20 @@ function salvarSessao(id, chave) {
   try { localStorage.setItem(CHAVE_SESSAO_LOCAL, JSON.stringify({ id, chave })); } catch { /* sem armazenamento */ }
 }
 function limparSessao() {
-  try { localStorage.removeItem(CHAVE_SESSAO_LOCAL); } catch { /* sem armazenamento */ }
+  try { localStorage.removeItem(CHAVE_SESSAO_LOCAL); localStorage.removeItem(CHAVE_CONTA_CACHE); } catch { /* sem armazenamento */ }
+  limparCacheDoPainel(); // o que era só do painel (contatos, intenções...) não fica guardado depois de sair
+}
+// A conta de quem está logado também fica guardada no aparelho: ao reabrir o painel ele entra NA HORA e a
+// conexão em tempo real confirma a conta em seguida (se foi suspensa/excluída/senha trocada, sai na hora).
+const CHAVE_CONTA_CACHE = "arautos_admin_conta_cache";
+function salvarContaEmCache(conta) {
+  try { localStorage.setItem(CHAVE_CONTA_CACHE, JSON.stringify(conta)); } catch { /* sem armazenamento */ }
+}
+function lerContaEmCache(id) {
+  try {
+    const c = JSON.parse(localStorage.getItem(CHAVE_CONTA_CACHE) || "null");
+    return c && c.id === id ? c : null;
+  } catch { return null; }
 }
 
 const telaLoginAdmin = document.getElementById("telaLoginAdmin");
@@ -83,6 +96,7 @@ function trocarVisaoLogin(visao) {
 // Se ainda não existe nenhuma conta, a primeira que for criada vira o administrador principal.
 let semContasAinda = false;
 async function prepararTelaLogin() {
+  document.documentElement.classList.remove("com-sessao"); // mostra o formulário de entrada
   try {
     const msg = sessionStorage.getItem(CHAVE_AVISO_LOGIN);
     if (msg) { mostrarAvisoLogin(msg); sessionStorage.removeItem(CHAVE_AVISO_LOGIN); }
@@ -111,6 +125,7 @@ function entrarNoPainel(conta, chave) {
   contaAtual = conta;
   chaveSessao = chave;
   salvarSessao(conta.id, chave);
+  salvarContaEmCache(conta);
   telaLoginAdmin.classList.add("oculto");
   iniciarPainel();
   aplicarPermissoes();
@@ -124,13 +139,17 @@ function entrarNoPainel(conta, chave) {
     if (!c.principal && c.status !== "aprovado") { sairDoPainel("O seu acesso foi suspenso pelo administrador."); return; }
     if (!(await chaveConfere(chaveSessao, c))) { sairDoPainel("A senha foi alterada. Entre de novo com a nova senha."); return; }
     contaAtual = c;
+    salvarContaEmCache(c);
     aplicarPermissoes();
   });
 }
 
 async function tentarLoginAutomatico() {
+  await Promise.resolve(); // deixa o resto do arquivo terminar de carregar antes de abrir o painel
   const sessao = lerSessao();
   if (!sessao || !sessao.id || !sessao.chave) { prepararTelaLogin(); return; }
+  const contaGuardada = lerContaEmCache(sessao.id);
+  if (contaGuardada) { entrarNoPainel(contaGuardada, sessao.chave); return; } // entra na hora; o ouvinte da conta confirma
   try {
     const conta = await obterAdministrador(sessao.id);
     const valida = conta && (conta.principal || conta.status === "aprovado") && (await chaveConfere(sessao.chave, conta));
@@ -408,14 +427,16 @@ function configurarFrase() {
   const camposTexto = () => Array.from(lista.querySelectorAll(".campo-frase-texto"));
   const camposAutor = () => Array.from(lista.querySelectorAll(".campo-frase-autor"));
 
-  obterFrases().then((dados) => {
+  // preenche na hora com o que estava guardado e, se o banco trouxer algo diferente, atualiza os campos
+  const preencherFrases = (dados) => {
     const textos = camposTexto();
     const autores = camposAutor();
     dados.lista.forEach((item, i) => {
       if (textos[i]) textos[i].value = item?.frase || "";
       if (autores[i]) autores[i].value = item?.autor || "";
     });
-  });
+  };
+  obterFrases(preencherFrases).then(preencherFrases);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -479,7 +500,7 @@ function configurarHorarios() {
     cb.addEventListener("change", () => cb.closest("label").classList.toggle("marcado", cb.checked));
   });
 
-  obterDiasHorarios().then((dh) => {
+  const preencherDiasHorarios = (dh) => {
     calInicio.definirValor(dh.dataInicio || null);
     calFim.definirValor(dh.dataFim || null);
     const ativos = new Set(dh.horariosAtivos || []);
@@ -491,7 +512,8 @@ function configurarHorarios() {
     aplicarEstadoSomenteEsseDia(campoSomenteEsseDia.checked);
     seletorHoraInicio.definirValor(dh.horaInicioPrimeiroDia || "");
     seletorHoraFim.definirValor(dh.horaFimUltimoDia || "");
-  });
+  };
+  obterDiasHorarios(preencherDiasHorarios).then(preencherDiasHorarios);
 
   document.getElementById("btnMarcarTodos").addEventListener("click", () => {
     checkboxes().forEach((cb) => { cb.checked = true; cb.closest("label").classList.add("marcado"); });
@@ -942,10 +964,11 @@ function configurarIntencoes() {
       .filter((cb) => cb.checked).map((cb) => Number(cb.value));
   }
 
-  obterConfigIntencoes().then((config) => {
+  const preencherHorariosMissas = (config) => {
     for (let d = 0; d < 7; d++) marcarHoras(d, config.horariosPorDia[d]);
     campoHorasAntes.value = config.horasAntes;
-  });
+  };
+  obterConfigIntencoes(preencherHorariosMissas).then(preencherHorariosMissas);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1933,12 +1956,13 @@ function configurarIntencoes() {
     return todosValidos ? emails : null;
   }
 
-  obterConfigEnvioIntencoes().then((cfg) => {
+  const preencherEnvio = (cfg) => {
     envioAtivo.checked = cfg.ativo;
     envioVazias.checked = cfg.enviarVazias;
     envioListaEmails.innerHTML = "";
     (cfg.emails.length ? cfg.emails : [""]).forEach((e) => criarLinhaEmail(e));
-  }).catch((err) => {
+  };
+  obterConfigEnvioIntencoes(preencherEnvio).then(preencherEnvio).catch((err) => {
     console.error(err);
     criarLinhaEmail();
   });
@@ -2893,7 +2917,7 @@ function configurarInfoContato() {
     corpoInfoContato.classList.toggle("oculto");
   });
 
-  obterConfiguracoesGerais().then((config) => {
+  const preencherContato = (config) => {
     campoTelefoneTexto.value = config.contatoTelefoneTexto || "";
     campoTelefoneDigits.value = config.contatoTelefoneDigits || "";
     campoEnderecoTexto.value = config.contatoEnderecoTexto || "";
@@ -2901,7 +2925,8 @@ function configurarInfoContato() {
     campoEnderecoLink.value = config.contatoEnderecoLink || "";
     campoInstagramTexto.value = config.contatoInstagramTexto || "";
     campoInstagramLink.value = config.contatoInstagramLink || "";
-  }).catch((err) => console.error(err));
+  };
+  obterConfiguracoesGerais(preencherContato).then(preencherContato).catch((err) => console.error(err));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -3535,7 +3560,12 @@ function configurarConfiguracoes() {
     try { return await enviarImagemParaCloudinary(await dataUrlParaArquivo(dataUrl, nome)); }
     catch (err) { console.warn("Cloudinary indisponível, mantendo a imagem no banco:", err); return dataUrl; }
   };
-  obterConfiguracoesGerais().then(async (config) => {
+  obterConfiguracoesGerais((nova) => {
+    // o banco trouxe imagens diferentes das guardadas no aparelho: só atualiza as prévias
+    if (nova.logoUrl) previewLogo.src = nova.logoUrl;
+    if (nova.fundoUrl) previewFundo.src = nova.fundoUrl;
+    mostrarFundoPc(nova.fundoPcUrl || "");
+  }).then(async (config) => {
     if (config.logoUrl) previewLogo.src = config.logoUrl;
     if (config.fundoUrl) previewFundo.src = config.fundoUrl;
     mostrarFundoPc(config.fundoPcUrl || "");

@@ -1,6 +1,6 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, normalizarFormularioIntencoes } from "./utils.js";
-import { obterConfiguracoesGerais, obterFormularioIntencoes } from "./dados.js";
+import { ouvirConfiguracoesGerais, ouvirFormularioIntencoes } from "./dados.js";
 
 inicializarNavegacao("contatos");
 
@@ -8,12 +8,10 @@ exigirCadastro().then(() => {
   // usuário identificado — nada mais a fazer aqui, a navegação já foi liberada
 });
 
-obterConfiguracoesGerais().then((config) => {
+ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
   aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
   aplicarInformacoesDeContato(config);
-}).catch((err) => {
-  console.error("Erro ao carregar configurações:", err);
 });
 
 function aplicarInformacoesDeContato(config) {
@@ -73,10 +71,10 @@ try {
   if (bruto) aplicarPix(normalizarFormularioIntencoes({ pix: JSON.parse(bruto) }).pix);
 } catch { /* sem cache: espera a rede */ }
 
-obterFormularioIntencoes().then((f) => {
+ouvirFormularioIntencoes((f) => {
   try { localStorage.setItem(CHAVE_CACHE_PIX, JSON.stringify(f.pix)); } catch { /* ignora */ }
   aplicarPix(f.pix);
-}).catch((err) => console.error("Erro ao carregar o PIX:", err));
+});
 
 let temporizadorCopiado = null;
 function marcarPixCopiado() {

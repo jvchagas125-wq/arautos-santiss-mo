@@ -1,11 +1,11 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, linkificarTexto, definirSrcOtimizado } from "./utils.js";
-import { obterConfiguracoesGerais, ouvirAvisos } from "./dados.js";
+import { ouvirConfiguracoesGerais, ouvirAvisos } from "./dados.js";
 
 inicializarNavegacao("avisos");
 exigirCadastro();
 
-obterConfiguracoesGerais().then((config) => {
+ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
   aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
 });

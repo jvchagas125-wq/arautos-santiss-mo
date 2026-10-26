@@ -1,7 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarHora } from "./utils.js";
-import { obterConfiguracoesGerais, ouvirAgendamentosDoUsuario, cancelarAgendamento, ocultarCanceladosDoUsuario } from "./dados.js";
+import { ouvirConfiguracoesGerais, ouvirAgendamentosDoUsuario, cancelarAgendamento, ocultarCanceladosDoUsuario } from "./dados.js";
 
 inicializarNavegacao("meus-agendamentos");
 
@@ -138,11 +138,11 @@ async function iniciar() {
   const usuario = await exigirCadastro();
   usuarioAtual = usuario;
 
-  const config = await obterConfiguracoesGerais();
-  aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
-
-  ouvirAgendamentosDoUsuario(usuario.telefoneDigits, renderizarLista);
+  ouvirAgendamentosDoUsuario(usuario.telefoneDigits, renderizarLista); // aparece na hora, sem esperar a configuração
+  ouvirConfiguracoesGerais((config) => {
+    aplicarLogo(config.logoUrl);
+    aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
+  });
 }
 
 iniciar();

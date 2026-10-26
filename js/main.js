@@ -1,6 +1,6 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia, comLimiteDeTempo, definirSrcOtimizado } from "./utils.js";
-import { obterConfiguracoesGerais, obterFrases, ouvirBanners } from "./dados.js";
+import { ouvirConfiguracoesGerais, obterFrases, ouvirBanners } from "./dados.js";
 
 inicializarNavegacao("index");
 
@@ -8,10 +8,11 @@ exigirCadastro().then(() => {
   // usuário identificado — nada mais a fazer aqui, a navegação já foi liberada
 });
 
-obterConfiguracoesGerais().then((config) => {
+// logo e fundo: aparecem na hora (do último acesso) e acompanham o painel em tempo real
+ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
   aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
-}).catch((err) => console.error("Erro ao carregar configurações:", err));
+});
 
 const FRASE_PADRAO = {
   frase: "Não omitais nunca a visita a cada dia ao Santíssimo Sacramento, ainda que seja muito breve, mas contanto que seja constante.",

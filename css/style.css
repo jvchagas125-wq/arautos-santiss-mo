@@ -1053,6 +1053,10 @@ img{ max-width: 100%; display:block; }
 }
 @keyframes brilho-skeleton{ from{ background-position: 140% 0; } to{ background-position: -40% 0; } }
 
+/* os "esqueletos" só aparecem se o conteúdo demorar mais que um instante: com os dados guardados no aparelho
+   (js/dados.js) o conteúdo real chega antes e o esqueleto nem chega a ser visto */
+@keyframes skeleton-aparece{ from{ opacity:0; } to{ opacity:1; } }
+.skeleton-aviso, .skeleton-agendamento, .skeleton-frase{ animation: skeleton-aparece .25s ease .3s both; }
 .skeleton-aviso{
   width:100%; border:1.5px solid rgba(157,122,31,.18); border-radius:14px; overflow:hidden;
   margin-bottom:18px; background:#fffefb; padding:16px 18px;

@@ -12,6 +12,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" media="print" onload="this.media='all'" />
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" /></noscript>
+<script>try{if(localStorage.getItem("arautos_admin_sessao"))document.documentElement.classList.add("com-sessao");}catch(e){}</script>
+<style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
 <link rel="stylesheet" href="css/admin.css?v=75" />
 </head>
@@ -591,7 +593,7 @@
           <div class="acoes-lista">
             <button type="button" class="btn btn-contorno btn-pequeno" id="btnLimparCanceladosAdmin">Limpar cancelados</button>
           </div>
-          <div id="listaCancelados" class="lista-agendamentos"><div class="spinner"></div></div>
+          <div id="listaCancelados" class="lista-agendamentos"><div class="skeleton-aviso"><div class="skeleton-linha"></div><div class="skeleton-linha"></div><div class="skeleton-linha"></div></div></div>
         </div>
       </section>
 
@@ -729,7 +731,7 @@
             <div class="campo" style="margin-bottom:6px;">
               <input type="text" id="buscaContatos" placeholder="Buscar por nome ou telefone..." autocomplete="off" />
             </div>
-            <div id="listaContatos" class="lista-agendamentos"><div class="spinner"></div></div>
+            <div id="listaContatos" class="lista-agendamentos"><div class="skeleton-aviso"><div class="skeleton-linha"></div><div class="skeleton-linha"></div><div class="skeleton-linha"></div></div></div>
           </div>
         </div>
       </section>

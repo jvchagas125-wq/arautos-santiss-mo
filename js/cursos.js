@@ -6,7 +6,7 @@ import {
   aplicarMascaraTelefone, formatarDataBR, obterUsuarioSessao, criarCampoData, hojeIso
 } from "./utils.js";
 import {
-  obterConfiguracoesGerais, ouvirCursos, inscricoesDaPessoa, salvarInscricao, excluirInscricao, ouvirAvisosDoCurso
+  ouvirConfiguracoesGerais, ouvirCursos, inscricoesDaPessoa, salvarInscricao, excluirInscricao, ouvirAvisosDoCurso
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, perguntaVisivel, opcoesDaPergunta, validarInscricao, montarInscricao, mascaraCpf,
@@ -15,10 +15,10 @@ import {
 
 inicializarNavegacao("cursos");
 
-obterConfiguracoesGerais().then((config) => {
+ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
   aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
-}).catch((err) => console.error("Erro ao carregar configurações:", err));
+});
 
 const lista = document.getElementById("listaCursos");
 const avisoSemCursos = document.getElementById("avisoSemCursos");
@@ -356,7 +356,7 @@ function renderizar() {
   });
   cartoes.forEach((c, id) => { if (!vivos.has(id)) { c.el.remove(); cartoes.delete(id); abertos.delete(id); } });
   // mantém a ordem do painel
-  lista.querySelector(".spinner")?.remove();
+  lista.querySelectorAll(".skeleton-aviso").forEach((e) => e.remove());
   ativos.forEach((curso) => lista.appendChild(cartoes.get(curso.id).el));
 }
 
@@ -390,7 +390,7 @@ ouvirCursos((cursos) => {
 }, () => {
   // o banco recusou ou falhou: sai do "carregando" em vez de ficar girando para sempre
   if (recebeuCursos || emCache) return;
-  lista.querySelector(".spinner")?.remove();
+  lista.querySelectorAll(".skeleton-aviso").forEach((e) => e.remove());
   if (!lista.querySelector(".curso-erro")) lista.appendChild(criar("p", "mensagem-vazia curso-erro", "Não foi possível carregar os cursos agora. Verifique a conexão e tente de novo."));
 });
 
