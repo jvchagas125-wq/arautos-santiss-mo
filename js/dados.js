@@ -720,12 +720,12 @@ export async function excluirBanner(id) {
 // avisosCursos/{id}: quadro de avisos de cada curso.
 
 // Lista (em tempo real) de cursos, na ordem em que o administrador os organizou (os mais novos por último).
-export function ouvirCursos(callback) {
+export function ouvirCursos(callback, aoErro) {
   return onSnapshot(collection(db, "cursos"), (snap) => {
     const lista = snap.docs.map((d) => ({ ...normalizarCurso(d.id, d.data()), criadoEmMs: d.data().criadoEmMs || 0 }));
     lista.sort((a, b) => (a.ordem - b.ordem) || (a.criadoEmMs - b.criadoEmMs));
     callback(lista);
-  }, aoFalharLeitura("cursos"));
+  }, (erro) => { aoFalharLeitura("cursos")(erro); if (aoErro) aoErro(erro); });
 }
 
 export async function salvarCurso(id, dados) {

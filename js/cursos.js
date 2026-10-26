@@ -3,7 +3,7 @@
 import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, linkificarTexto, definirSrcOtimizado,
-  aplicarMascaraTelefone, formatarDataBR
+  aplicarMascaraTelefone, formatarDataBR, obterUsuarioSessao
 } from "./utils.js";
 import {
   obterConfiguracoesGerais, ouvirCursos, inscricoesDaPessoa, salvarInscricao, excluirInscricao, ouvirAvisosDoCurso
@@ -23,7 +23,7 @@ obterConfiguracoesGerais().then((config) => {
 const lista = document.getElementById("listaCursos");
 const avisoSemCursos = document.getElementById("avisoSemCursos");
 
-let usuario = null;
+let usuario = obterUsuarioSessao() || {}; // vale já na abertura (identificação guardada no aparelho)
 const minhasInscricoes = new Map(); // cursoId -> inscrição
 const abertos = new Set();           // cursos que a pessoa abriu
 const cartoes = new Map();           // cursoId -> { el, assinatura, atualizar() }
@@ -344,7 +344,7 @@ function renderizar() {
   const vivos = new Set();
   ativos.forEach((curso) => {
     vivos.add(curso.id);
-    const assinatura = JSON.stringify(curso);
+    const assinatura = JSON.stringify(curso) + (minhasInscricoes.has(curso.id) ? "|inscrito" : "");
     let c = cartoes.get(curso.id);
     if (c && c.assinatura === assinatura) return;
     const el = criarCartao(curso);
@@ -357,10 +357,44 @@ function renderizar() {
   ativos.forEach((curso) => lista.appendChild(cartoes.get(curso.id).el));
 }
 
-(async () => {
-  usuario = await exigirCadastro();
+/* ---------- Carregamento instantâneo ----------
+   A lista de cursos fica guardada neste aparelho: ao abrir a página ela já aparece na hora e o banco só
+   confirma/atualiza em tempo real logo em seguida. Tudo (cursos, minhas inscrições e identificação)
+   carrega ao mesmo tempo, sem um esperar o outro. */
+const CHAVE_CACHE_CURSOS = "arautos_cursos_cache";
+function lerCursosEmCache() {
   try {
-    (await inscricoesDaPessoa(usuario.telefoneDigits)).forEach((i) => minhasInscricoes.set(i.cursoId, i));
+    const lista = JSON.parse(localStorage.getItem(CHAVE_CACHE_CURSOS) || "null");
+    return Array.isArray(lista) ? lista : null;
+  } catch { return null; }
+}
+function guardarCursosEmCache(cursos) {
+  try {
+    // só o que o site público mostra (cursos abertos)
+    localStorage.setItem(CHAVE_CACHE_CURSOS, JSON.stringify(cursos.filter((c) => c.ativo && c.nome)));
+  } catch { /* sem armazenamento: só perde a otimização */ }
+}
+
+const emCache = lerCursosEmCache();
+if (emCache) { ultimosCursos = emCache; renderizar(); }
+
+let recebeuCursos = false;
+ouvirCursos((cursos) => {
+  recebeuCursos = true;
+  ultimosCursos = cursos;
+  guardarCursosEmCache(cursos);
+  renderizar();
+}, () => {
+  // o banco recusou ou falhou: sai do "carregando" em vez de ficar girando para sempre
+  if (recebeuCursos || emCache) return;
+  lista.querySelector(".spinner")?.remove();
+  if (!lista.querySelector(".curso-erro")) lista.appendChild(criar("p", "mensagem-vazia curso-erro", "Não foi possível carregar os cursos agora. Verifique a conexão e tente de novo."));
+});
+
+exigirCadastro().then(async (u) => {
+  usuario = u;
+  try {
+    (await inscricoesDaPessoa(u.telefoneDigits)).forEach((i) => minhasInscricoes.set(i.cursoId, i));
+    renderizar(); // atualiza os selos "Você está inscrito(a)"
   } catch (err) { console.error(err); }
-  ouvirCursos((cursos) => { ultimosCursos = cursos; renderizar(); });
-})();
+});
