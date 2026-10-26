@@ -17,7 +17,7 @@ inicializarNavegacao("cursos");
 
 obterConfiguracoesGerais().then((config) => {
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl);
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
 }).catch((err) => console.error("Erro ao carregar configurações:", err));
 
 const lista = document.getElementById("listaCursos");

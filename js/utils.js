@@ -926,6 +926,21 @@ export function definirSrcOtimizado(img, url, largura) {
   }
   img.src = otimizada;
 }
+// Foto de fundo própria para o computador (tela larga, com mouse). Vazia = o CSS cai na do celular.
+export const ehComputador = () => {
+  try { return window.matchMedia("(min-width: 1000px) and (hover: hover) and (pointer: fine)").matches; } catch { return false; }
+};
+function definirFundoPcCss(url) {
+  if (!url) { document.documentElement.style.removeProperty("--fundo-img-pc"); return ""; }
+  const otimizada = otimizarImagemUrl(url, 1920);
+  document.documentElement.style.setProperty("--fundo-img-pc", `url('${otimizada}')`);
+  if (otimizada !== url) {
+    const teste = new Image();
+    teste.onerror = () => document.documentElement.style.setProperty("--fundo-img-pc", `url('${url}')`);
+    teste.src = otimizada;
+  }
+  return otimizada;
+}
 function definirFundoCss(url) {
   const otimizada = otimizarImagemUrl(url, 1000);
   document.documentElement.style.setProperty("--fundo-img", `url('${otimizada}')`);
@@ -958,8 +973,10 @@ export function aplicarConfigVisualEmCache() {
   if (cache.logoUrl) {
     document.querySelectorAll(".js-logo").forEach((img) => definirSrcOtimizado(img, cache.logoUrl, 500));
   }
+  const fundoPc = cache.fundoPcUrl ? definirFundoPcCss(cache.fundoPcUrl) : "";
   if (cache.fundoUrl) {
-    precarregarImagem(definirFundoCss(cache.fundoUrl));
+    const celular = definirFundoCss(cache.fundoUrl);
+    precarregarImagem(ehComputador() && fundoPc ? fundoPc : celular); // baixa só a foto do aparelho em uso
   }
 }
 
@@ -969,7 +986,11 @@ export function aplicarLogo(url) {
   });
   if (url) salvarCacheVisual("logoUrl", url);
 }
-export function aplicarFundo(url) {
+export function aplicarFundo(url, urlComputador) {
+  if (urlComputador !== undefined) {
+    definirFundoPcCss(urlComputador);
+    salvarCacheVisual("fundoPcUrl", urlComputador || "");
+  }
   if (!url) return;
   definirFundoCss(url);
   salvarCacheVisual("fundoUrl", url);

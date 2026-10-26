@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v74";
+const CACHE_NAME = "arautos-shell-v76";
 
 // Só o que o site PÚBLICO usa é baixado na instalação (o painel administrativo e seus arquivos pesados
 // — admin.js, exportações, CRM — entram no cache sozinhos quando o administrador abre o painel).
@@ -88,7 +88,7 @@ const CACHE_EXTERNO = "arautos-externo-v1";
 
 // Painel administrativo: continua buscando a versão mais nova na rede primeiro (quem administra
 // precisa ver na hora o que acabou de ser publicado). O resto do site abre direto do cache.
-const ARQUIVOS_ADMIN = /\/(admin(\.html)?|js\/(admin|acessos|contas|docx-intencoes|pdf-intencoes)\.js|css\/admin\.css)$/;
+const ARQUIVOS_ADMIN = /\/(admin(\.html)?|js\/(admin|inicio-admin|acessos|contas|docx-intencoes|pdf-intencoes)\.js|css\/admin\.css)$/;
 
 function ehNavegacao(requisicao) {
   return requisicao.mode === "navigate";

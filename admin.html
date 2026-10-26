@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" media="print" onload="this.media='all'" />
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" /></noscript>
 <link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/admin.css" />
+<link rel="stylesheet" href="css/admin.css?v=75" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -416,6 +416,7 @@
               <p class="formulario-ajuda">Aparece na página <strong>Contatos</strong> do site, no quadro "Faça a Sua Contribuição!". Se não houver QR Code nem código, o quadro fica escondido.</p>
               <div class="campo">
                 <label>QR Code do PIX</label>
+                <span class="campo-ajuda" style="margin:-2px 0 8px;">📐 Tamanho ideal: <strong>600 × 600 px</strong> (quadrado).</span>
                 <div class="pix-upload">
                   <img id="pixPreview" class="pix-upload__preview oculto" alt="QR Code do PIX" />
                   <div class="pix-upload__acoes">
@@ -523,6 +524,7 @@
             <div class="campo">
               <label for="campoAvisoImagem">Anexar imagem (opcional)</label>
               <input type="file" id="campoAvisoImagem" accept="image/*" />
+              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 500 px</strong> (horizontal).</span>
               <img id="previewAvisoImagem" alt="" class="oculto" style="margin-top:8px; max-height:140px; border-radius:8px; display:block;" />
             </div>
             <button type="submit" class="btn btn-dourado">Publicar aviso</button>
@@ -798,6 +800,7 @@
           <div class="campo">
             <label for="uploadLogo">Enviar novo arquivo (PNG recomendado)</label>
             <input type="file" id="uploadLogo" accept="image/*" />
+            <span class="campo-ajuda">📐 Tamanho ideal: <strong>500 × 200 px</strong> (PNG com fundo transparente).</span>
           </div>
           <div class="campo">
             <label for="urlLogo">— ou cole o link de uma imagem já hospedada</label>
@@ -809,21 +812,48 @@
 
         <div class="painel">
           <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFundo" role="button" tabindex="0" aria-expanded="false">
-            <span class="emoji">📷</span> Foto de fundo do site
+            <span class="emoji">📱</span> Foto de fundo do site — celular
             <span class="painel__dica">Clique aqui para poder abrir</span>
             <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </div>
           <div id="corpoFundo" class="oculto">
-          <div class="admin-preview admin-preview--fundo"><img id="previewFundo" src="assets/fundo-altar.jpg" alt="Fundo atual" /></div>
+          <p class="formulario-intro">Aparece no celular e no tablet. Se você não escolher uma foto específica para o computador, ela também será usada lá.</p>
+          <div class="admin-preview admin-preview--fundo"><img id="previewFundo" src="assets/fundo-altar.jpg" alt="Fundo atual do celular" /></div>
           <div class="campo">
             <label for="uploadFundo">Enviar novo arquivo (JPG recomendado)</label>
             <input type="file" id="uploadFundo" accept="image/*" />
+            <span class="campo-ajuda">📐 Tamanho ideal: <strong>1080 × 1920 px</strong> (foto vertical, formato de tela de celular).</span>
           </div>
           <div class="campo">
             <label for="urlFundo">— ou cole o link de uma imagem já hospedada</label>
             <input type="text" id="urlFundo" placeholder="https://..." />
           </div>
-          <button type="button" class="btn btn-dourado" id="btnSalvarFundo">Salvar foto de fundo</button>
+          <button type="button" class="btn btn-dourado" id="btnSalvarFundo">Salvar foto de fundo do celular</button>
+          </div>
+        </div>
+
+        <div class="painel">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFundoPc" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🖥️</span> Foto de fundo do site — computador
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoFundoPc" class="oculto">
+          <p class="formulario-intro">Aparece só quando o site é aberto no computador (tela larga). Uma foto horizontal fica bem melhor nesses aparelhos.</p>
+          <div class="admin-preview admin-preview--fundo"><img id="previewFundoPc" alt="Fundo atual do computador" class="oculto" /><p class="mensagem-vazia" id="semFundoPc">Nenhuma foto própria para o computador — está usando a do celular.</p></div>
+          <div class="campo">
+            <label for="uploadFundoPc">Enviar novo arquivo (JPG recomendado)</label>
+            <input type="file" id="uploadFundoPc" accept="image/*" />
+            <span class="campo-ajuda">📐 Tamanho ideal: <strong>1920 × 1080 px</strong> (foto horizontal, formato de tela de computador).</span>
+          </div>
+          <div class="campo">
+            <label for="urlFundoPc">— ou cole o link de uma imagem já hospedada</label>
+            <input type="text" id="urlFundoPc" placeholder="https://..." />
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-dourado" id="btnSalvarFundoPc">Salvar foto de fundo do computador</button>
+            <button type="button" class="btn btn-contorno oculto" id="btnRemoverFundoPc">Usar a mesma do celular</button>
+          </div>
           </div>
         </div>
 
@@ -842,6 +872,7 @@
             <div class="campo">
               <label for="campoBannerImagem">Imagem do banner</label>
               <input type="file" id="campoBannerImagem" accept="image/*" required />
+              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 600 px</strong> (formato 2:1, retangular).</span>
               <img id="previewBannerImagem" alt="" class="oculto" style="margin-top:8px; max-height:140px; border-radius:8px; display:block;" />
             </div>
             <div class="campo">
@@ -875,8 +906,11 @@
         </div>
       </section>
 
-      <button type="button" class="btn-voltar-inicio" id="btnVoltarInicio" aria-label="Voltar para a Página inicial">
-        <span aria-hidden="true">←</span> <span class="btn-voltar-inicio__txt">Página inicial</span>
+      <button type="button" class="btn-voltar-inicio" id="btnVoltarInicio" aria-label="Voltar para a Página inicial" hidden>
+        <span class="btn-voltar-inicio__icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h4.5v-5.5h4v5.5h4.5V10"/></svg>
+        </span>
+        <span class="btn-voltar-inicio__texto"><small>Voltar para a</small><strong>Página inicial</strong></span>
       </button>
     </main>
   </div>
@@ -1175,6 +1209,7 @@
         </div>
         <div class="campo">
           <label>Imagem do curso</label>
+          <span class="campo-ajuda" style="margin:-2px 0 8px;">📐 Tamanho ideal: <strong>1200 × 750 px</strong> (horizontal).</span>
           <img id="cursoImagemPreview" class="curso-editor__preview oculto" alt="" />
           <div class="curso-editor__linha">
             <button type="button" class="btn btn-contorno btn-pequeno" id="btnCursoEscolherImagem">Escolher imagem</button>

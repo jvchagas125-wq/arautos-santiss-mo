@@ -1221,7 +1221,7 @@ img{ max-width: 100%; display:block; }
 .selo-rascunho--pendente{ background: rgba(122,12,30,.1); color: var(--vermelho); }
 .intencoes-modal__corpo{
   position:relative; flex:1; min-height:0; overflow-y:auto; padding:16px 24px 24px;
-  scroll-behavior:smooth; -webkit-overflow-scrolling:touch;
+  -webkit-overflow-scrolling:touch; overscroll-behavior: contain;
 }
 .intencoes-modal__rodape{
   display:grid; grid-template-columns: 1fr 1.5fr 1.5fr; gap:8px; align-items:stretch;
@@ -1565,3 +1565,28 @@ body.pagina-indisponivel main.conteudo > *:not(.pagina-indisponivel__aviso){ dis
 .calendario__selecoes select:last-child{ flex:0 0 84px; }
 .calendario__rodape{ display:flex; justify-content:space-between; margin-top:10px; }
 .calendario__link{ border:none; background:none; color:var(--vermelho); font-family:'Cinzel'; font-size:.78rem; padding:6px 4px; cursor:pointer; }
+
+
+/* ============ Janelas (modais) mais leves no celular ============
+   O desfoque do fundo (backdrop-filter) sobre uma foto grande é pesado para o celular: ao abrir uma
+   janela a tela travava e piscava. No celular usa só um escurecido simples, sem desfoque. */
+.modal-overlay.sem-transicao, .modal-overlay.sem-transicao .modal{ transition:none !important; }
+@media (max-width: 900px), (hover: none) {
+  .modal-overlay, .modal-fundo{ backdrop-filter:none !important; -webkit-backdrop-filter:none !important; background: rgba(15,3,5,.74) !important; }
+}
+
+
+/* ============ COMPUTADOR (tela larga, com mouse) ============
+   - foto de fundo própria do computador (Configurações > Foto de fundo — computador); sem ela, usa a do celular
+   - o site público abre já com zoom de 80%, que mostra tudo sem precisar rolar. O painel administrativo
+     (body.admin-body) não é afetado, e o celular continua exatamente como está.
+   Com "zoom", a unidade vh não acompanha; por isso as alturas em vh são divididas por 0,8 (= 125vh). */
+@media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
+  .tela-fundo::before{ background-image: var(--fundo-img-pc, var(--fundo-img)); }
+
+  html:has(body:not(.admin-body)){ zoom: .8; }
+  body:not(.admin-body), .tela-fundo, .pagina-clara, .pagina-home{ min-height: 125vh; }
+  body:not(.admin-body) .modal--largo,
+  body:not(.admin-body) .modal--intencoes,
+  body:not(.admin-body) .modal--previa{ max-height: calc(125vh - 50px); max-height: calc(125dvh - 50px); }
+}

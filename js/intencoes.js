@@ -18,7 +18,7 @@ const usuarioPromise = exigirCadastro();
 
 obterConfiguracoesGerais().then((config) => {
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl);
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
 });
 
 /* =========================================================
@@ -28,12 +28,32 @@ obterConfiguracoesGerais().then((config) => {
    ========================================================= */
 const el = (id) => document.getElementById(id);
 function abrir(modal) {
+  janelaAbertaEm = Date.now();
   modal.classList.add("aberto");
   document.body.style.overflow = "hidden";
 }
 function fechar(modal) {
   modal.classList.remove("aberto");
   if (!document.querySelector(".modal-overlay.aberto")) document.body.style.overflow = "";
+}
+// fecha sem animação: usado quando outra janela abre no lugar (evita duas janelas com desfoque
+// aparecendo/sumindo ao mesmo tempo, que no celular fazia a tela travar e piscar)
+function fecharSemAnimacao(modal) {
+  modal.classList.add("sem-transicao");
+  fechar(modal);
+  requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.remove("sem-transicao")));
+}
+// o teclado do celular só sobe depois que a janela terminou de abrir (senão a tela pisca)
+let janelaAbertaEm = 0;
+function focarQuandoPronto(campo) {
+  const espera = Math.max(50, 420 - (Date.now() - janelaAbertaEm));
+  setTimeout(() => {
+    if (!campo.isConnected) return;
+    const ativo = document.activeElement;
+    // se a pessoa já tocou em outro campo enquanto esperava, não tira o foco dela
+    if (ativo && ativo !== campo && /^(INPUT|TEXTAREA)$/.test(ativo.tagName) && ativo.isConnected) return;
+    campo.focus({ preventScroll: true });
+  }, espera);
 }
 function fecharTodosOsModais() {
   document.querySelectorAll(".modal-overlay.aberto").forEach((m) => m.classList.remove("aberto"));
@@ -251,9 +271,15 @@ function itensDeEnviadas(enviadas) {
   });
 }
 
+let abrindoLista = false;
 async function abrirLista(hora) {
+  if (abrindoLista) return; // toque duplo não abre a lista duas vezes
   const status = statusDaMissa(hora);
   if (!status.aberta) { mostrarToast("Esta lista já está encerrada."); return; }
+  abrindoLista = true;
+  try { await abrirListaDe(hora); } finally { abrindoLista = false; }
+}
+async function abrirListaDe(hora) {
   const iso = diaSelecionado;
   usuarioAtual = await usuarioPromise;
 
@@ -265,7 +291,7 @@ async function abrirLista(hora) {
   el("listaSubtitulo").textContent = formatarDataComDiaSemana(iso);
   el("listaEntradas").innerHTML = "";
   el("editorIntencao").innerHTML = `<p class="categoria-intencao__vazio">Carregando suas intenções...</p>`;
-  fechar(modalEscolherLista);
+  fecharSemAnimacao(modalEscolherLista);
   abrir(modalLista);
 
   try {
@@ -495,7 +521,7 @@ function montarEditorNome(caixa, cat) {
     renderizarEditor({ rolar: true });
   });
   caixa.appendChild(btn);
-  setTimeout(() => area.focus({ preventScroll: true }), 50);
+  focarQuandoPronto(area);
 }
 
 function montarEditorFalecimento(caixa, cat) {
@@ -549,7 +575,7 @@ function montarEditorFalecimento(caixa, cat) {
       renderizarEditor();
     });
     caixa.appendChild(btnAdicionar);
-    setTimeout(() => area.focus({ preventScroll: true }), 50);
+    focarQuandoPronto(area);
   }
 
   const btnMais = document.createElement("button");
@@ -674,7 +700,7 @@ function montarEditorAniversario(caixa, cat) {
       renderizarEditor();
     });
     caixa.appendChild(btnAdicionar);
-    setTimeout(() => primeiro.focus({ preventScroll: true }), 50);
+    focarQuandoPronto(primeiro);
   }
 
   const btnMais = document.createElement("button");

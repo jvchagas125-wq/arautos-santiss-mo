@@ -60,7 +60,7 @@ async function iniciar() {
 
     const config = await comLimiteDeTempo(obterConfiguracoesGerais());
     aplicarLogo(config.logoUrl);
-    aplicarFundo(config.fundoUrl);
+    aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
 
     diasHorarios = await comLimiteDeTempo(obterDiasHorarios());
 

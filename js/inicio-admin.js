@@ -245,9 +245,20 @@ function iniciarBlocos() {
 
 export function iniciarInicioAdmin() {
   // botão fixo no canto inferior: de qualquer página volta para a Página inicial
-  document.getElementById("btnVoltarInicio")?.addEventListener("click", () => {
-    document.querySelector('#menuLateral nav a[data-secao="inicio"]')?.click();
-  });
+  const voltar = document.getElementById("btnVoltarInicio");
+  if (voltar) {
+    voltar.addEventListener("click", () => {
+      document.querySelector('#menuLateral nav a[data-secao="inicio"]')?.click();
+    });
+    // só aparece fora da Página inicial (e fora da tela "sem acesso")
+    const atualizarVoltar = () => {
+      const aberta = document.querySelector(".admin-secao:not(.oculto)");
+      voltar.hidden = !aberta || aberta.id === "secao-inicio" || aberta.id === "secao-sem-acesso";
+    };
+    const obs = new MutationObserver(atualizarVoltar);
+    document.querySelectorAll(".admin-secao").forEach((sec) => obs.observe(sec, { attributes: true, attributeFilter: ["class"] }));
+    atualizarVoltar();
+  }
   iniciarBlocos();
   iniciarGrafico();
 }

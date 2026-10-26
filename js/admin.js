@@ -276,7 +276,7 @@ const ALVOS_PARTES = {
   },
   configuracoes: {
     logo: painelDe("previewLogo"),
-    fundo: painelDe("previewFundo"),
+    fundo: () => [...painelDe("previewFundo")(), ...painelDe("previewFundoPc")()],
     paginas: painelDe("cabecalhoPaginasSite"),
     banners: () => [
       document.getElementById("campoBannerDestino")?.closest(".painel"),
@@ -2180,6 +2180,7 @@ function configurarAvisos() {
             <div class="campo">
               <label>Trocar imagem (opcional)</label>
               <input type="file" class="campo-edit-imagem" accept="image/*" />
+              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 500 px</strong> (horizontal).</span>
               ${aviso.imagemUrl ? `<img src="${aviso.imagemUrl}" alt="" class="cartao-aviso-admin__img" style="margin-top:8px; max-height:100px; border-radius:8px;" />` : ""}
             </div>
             <div class="cartao-aviso-admin__acoes">
@@ -3391,6 +3392,7 @@ function configurarBanners() {
             <div class="campo">
               <label>Trocar imagem (opcional)</label>
               <input type="file" class="campo-edit-imagem-banner" accept="image/*" />
+              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 600 px</strong> (formato 2:1, retangular).</span>
             </div>
             <div class="campo">
               <label>Texto do botão (opcional)</label>
@@ -3506,10 +3508,21 @@ function configurarConfiguracoes() {
   const uploadFundo = document.getElementById("uploadFundo");
   const urlLogo = document.getElementById("urlLogo");
   const urlFundo = document.getElementById("urlFundo");
-
+  const previewFundoPc = document.getElementById("previewFundoPc");
+  const semFundoPc = document.getElementById("semFundoPc");
+  const uploadFundoPc = document.getElementById("uploadFundoPc");
+  const urlFundoPc = document.getElementById("urlFundoPc");
+  const btnRemoverFundoPc = document.getElementById("btnRemoverFundoPc");
+  const mostrarFundoPc = (url) => {
+    previewFundoPc.classList.toggle("oculto", !url);
+    semFundoPc.classList.toggle("oculto", !!url);
+    btnRemoverFundoPc.classList.toggle("oculto", !url);
+    if (url) previewFundoPc.src = url;
+  };
 
   let novoLogoDataUrl = null;
   let novoFundoDataUrl = null;
+  let novoFundoPcDataUrl = null;
 
   // Imagens guardadas direto no banco (data:...) deixam TODAS as páginas do site lentas, porque cada
   // visita baixa essas centenas de KB junto com a configuração. Aqui elas vão para o Cloudinary
@@ -3525,6 +3538,7 @@ function configurarConfiguracoes() {
   obterConfiguracoesGerais().then(async (config) => {
     if (config.logoUrl) previewLogo.src = config.logoUrl;
     if (config.fundoUrl) previewFundo.src = config.fundoUrl;
+    mostrarFundoPc(config.fundoPcUrl || "");
     if (migracaoImagensIniciada) return;
     migracaoImagensIniciada = true;
     const ajustes = {};
@@ -3554,9 +3568,16 @@ function configurarConfiguracoes() {
   uploadFundo.addEventListener("change", async () => {
     const file = uploadFundo.files[0];
     if (!file) return;
-    novoFundoDataUrl = await comprimirImagem(file, 1000, 0.65, "image/jpeg");
+    novoFundoDataUrl = await comprimirImagem(file, 1080, 0.7, "image/jpeg");
     previewFundo.src = novoFundoDataUrl;
     urlFundo.value = "";
+  });
+  uploadFundoPc.addEventListener("change", async () => {
+    const file = uploadFundoPc.files[0];
+    if (!file) return;
+    novoFundoPcDataUrl = await comprimirImagem(file, 1920, 0.75, "image/jpeg");
+    mostrarFundoPc(novoFundoPcDataUrl);
+    urlFundoPc.value = "";
   });
 
   document.getElementById("btnSalvarLogo").addEventListener("click", async () => {
@@ -3579,10 +3600,37 @@ function configurarConfiguracoes() {
     try {
       if (valor.startsWith("data:")) valor = await hospedar(valor, "fundo.jpg");
       await salvarConfiguracoesGerais({ fundoUrl: valor });
-      mostrarToast("Foto de fundo atualizada!");
+      mostrarToast("Foto de fundo do celular atualizada!");
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível salvar (arquivo muito grande). Tente uma imagem menor ou um link.");
+    }
+  });
+
+  // Foto de fundo própria para o computador (tela larga)
+  document.getElementById("btnSalvarFundoPc").addEventListener("click", async () => {
+    let valor = novoFundoPcDataUrl || urlFundoPc.value.trim();
+    if (!valor) { mostrarToast("Selecione um arquivo ou cole um link para o fundo do computador."); return; }
+    try {
+      if (valor.startsWith("data:")) valor = await hospedar(valor, "fundo-computador.jpg");
+      await salvarConfiguracoesGerais({ fundoPcUrl: valor });
+      novoFundoPcDataUrl = null;
+      mostrarFundoPc(valor);
+      mostrarToast("Foto de fundo do computador atualizada!");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível salvar (arquivo muito grande). Tente uma imagem menor ou um link.");
+    }
+  });
+  btnRemoverFundoPc.addEventListener("click", async () => {
+    try {
+      await salvarConfiguracoesGerais({ fundoPcUrl: "" });
+      novoFundoPcDataUrl = null; urlFundoPc.value = ""; uploadFundoPc.value = "";
+      mostrarFundoPc("");
+      mostrarToast("O computador agora usa a mesma foto do celular.");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível remover. Tente novamente.");
     }
   });
 }
@@ -3608,6 +3656,7 @@ function configurarPaginasDoSite() {
   // as outras partes de Configurações também ficam em listas fechadas
   ligarListaFechada("cabecalhoLogo", "corpoLogo");
   ligarListaFechada("cabecalhoFundo", "corpoFundo");
+  ligarListaFechada("cabecalhoFundoPc", "corpoFundoPc");
   ligarListaFechada("cabecalhoNovoBanner", "corpoNovoBanner");
   const lista = document.getElementById("listaPaginasSite");
 

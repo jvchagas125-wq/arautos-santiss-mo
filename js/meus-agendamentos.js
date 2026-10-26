@@ -140,7 +140,7 @@ async function iniciar() {
 
   const config = await obterConfiguracoesGerais();
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl);
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
 
   ouvirAgendamentosDoUsuario(usuario.telefoneDigits, renderizarLista);
 }

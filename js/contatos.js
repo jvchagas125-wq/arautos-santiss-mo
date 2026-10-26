@@ -10,7 +10,7 @@ exigirCadastro().then(() => {
 
 obterConfiguracoesGerais().then((config) => {
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl);
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
   aplicarInformacoesDeContato(config);
 }).catch((err) => {
   console.error("Erro ao carregar configurações:", err);

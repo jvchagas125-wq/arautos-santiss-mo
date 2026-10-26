@@ -7,7 +7,7 @@ exigirCadastro();
 
 obterConfiguracoesGerais().then((config) => {
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl);
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
 });
 
 const elVazio = document.getElementById("avisosVazio");
