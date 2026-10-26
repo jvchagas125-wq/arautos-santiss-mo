@@ -2089,6 +2089,8 @@ async function enviarImagemParaCloudinary(file) {
 }
 
 function configurarAvisos() {
+  ligarListaFechada("cabecalhoNovoAviso", "corpoNovoAviso");
+  ligarListaFechada("cabecalhoAvisosPublicados", "corpoAvisosPublicados");
   const formNovo = document.getElementById("formNovoAviso");
   const campoTitulo = document.getElementById("campoAvisoTitulo");
   const campoTexto = document.getElementById("campoAvisoTexto");

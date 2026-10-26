@@ -486,7 +486,12 @@
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
         <div class="painel">
-          <div class="painel__titulo"><span class="emoji">📢</span> Publicar novo aviso</div>
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoNovoAviso" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">📢</span> Publicar novo aviso
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoNovoAviso" class="oculto">
           <form id="formNovoAviso">
             <div class="campo">
               <label for="campoAvisoTitulo">Título</label>
@@ -503,12 +508,19 @@
             </div>
             <button type="submit" class="btn btn-dourado">Publicar aviso</button>
           </form>
+          </div>
         </div>
 
         <div class="painel">
-          <div class="painel__titulo"><span class="emoji">🗂️</span> Avisos publicados</div>
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoAvisosPublicados" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🗂️</span> Avisos publicados
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoAvisosPublicados" class="oculto">
           <p class="mensagem-vazia oculto" id="avisoSemAvisos">Nenhum aviso publicado ainda.</p>
           <div id="listaAvisosAdmin"></div>
+          </div>
         </div>
       </section>
 
