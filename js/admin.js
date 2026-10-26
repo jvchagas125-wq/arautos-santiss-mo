@@ -1,3 +1,4 @@
+import { iniciarInicioAdmin } from "./inicio-admin.js";
 import { listaArquivada, inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
@@ -292,11 +293,17 @@ function aplicarPermissoes() {
 
   // menu: só as páginas liberadas
   let primeiroLink = null;
+  const linkInicio = document.querySelector('#menuLateral nav a[data-secao="inicio"]');
   document.querySelectorAll("#menuLateral nav a[data-secao]").forEach((a) => {
+    if (a.dataset.secao === "inicio") return; // a Página inicial vale para quem tem ao menos uma página
     const pode = temAcesso(conta, a.dataset.secao);
     a.classList.toggle("sem-acesso", !pode);
     if (pode && !primeiroLink) primeiroLink = a;
   });
+  const temAlguma = !!primeiroLink;
+  if (linkInicio) { linkInicio.classList.toggle("sem-acesso", !temAlguma); if (temAlguma) primeiroLink = linkInicio; }
+  // blocos da Página inicial: só os das páginas liberadas
+  document.querySelectorAll(".bloco-inicio[data-secao]").forEach((b) => b.classList.toggle("sem-acesso", !temAcesso(conta, b.dataset.secao)));
 
   // dentro de cada página: só as partes liberadas
   Object.entries(ALVOS_PARTES).forEach(([pagina, partes]) => {
@@ -319,7 +326,7 @@ function aplicarPermissoes() {
   if (!primeiroLink) {
     document.querySelectorAll(".admin-secao").forEach((sec) => sec.classList.toggle("oculto", sec !== semAcesso));
     document.querySelectorAll("#menuLateral nav a").forEach((a) => a.classList.remove("ativa"));
-  } else if (idAberto === "sem-acesso" || !temAcesso(conta, idAberto)) {
+  } else if (idAberto === "sem-acesso" || (idAberto !== "inicio" && !temAcesso(conta, idAberto))) {
     semAcesso.classList.add("oculto");
     primeiroLink.click();
   }
@@ -338,6 +345,7 @@ function iniciarPainel() {
   document.getElementById("btnSairAdmin").addEventListener("click", () => sairDoPainel(""));
 
   configurarMenuSecoes();
+  iniciarInicioAdmin();
   configurarMinhaConta();
   configurarFrase();
   configurarHorarios();

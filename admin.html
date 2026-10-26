@@ -98,7 +98,8 @@
         <button class="menu-lateral__fechar" id="btnFecharMenu" aria-label="Fechar menu">&times;</button>
       </div>
       <nav>
-        <a href="#frase" data-secao="frase" class="ativa"><span class="emoji">💬</span> Frase do dia</a>
+        <a href="#inicio" data-secao="inicio" class="ativa"><span class="emoji">🏠</span> Página inicial</a>
+        <a href="#frase" data-secao="frase"><span class="emoji">💬</span> Frase do dia</a>
         <a href="#horarios" data-secao="horarios"><span class="emoji">🗓️</span> Dias e horários</a>
         <a href="#intencoes" data-secao="intencoes"><span class="emoji">🙏</span> Intenções</a>
         <a href="#avisos" data-secao="avisos"><span class="emoji">📢</span> Avisos</a>
@@ -125,8 +126,26 @@
 
     <main class="admin-conteudo">
 
+      <!-- PÁGINA INICIAL -->
+      <section class="admin-secao" id="secao-inicio">
+        <h1 class="titulo-pagina">Página inicial</h1>
+        <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+        <div class="inicio-grade" id="blocosInicio"></div>
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">📈</span> Pessoas cadastradas no site</div>
+          <div class="crm-resumo" id="kpisCadastros"></div>
+          <div class="grafico__abas" id="abasCadastros" role="group" aria-label="Período do gráfico">
+            <button type="button" data-periodo="30d" class="ativa" aria-pressed="true">30 dias</button>
+            <button type="button" data-periodo="12m" aria-pressed="false">12 meses</button>
+            <button type="button" data-periodo="tudo" aria-pressed="false">Tudo</button>
+          </div>
+          <div class="grafico" id="graficoCadastros"></div>
+          <p class="grafico__dica" id="dicaGrafico" aria-live="polite"></p>
+        </div>
+      </section>
+
       <!-- FRASE DO DIA -->
-      <section class="admin-secao" id="secao-frase">
+      <section class="admin-secao oculto" id="secao-frase">
         <h1 class="titulo-pagina">Frase do Dia</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
         <div class="painel">
