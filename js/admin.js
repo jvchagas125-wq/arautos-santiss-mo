@@ -3488,6 +3488,7 @@ function configurarBanners() {
   });
 }
 
+let migracaoImagensIniciada = false; // a conversão das imagens antigas roda uma vez só por abertura do painel
 function configurarConfiguracoes() {
   const previewLogo = document.getElementById("previewLogo");
   const previewFundo = document.getElementById("previewFundo");
@@ -3500,10 +3501,38 @@ function configurarConfiguracoes() {
   let novoLogoDataUrl = null;
   let novoFundoDataUrl = null;
 
-  obterConfiguracoesGerais().then((config) => {
+  // Imagens guardadas direto no banco (data:...) deixam TODAS as páginas do site lentas, porque cada
+  // visita baixa essas centenas de KB junto com a configuração. Aqui elas vão para o Cloudinary
+  // (o banco guarda só o link). Também converte, uma vez, as que já estavam salvas do jeito antigo.
+  const dataUrlParaArquivo = async (dataUrl, nome) => {
+    const blob = await (await fetch(dataUrl)).blob();
+    return new File([blob], nome, { type: blob.type || "image/png" });
+  };
+  const hospedar = async (dataUrl, nome) => {
+    try { return await enviarImagemParaCloudinary(await dataUrlParaArquivo(dataUrl, nome)); }
+    catch (err) { console.warn("Cloudinary indisponível, mantendo a imagem no banco:", err); return dataUrl; }
+  };
+  obterConfiguracoesGerais().then(async (config) => {
     if (config.logoUrl) previewLogo.src = config.logoUrl;
     if (config.fundoUrl) previewFundo.src = config.fundoUrl;
-  });
+    if (migracaoImagensIniciada) return;
+    migracaoImagensIniciada = true;
+    const ajustes = {};
+    if (String(config.logoUrl || "").startsWith("data:") && temAcesso(contaAtual, "configuracoes", "logo")) {
+      const url = await hospedar(config.logoUrl, "logo.png");
+      if (!url.startsWith("data:")) ajustes.logoUrl = url;
+    }
+    if (String(config.fundoUrl || "").startsWith("data:") && temAcesso(contaAtual, "configuracoes", "fundo")) {
+      const url = await hospedar(config.fundoUrl, "fundo.jpg");
+      if (!url.startsWith("data:")) ajustes.fundoUrl = url;
+    }
+    if (Object.keys(ajustes).length) {
+      await salvarConfiguracoesGerais(ajustes);
+      if (ajustes.logoUrl) { previewLogo.src = ajustes.logoUrl; aplicarLogo(ajustes.logoUrl); }
+      if (ajustes.fundoUrl) previewFundo.src = ajustes.fundoUrl;
+      mostrarToast("Imagens do site otimizadas — as páginas agora carregam mais rápido.");
+    }
+  }).catch((err) => console.error(err));
 
   uploadLogo.addEventListener("change", async () => {
     const file = uploadLogo.files[0];
@@ -3521,9 +3550,10 @@ function configurarConfiguracoes() {
   });
 
   document.getElementById("btnSalvarLogo").addEventListener("click", async () => {
-    const valor = novoLogoDataUrl || urlLogo.value.trim();
+    let valor = novoLogoDataUrl || urlLogo.value.trim();
     if (!valor) { mostrarToast("Selecione um arquivo ou cole um link para a logo."); return; }
     try {
+      if (valor.startsWith("data:")) valor = await hospedar(valor, "logo.png");
       await salvarConfiguracoesGerais({ logoUrl: valor });
       aplicarLogo(valor);
       mostrarToast("Logo atualizada!");
@@ -3534,9 +3564,10 @@ function configurarConfiguracoes() {
   });
 
   document.getElementById("btnSalvarFundo").addEventListener("click", async () => {
-    const valor = novoFundoDataUrl || urlFundo.value.trim();
+    let valor = novoFundoDataUrl || urlFundo.value.trim();
     if (!valor) { mostrarToast("Selecione um arquivo ou cole um link para o fundo."); return; }
     try {
+      if (valor.startsWith("data:")) valor = await hospedar(valor, "fundo.jpg");
       await salvarConfiguracoesGerais({ fundoUrl: valor });
       mostrarToast("Foto de fundo atualizada!");
     } catch (err) {

@@ -38,21 +38,18 @@ export function exigirCadastro() {
   return new Promise(async (resolve) => {
     const usuarioExistente = obterUsuarioSessao();
     if (usuarioExistente && usuarioExistente.nome && usuarioExistente.telefone) {
-      // confirma no banco que o cadastro ainda existe (pode ter sido removido pelo painel admin)
-      // — com limite de tempo, pra nunca travar a página inteira esperando essa checagem
-      try {
-        const aindaCadastrado = await comLimiteDeTempo(obterUsuario(usuarioExistente.telefoneDigits), 6000);
-        if (aindaCadastrado && aindaCadastrado.nome) {
-          resolve(usuarioExistente);
-          return;
+      // Quem já estava identificado neste aparelho entra NA HORA — antes a página esperava o banco
+      // responder (segundos, na primeira conexão do celular) só para confirmar o cadastro. A
+      // confirmação agora acontece em segundo plano: se o cadastro tiver sido removido pelo painel
+      // admin, a sessão é encerrada e o formulário de cadastro volta a aparecer.
+      resolve(usuarioExistente);
+      comLimiteDeTempo(obterUsuario(usuarioExistente.telefoneDigits), 20000).then((aindaCadastrado) => {
+        if (!aindaCadastrado || !aindaCadastrado.nome) {
+          limparUsuarioSessao();
+          window.location.reload();
         }
-        limparUsuarioSessao();
-      } catch (err) {
-        // sem conexão no momento: não bloqueia quem já estava logado neste aparelho
-        console.error(err);
-        resolve(usuarioExistente);
-        return;
-      }
+      }).catch((err) => console.warn("Não foi possível confirmar o cadastro agora:", err)); // sem conexão: não bloqueia
+      return;
     }
 
     document.body.insertAdjacentHTML("beforeend", MODAL_HTML);

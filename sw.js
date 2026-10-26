@@ -3,8 +3,10 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v68";
+const CACHE_NAME = "arautos-shell-v69";
 
+// Só o que o site PÚBLICO usa é baixado na instalação (o painel administrativo e seus arquivos pesados
+// — admin.js, exportações, CRM — entram no cache sozinhos quando o administrador abre o painel).
 const ARQUIVOS_APP_SHELL = [
   "./",
   "./index.html",
@@ -15,7 +17,6 @@ const ARQUIVOS_APP_SHELL = [
   "./contatos.html",
   "./cursos.html",
   "./sobre.html",
-  "./admin.html",
   "./manifest.json",
   "./css/style.css",
   "./js/main.js",
@@ -30,20 +31,14 @@ const ARQUIVOS_APP_SHELL = [
   "./js/meus-agendamentos.js",
   "./js/sobre.js",
   "./js/contatos.js",
-  "./js/admin.js",
-  "./js/docx-intencoes.js",
   "./js/acessos.js",
   "./js/contas.js",
   "./js/instalar-app.js",
-  "./js/pdf-intencoes.js",
   "./js/sw-registro.js",
   "./js/voz.js",
-  "./js/crm-contatos.js",
   "./js/novo-dominio.js",
   "./js/cursos.js",
   "./js/cursos-comum.js",
-  "./js/cursos-admin.js",
-  "./js/exportar-inscritos.js",
   "./assets/logo.png",
   "./assets/favicon.png?v=2",
   "./assets/selo-adoracao.png",

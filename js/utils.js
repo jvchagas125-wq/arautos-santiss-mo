@@ -938,6 +938,7 @@ function definirFundoCss(url) {
 }
 
 function precarregarImagem(url) {
+  if (!url || String(url).startsWith("data:")) return; // imagem embutida já está na página — nada a pré-carregar
   try {
     const link = document.createElement("link");
     link.rel = "preload";
