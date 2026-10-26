@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Painel Administrativo — Arautos do Evangelho</title>
 <meta name="robots" content="noindex, nofollow" />
-<link rel="icon" href="assets/favicon.png?v=2" />
+<link rel="icon" href="/favicon.ico" sizes="48x48" />
+<link rel="icon" type="image/png" href="/assets/favicon-96.png" sizes="96x96" />
+<link rel="icon" type="image/png" href="/assets/icone-app-192.png?v=2" sizes="192x192" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" media="print" onload="this.media='all'" />
@@ -755,7 +757,12 @@
         </div>
 
         <div class="painel">
-          <div class="painel__titulo"><span class="emoji">🖼️</span> Logo padrão</div>
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoLogo" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🖼️</span> Logo padrão
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoLogo" class="oculto">
           <div class="admin-preview"><img id="previewLogo" src="assets/logo.png" alt="Logo atual" /></div>
           <div class="campo">
             <label for="uploadLogo">Enviar novo arquivo (PNG recomendado)</label>
@@ -766,10 +773,16 @@
             <input type="text" id="urlLogo" placeholder="https://..." />
           </div>
           <button type="button" class="btn btn-dourado" id="btnSalvarLogo">Salvar logo</button>
+          </div>
         </div>
 
         <div class="painel">
-          <div class="painel__titulo"><span class="emoji">📷</span> Foto de fundo do site</div>
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFundo" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">📷</span> Foto de fundo do site
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoFundo" class="oculto">
           <div class="admin-preview admin-preview--fundo"><img id="previewFundo" src="assets/fundo-altar.jpg" alt="Fundo atual" /></div>
           <div class="campo">
             <label for="uploadFundo">Enviar novo arquivo (JPG recomendado)</label>
@@ -780,10 +793,16 @@
             <input type="text" id="urlFundo" placeholder="https://..." />
           </div>
           <button type="button" class="btn btn-dourado" id="btnSalvarFundo">Salvar foto de fundo</button>
+          </div>
         </div>
 
         <div class="painel">
-          <div class="painel__titulo"><span class="emoji">🖼️</span> Banners da página inicial (carrossel)</div>
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoNovoBanner" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🖼️</span> Banners da página inicial (carrossel)
+            <span class="painel__dica">Clique aqui para poder abrir</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoNovoBanner" class="oculto">
           <p style="margin:0 0 14px; font-size:.86rem; color:var(--texto-suave); line-height:1.6;">
             Esses banners passam em rotação automática no topo da página inicial. Sem nenhum banner
             cadastrado, essa área simplesmente fica vazia.
@@ -809,6 +828,7 @@
             </div>
             <button type="submit" class="btn btn-dourado" style="margin-top:16px;">Adicionar banner</button>
           </form>
+          </div>
         </div>
 
         <div class="painel">

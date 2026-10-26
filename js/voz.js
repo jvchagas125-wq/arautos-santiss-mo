@@ -11,6 +11,35 @@ const Reconhecimento = typeof window !== "undefined" ? (window.SpeechRecognition
 
 const ICONE_MICROFONE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`;
 
+/* Junta os trechos que o reconhecedor devolveu num texto só, sem repetir palavras.
+   O Chrome do Android (e alguns outros) devolve, no modo contínuo, trechos "acumulados" — cada um já
+   traz tudo o que foi dito até ali ("olá" / "olá tudo" / "olá tudo bem") — ou trechos que começam
+   repetindo o fim do anterior. Somar tudo gera "olá olá tudo olá tudo bem". Aqui, cada trecho novo:
+   - que já contém o texto anterior inteiro → substitui o anterior;
+   - que já está dentro do texto anterior → é ignorado;
+   - que repete as últimas palavras do anterior → entra só com o que é novo. */
+const semMarcas = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.,;:!?¿¡"“”]/g, "");
+export function juntarTrechos(trechos) {
+  let acc = "";
+  for (const bruto of trechos) {
+    const t = String(bruto || "").replace(/\s+/g, " ").trim();
+    if (!t) continue;
+    if (!acc) { acc = t; continue; }
+    const a = semMarcas(acc).replace(/\s+/g, " ").trim();
+    const n = semMarcas(t).replace(/\s+/g, " ").trim();
+    if (!n) continue;
+    if (n === a || a.endsWith(" " + n) || a.endsWith(n) && n.includes(" ")) continue; // já dito
+    if (n.startsWith(a + " ") || n.startsWith(a)) { acc = t; continue; }               // acumulado: troca
+    if (a.includes(n) && n.split(" ").length >= 2) continue;                          // repetição do meio
+    const pa = acc.split(" "), pn = t.split(" ");
+    const na = a.split(" "), nn = n.split(" ");
+    let k = Math.min(na.length, nn.length - 1);
+    while (k > 0 && na.slice(na.length - k).join(" ") !== nn.slice(0, k).join(" ")) k--;
+    acc = (k > 0 ? [...pa, ...pn.slice(k)] : [...pa, ...pn]).join(" ");
+  }
+  return acc;
+}
+
 let ativo = null; // { campo, botao, reconhecimento }
 let aviso = () => {};
 
@@ -68,25 +97,24 @@ function iniciar(campo, botao) {
   let antes = valorAtual.slice(0, inicio);
   const depois = valorAtual.slice(fim);
   if (antes && !/\s$/.test(antes)) antes += " ";
-  let finais = "";
   let houveFala = false;
+  let textoAtual = "";
 
-  const montar = (provisorio) => {
-    let texto = (finais + provisorio).replace(/\s+/g, " ").trimStart();
+  const montar = (texto) => {
+    texto = texto.replace(/\s+/g, " ").trimStart();
     // começo do campo (ou de uma frase): primeira letra maiúscula, bom para nomes e frases
     if (!antes.trim() || /[.!?]\s*$/.test(antes)) texto = texto.charAt(0).toUpperCase() + texto.slice(1);
     return texto;
   };
 
+  // A cada evento reconstrói o texto a partir de TODOS os trechos da sessão (em vez de ir somando),
+  // e o junta sem repetições — assim nunca aparecem palavras que não foram ditas.
   rec.onresult = (e) => {
-    let provisorio = "";
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const parte = e.results[i][0].transcript;
-      if (e.results[i].isFinal) { finais += (finais && !/\s$/.test(finais) ? " " : "") + parte.trim(); }
-      else provisorio += parte;
-    }
+    const trechos = [];
+    for (let i = 0; i < e.results.length; i++) trechos.push(e.results[i][0].transcript);
+    textoAtual = juntarTrechos(trechos);
     houveFala = true;
-    escrever(campo, antes, depois, montar(provisorio));
+    escrever(campo, antes, depois, montar(textoAtual));
   };
   rec.onerror = (e) => {
     if (e.error === "not-allowed" || e.error === "service-not-allowed") aviso("Permita o uso do microfone no navegador para poder falar.");
@@ -97,7 +125,7 @@ function iniciar(campo, botao) {
   };
   rec.onend = () => {
     if (ativo && ativo.reconhecimento === rec) pararAtivo();
-    if (houveFala) escrever(campo, antes, depois, montar("")); // deixa só o texto final (sem o provisório)
+    if (houveFala) escrever(campo, antes, depois, montar(textoAtual)); // texto final
   };
 
   try {

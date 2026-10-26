@@ -355,6 +355,10 @@ function iniciarPainel() {
   configurarBanners();
   configurarConfiguracoes();
   configurarPaginasDoSite();
+  // avisa (uma vez por coleção) quando as regras do Firebase ainda não liberam uma coleção nova
+  window.addEventListener("arautos-sem-permissao", (e) => {
+    mostrarToast(`O Firebase não liberou a leitura de "${e.detail}". Atualize as Regras do Firestore (veja as instruções que o Claude enviou).`);
+  });
 }
 
 function configurarMenuSecoes() {
@@ -3543,10 +3547,11 @@ function configurarConfiguracoes() {
 }
 
 /* ---------------- Páginas do site público (ligar / desligar, em tempo real) ---------------- */
-function configurarPaginasDoSite() {
-  const cabecalho = document.getElementById("cabecalhoPaginasSite");
-  const corpo = document.getElementById("corpoPaginasSite");
-  const lista = document.getElementById("listaPaginasSite");
+// Lista que abre e fecha ao clicar no título (começa fechada).
+function ligarListaFechada(idCabecalho, idCorpo) {
+  const cabecalho = document.getElementById(idCabecalho);
+  const corpo = document.getElementById(idCorpo);
+  if (!cabecalho || !corpo) return;
   const alternar = () => {
     const abrir = corpo.classList.contains("oculto");
     corpo.classList.toggle("oculto", !abrir);
@@ -3555,6 +3560,15 @@ function configurarPaginasDoSite() {
   };
   cabecalho.addEventListener("click", alternar);
   cabecalho.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); } });
+}
+
+function configurarPaginasDoSite() {
+  ligarListaFechada("cabecalhoPaginasSite", "corpoPaginasSite");
+  // as outras partes de Configurações também ficam em listas fechadas
+  ligarListaFechada("cabecalhoLogo", "corpoLogo");
+  ligarListaFechada("cabecalhoFundo", "corpoFundo");
+  ligarListaFechada("cabecalhoNovoBanner", "corpoNovoBanner");
+  const lista = document.getElementById("listaPaginasSite");
 
   const paginas = ORDEM_PAGINAS.filter((p) => p.chave !== "index");
   const caixas = new Map();

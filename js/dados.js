@@ -12,6 +12,20 @@ import {
 
 /* ---------------- Configurações gerais (frase do dia, logo, fundo) ---------------- */
 
+
+// Quando o Firestore recusa a leitura de uma coleção (regras de segurança do Firebase que ainda não
+// liberam a coleção), avisa uma vez só em vez de deixar um erro "solto" no console.
+const colecoesSemPermissao = new Set();
+function aoFalharLeitura(colecao) {
+  return (erro) => {
+    console.warn(`[Firestore] não foi possível ler "${colecao}":`, erro && erro.code);
+    if (erro && erro.code === "permission-denied" && !colecoesSemPermissao.has(colecao)) {
+      colecoesSemPermissao.add(colecao);
+      window.dispatchEvent(new CustomEvent("arautos-sem-permissao", { detail: colecao }));
+    }
+  };
+}
+
 const REF_CONFIG_GERAL = doc(db, "configuracoes", "geral");
 const REF_DIAS_HORARIOS = doc(db, "configuracoes", "diasHorarios");
 const REF_ADMIN = doc(db, "configuracoes", "admin");
@@ -555,7 +569,7 @@ export function ouvirContatosCrm(callback) {
     const mapa = {};
     snap.docs.forEach((d) => { mapa[d.id] = d.data(); });
     callback(mapa);
-  });
+  }, aoFalharLeitura("contatosCrm"));
 }
 
 export async function salvarContatoCrm(id, { notas, etiquetas }) {
@@ -711,7 +725,7 @@ export function ouvirCursos(callback) {
     const lista = snap.docs.map((d) => ({ ...normalizarCurso(d.id, d.data()), criadoEmMs: d.data().criadoEmMs || 0 }));
     lista.sort((a, b) => (a.ordem - b.ordem) || (a.criadoEmMs - b.criadoEmMs));
     callback(lista);
-  });
+  }, aoFalharLeitura("cursos"));
 }
 
 export async function salvarCurso(id, dados) {
@@ -777,7 +791,7 @@ export async function excluirInscricao(id) {
 export function ouvirTodasInscricoes(callback) {
   return onSnapshot(collection(db, "inscricoes"), (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  });
+  }, aoFalharLeitura("inscricoes"));
 }
 
 // Avisos de um curso (quadro de avisos): do mais novo para o mais antigo
@@ -786,14 +800,14 @@ export function ouvirAvisosDoCurso(cursoId, callback) {
     const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     lista.sort((a, b) => (b.criadoEmMs || 0) - (a.criadoEmMs || 0));
     callback(lista);
-  });
+  }, aoFalharLeitura("avisosCursos"));
 }
 export function ouvirTodosAvisosDosCursos(callback) {
   return onSnapshot(collection(db, "avisosCursos"), (snap) => {
     const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     lista.sort((a, b) => (b.criadoEmMs || 0) - (a.criadoEmMs || 0));
     callback(lista);
-  });
+  }, aoFalharLeitura("avisosCursos"));
 }
 export async function criarAvisoDoCurso({ cursoId, titulo, texto }) {
   const ref = doc(collection(db, "avisosCursos"));
