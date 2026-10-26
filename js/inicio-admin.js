@@ -244,6 +244,10 @@ function iniciarBlocos() {
 }
 
 export function iniciarInicioAdmin() {
+  // botão fixo no canto inferior: de qualquer página volta para a Página inicial
+  document.getElementById("btnVoltarInicio")?.addEventListener("click", () => {
+    document.querySelector('#menuLateral nav a[data-secao="inicio"]')?.click();
+  });
   iniciarBlocos();
   iniciarGrafico();
 }
