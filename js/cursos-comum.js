@@ -157,7 +157,12 @@ export function montarInscricao(curso, usuario, { nome, padrao, respostas }) {
 
 export const idInscricao = (cursoId, telefoneDigits) => `${cursoId}_${telefoneDigits}`;
 
-export const valorComoTexto = (v) => (Array.isArray(v) ? v.join(", ") : String(v ?? ""));
+// datas guardadas como aaaa-mm-dd aparecem como dd/mm/aaaa
+export const dataParaTexto = (v) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v ?? ""));
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v ?? "");
+};
+export const valorComoTexto = (v) => (Array.isArray(v) ? v.join(", ") : dataParaTexto(v));
 
 /* ---------- Tabela para exportar / mostrar ---------- */
 // Colunas = nome + dados pedidos + cada pergunta (as do formulário atual e as que já foram respondidas
@@ -180,7 +185,7 @@ export function tabelaDeInscritos(curso, inscricoes) {
   const ordenadas = [...inscricoes].sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
   const linhas = ordenadas.map((i) => {
     const l = { nome: i.nome || "", telefone: formatarTelefone(i.telefoneDigits) };
-    CAMPOS_PADRAO.forEach(({ chave }) => { if (chave !== "telefone") l[chave] = (i.padrao && i.padrao[chave]) || ""; });
+    CAMPOS_PADRAO.forEach(({ chave }) => { if (chave !== "telefone") l[chave] = dataParaTexto((i.padrao && i.padrao[chave]) || ""); });
     if (i.padrao && i.padrao.telefone) l.telefone = i.padrao.telefone;
     perguntas.forEach((p) => {
       const it = (i.itens || []).find((x) => x.id === p.id);

@@ -9,7 +9,7 @@ import {
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, TIPOS_PERGUNTA, TIPOS_COM_OPCOES, perguntaTemOpcoes, opcoesDaPergunta, normalizarCurso, novoIdCurto,
-  tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailValido, valorComoTexto
+  tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailValido, valorComoTexto, dataParaTexto
 } from "./cursos-comum.js";
 import { exportarInscritos } from "./exportar-inscritos.js";
 
@@ -528,7 +528,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
         dl.appendChild(criar("dt", "", r));
         dl.appendChild(criar("dd", "", v));
       };
-      CAMPOS_PADRAO.forEach(({ chave, rotulo }) => linha(rotulo, insc.padrao && insc.padrao[chave]));
+      CAMPOS_PADRAO.forEach(({ chave, rotulo }) => linha(rotulo, dataParaTexto(insc.padrao && insc.padrao[chave])));
       (insc.itens || []).forEach((it) => linha(it.rotulo, valorComoTexto(it.valor)));
       linha("Inscrito em", dataDoMs(insc.criadoEmMs));
       det.appendChild(dl);

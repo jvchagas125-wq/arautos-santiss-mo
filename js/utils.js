@@ -1223,6 +1223,106 @@ export function criarCalendario(container, input, opts = {}) {
 }
 
 
+/* ---------- Campo de data com calendário personalizado (datas de nascimento etc.) ----------
+   Mostra "Toque para escolher a data"; ao tocar abre um calendário com mês e ano para escolher
+   direto (dá para voltar décadas em dois toques). Guarda a data como "aaaa-mm-dd".
+   opts: { valorIso, aoMudar(iso), placeholder, maxIso, anoInicial, anosAtras, anosAFrente } */
+export function criarCampoData(opts = {}) {
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const maxIso = opts.maxIso || null;
+  const anoMax = maxIso ? Math.min(Number(maxIso.slice(0, 4)), anoAtual + (opts.anosAFrente ?? 0)) : anoAtual + (opts.anosAFrente ?? 5);
+  const anoMin = anoAtual - (opts.anosAtras ?? 110);
+  let selecionada = opts.valorIso && /^\d{4}-\d{2}-\d{2}$/.test(opts.valorIso) ? opts.valorIso : "";
+  const base = selecionada ? isoParaData(selecionada) : null;
+  let mes = base ? base.getMonth() : hoje.getMonth();
+  let ano = base ? base.getFullYear() : Math.min(opts.anoInicial || anoAtual, anoMax);
+
+  const caixa = document.createElement("div");
+  caixa.className = "campo-data";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.readOnly = true;
+  input.className = "campo-clicavel";
+  input.placeholder = opts.placeholder || "Toque para escolher a data";
+  input.autocomplete = "off";
+  input.setAttribute("inputmode", "none");
+  input.value = selecionada ? formatarDataBR(selecionada) : "";
+  const cal = document.createElement("div");
+  cal.className = "calendario calendario--campo";
+  cal.innerHTML = `
+    <div class="calendario__cabecalho calendario__cabecalho--campo">
+      <button type="button" class="calendario__nav" data-ant aria-label="Mês anterior">‹</button>
+      <span class="calendario__selecoes">
+        <select data-mes aria-label="Mês"></select>
+        <select data-ano aria-label="Ano"></select>
+      </span>
+      <button type="button" class="calendario__nav" data-prox aria-label="Próximo mês">›</button>
+    </div>
+    <div class="calendario__semana"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+    <div class="calendario__dias" data-dias></div>
+    <div class="calendario__rodape"><button type="button" class="calendario__link" data-limpar>Limpar</button><button type="button" class="calendario__link" data-fechar>Fechar</button></div>`;
+  caixa.append(input, cal);
+
+  const selMes = cal.querySelector("[data-mes]");
+  const selAno = cal.querySelector("[data-ano]");
+  const elDias = cal.querySelector("[data-dias]");
+  MESES.forEach((m, i) => selMes.add(new Option(m.charAt(0).toUpperCase() + m.slice(1), String(i))));
+  for (let a = anoMax; a >= anoMin; a--) selAno.add(new Option(String(a), String(a)));
+
+  function desenhar() {
+    selMes.value = String(mes);
+    selAno.value = String(ano);
+    elDias.innerHTML = "";
+    const primeiro = new Date(ano, mes, 1).getDay();
+    const total = new Date(ano, mes + 1, 0).getDate();
+    for (let i = 0; i < primeiro; i++) { const v = document.createElement("span"); v.className = "calendario__vazio"; elDias.appendChild(v); }
+    for (let dia = 1; dia <= total; dia++) {
+      const iso = dataParaIso(new Date(ano, mes, dia));
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "calendario__dia";
+      btn.textContent = dia;
+      if (!maxIso || iso <= maxIso) {
+        btn.classList.add("disponivel");
+        if (iso === selecionada) btn.classList.add("selecionado");
+        btn.addEventListener("click", () => definir(iso, true));
+      }
+      elDias.appendChild(btn);
+    }
+    cal.querySelector("[data-ant]").disabled = ano <= anoMin && mes === 0;
+    cal.querySelector("[data-prox]").disabled = ano >= anoMax && mes === 11;
+  }
+  function definir(iso, fechar) {
+    selecionada = iso || "";
+    input.value = iso ? formatarDataBR(iso) : "";
+    if (iso) { const d = isoParaData(iso); mes = d.getMonth(); ano = d.getFullYear(); }
+    desenhar();
+    if (fechar) cal.classList.remove("aberto");
+    opts.aoMudar?.(selecionada);
+  }
+
+  const mover = (delta) => {
+    const d = new Date(ano, mes + delta, 1);
+    mes = d.getMonth(); ano = d.getFullYear();
+    desenhar();
+  };
+  cal.querySelector("[data-ant]").addEventListener("click", () => mover(-1));
+  cal.querySelector("[data-prox]").addEventListener("click", () => mover(1));
+  selMes.addEventListener("change", () => { mes = Number(selMes.value); desenhar(); });
+  selAno.addEventListener("change", () => { ano = Number(selAno.value); desenhar(); });
+  cal.querySelector("[data-limpar]").addEventListener("click", () => { definir("", true); });
+  cal.querySelector("[data-fechar]").addEventListener("click", () => cal.classList.remove("aberto"));
+  input.addEventListener("click", () => {
+    document.querySelectorAll(".calendario--campo.aberto").forEach((c) => { if (c !== cal) c.classList.remove("aberto"); });
+    cal.classList.toggle("aberto");
+  });
+  document.addEventListener("click", (e) => { if (!caixa.contains(e.target) && !e.target.closest?.(".calendario--campo")) cal.classList.remove("aberto"); });
+
+  desenhar();
+  return caixa;
+}
+
 /* ---------- Arquivo de listas de intenções ----------
    Uma lista vai para o "Histórico (arquivo)" do painel quando já foi ENVIADA por e-mail há
    ARQUIVAR_LISTA_APOS_DIAS dias ou mais e a missa já passou. Nada é apagado do banco de dados:

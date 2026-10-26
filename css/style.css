@@ -1547,3 +1547,21 @@ body.pagina-indisponivel main.conteudo > *:not(.pagina-indisponivel__aviso){ dis
 .pagina-indisponivel__aviso{ text-align:center; padding: 40px 12px; }
 .pagina-indisponivel__icone{ font-size:3rem; margin-bottom:8px; }
 .pagina-indisponivel__aviso p{ color: var(--texto-suave); line-height:1.6; margin: 10px 0 24px; }
+
+/* ---------- Campo de data com calendário (inscrições, datas de nascimento) ---------- */
+.campo-data{ position:relative; }
+.campo-data input.campo-clicavel{ width:100%; cursor:pointer; }
+.calendario--campo{
+  position:static; display:none; width:100%; max-width:340px; margin-top:8px; box-sizing:border-box;
+  opacity:1; transform:none; pointer-events:auto; box-shadow:0 6px 20px rgba(74,7,17,.18);
+}
+.calendario--campo.aberto{ display:block; }
+.calendario__cabecalho--campo{ gap:8px; }
+.calendario__selecoes{ display:flex; gap:6px; flex:1; min-width:0; }
+.calendario__selecoes select{
+  flex:1; min-width:0; font:inherit; font-size:.9rem; padding:7px 6px; color:var(--texto);
+  border:1.5px solid rgba(157,122,31,.45); border-radius:8px; background:#fffefb;
+}
+.calendario__selecoes select:last-child{ flex:0 0 84px; }
+.calendario__rodape{ display:flex; justify-content:space-between; margin-top:10px; }
+.calendario__link{ border:none; background:none; color:var(--vermelho); font-family:'Cinzel'; font-size:.78rem; padding:6px 4px; cursor:pointer; }

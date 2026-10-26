@@ -3,14 +3,14 @@
 import { exigirCadastro } from "./auth.js";
 import {
   inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, linkificarTexto, definirSrcOtimizado,
-  aplicarMascaraTelefone, formatarDataBR, obterUsuarioSessao
+  aplicarMascaraTelefone, formatarDataBR, obterUsuarioSessao, criarCampoData, hojeIso
 } from "./utils.js";
 import {
   obterConfiguracoesGerais, ouvirCursos, inscricoesDaPessoa, salvarInscricao, excluirInscricao, ouvirAvisosDoCurso
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, perguntaVisivel, opcoesDaPergunta, validarInscricao, montarInscricao, mascaraCpf,
-  valorComoTexto, idInscricao
+  valorComoTexto, idInscricao, dataParaTexto
 } from "./cursos-comum.js";
 
 inicializarNavegacao("cursos");
@@ -83,7 +83,10 @@ function montarFormulario(curso, existente, aoConcluir) {
       if (tipo === "email") { tipoInput = "email"; extras.autocomplete = "email"; extras.inputmode = "email"; }
       if (tipo === "telefone") { tipoInput = "tel"; extras.inputmode = "numeric"; extras.placeholder = "(00) 00000-0000"; extras.autocomplete = "tel"; }
       if (tipo === "cpf") { extras.inputmode = "numeric"; extras.placeholder = "000.000.000-00"; }
-      if (tipo === "data") tipoInput = "date";
+      if (tipo === "data") {
+        // data de nascimento: calendário personalizado (mês e ano para escolher), sem datas futuras
+        return criarCampoData({ valorIso: padrao[chave], maxIso: hojeIso(), anoInicial: new Date().getFullYear() - 30, aoMudar: (iso) => { padrao[chave] = iso; } });
+      }
       return entradaTexto(tipoInput, padrao[chave], (i) => {
         if (tipo === "cpf") i.value = mascaraCpf(i.value);
         if (tipo === "telefone") i.value = aplicarMascaraTelefone(i.value);
@@ -105,7 +108,7 @@ function montarFormulario(curso, existente, aoConcluir) {
     const bloco = campo("p:" + p.id, p.rotulo, obrigatoria, () => {
       const r = respostas[p.id];
       if (p.tipo === "texto") return entradaTexto("text", r || "", (i) => { respostas[p.id] = i.value; }, { maxlength: "300" });
-      if (p.tipo === "data") return entradaTexto("date", r || "", (i) => { respostas[p.id] = i.value; });
+      if (p.tipo === "data") return criarCampoData({ valorIso: r, aoMudar: (iso) => { respostas[p.id] = iso; }, anosAFrente: 5 });
       if (p.tipo === "textolongo") {
         const ta = document.createElement("textarea");
         ta.rows = 3; ta.maxLength = 2000; ta.value = r || "";
@@ -280,7 +283,7 @@ function criarCartao(curso) {
       resumo.appendChild(li);
     };
     addLinha("Nome", minha.nome);
-    CAMPOS_PADRAO.forEach(({ chave, rotulo }) => addLinha(rotulo, (minha.padrao || {})[chave]));
+    CAMPOS_PADRAO.forEach(({ chave, rotulo }) => addLinha(rotulo, dataParaTexto((minha.padrao || {})[chave])));
     (minha.itens || []).forEach((it) => addLinha(it.rotulo, valorComoTexto(it.valor)));
     ok.appendChild(resumo);
     const acoes = criar("div", "curso-form__botoes");
