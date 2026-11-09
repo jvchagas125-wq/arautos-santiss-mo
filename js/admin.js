@@ -3,6 +3,7 @@ import { listaArquivada, inicializarNavegacao, aplicarLogo, mostrarToast, abrirM
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
   MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS, categoriasPermitidasDaMissa,
+  normalizarRegraFechamento, regraDeFechamentoDaMissa, descreverRegraDeFechamento, textoHoraMinuto,
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais, ouvirPaginasOcultas, salvarPaginaOculta,
@@ -824,11 +825,102 @@ function configurarHorarios() {
   });
 }
 
+/* ---------------- Editor de "quando a lista fecha" (usado em vários lugares) ----------------
+   Cria um pequeno formulário: [Horas antes da missa | Horário fixo | (Usar o padrão)].
+   obter() devolve a regra ({tipo:"antes"|"fixo", ...}), null quando está em "usar o padrão" ou false se
+   o que foi digitado não vale. */
+function criarEditorFechamento({ comHerdar = false, rotuloHerdar = "Usar o padrão" } = {}) {
+  const el = document.createElement("div");
+  el.className = "regra-fechamento";
+
+  const selModo = document.createElement("select");
+  selModo.setAttribute("aria-label", "Como a lista fecha");
+  const opcoes = [];
+  if (comHerdar) opcoes.push(["herdar", rotuloHerdar]);
+  opcoes.push(["antes", "Algumas horas antes da missa"], ["fixo", "Num horário fixo"]);
+  opcoes.forEach(([valor, texto]) => {
+    const o = document.createElement("option");
+    o.value = valor;
+    o.textContent = texto;
+    selModo.appendChild(o);
+  });
+  el.appendChild(selModo);
+
+  const grupoAntes = document.createElement("span");
+  grupoAntes.className = "regra-fechamento__grupo";
+  const campoHoras = document.createElement("input");
+  campoHoras.type = "number";
+  campoHoras.min = "0.5";
+  campoHoras.max = "72";
+  campoHoras.step = "0.5";
+  campoHoras.value = "3";
+  campoHoras.setAttribute("aria-label", "Quantas horas antes da missa");
+  grupoAntes.append(campoHoras, document.createTextNode("horas antes da missa"));
+  el.appendChild(grupoAntes);
+
+  const grupoFixo = document.createElement("span");
+  grupoFixo.className = "regra-fechamento__grupo";
+  const campoHora = document.createElement("input");
+  campoHora.type = "time";
+  campoHora.value = "21:00";
+  campoHora.setAttribute("aria-label", "Horário em que a lista fecha");
+  const selDias = document.createElement("select");
+  selDias.setAttribute("aria-label", "Em que dia a lista fecha");
+  [[0, "no mesmo dia da missa"], [1, "na véspera (1 dia antes)"], [2, "2 dias antes"], [3, "3 dias antes"], [4, "4 dias antes"], [5, "5 dias antes"], [6, "6 dias antes"], [7, "7 dias antes"]].forEach(([v, t]) => {
+    const o = document.createElement("option");
+    o.value = String(v);
+    o.textContent = t;
+    selDias.appendChild(o);
+  });
+  selDias.value = "1";
+  grupoFixo.append(document.createTextNode("às"), campoHora, selDias);
+  el.appendChild(grupoFixo);
+
+  const herdado = document.createElement("span");
+  herdado.className = "regra-fechamento__herdado";
+  el.appendChild(herdado);
+
+  function atualizar() {
+    const modo = selModo.value;
+    grupoAntes.hidden = modo !== "antes";
+    grupoFixo.hidden = modo !== "fixo";
+    herdado.hidden = modo !== "herdar";
+  }
+  selModo.addEventListener("change", atualizar);
+  atualizar();
+
+  return {
+    el,
+    obter() {
+      const modo = selModo.value;
+      if (modo === "herdar") return null;
+      if (modo === "antes") return normalizarRegraFechamento({ tipo: "antes", horas: campoHoras.value }) || false;
+      const [h, m] = String(campoHora.value || "").split(":").map(Number);
+      if (!Number.isInteger(h)) return false;
+      return normalizarRegraFechamento({ tipo: "fixo", hora: h, minuto: m || 0, diasAntes: Number(selDias.value) }) || false;
+    },
+    definir(regra) {
+      const r = normalizarRegraFechamento(regra);
+      if (!r) {
+        selModo.value = comHerdar ? "herdar" : "antes";
+      } else if (r.tipo === "antes") {
+        selModo.value = "antes";
+        campoHoras.value = String(r.horas);
+      } else {
+        selModo.value = "fixo";
+        campoHora.value = `${String(r.hora).padStart(2, "0")}:${String(r.minuto).padStart(2, "0")}`;
+        selDias.value = String(r.diasAntes);
+      }
+      atualizar();
+    },
+    definirHerdado(texto) { herdado.textContent = texto ? `Vale: ${texto}` : ""; }
+  };
+}
+
 /* ---------------- Intenções da missa ---------------- */
 function configurarIntencoes() {
   const form = document.getElementById("formHorariosMissas");
   const gradesPorDia = document.getElementById("gradesPorDia");
-  const campoHorasAntes = document.getElementById("campoHorasAntes");
 
   // "Listas preenchidas" também começa fechada — só abre quando a pessoa clicar no título
   const cabecalhoListasPreenchidas = document.getElementById("cabecalhoListasPreenchidas");
@@ -897,6 +989,32 @@ function configurarIntencoes() {
   // exibidos na ordem segunda...domingo para ficar mais natural de ler
   const ORDEM_EXIBICAO = [1, 2, 3, 4, 5, 6, 0];
   const gradesPorIndice = []; // gradesPorIndice[diaSemana] = elemento .grade-checkbox
+  const regrasDoDia = []; // regrasDoDia[diaSemana] = { bloco, lista, editores: { hora: editor } } (fechamento de cada missa)
+
+  // editores do fechamento geral: padrão, manhã e tarde/noite
+  const editorPadrao = criarEditorFechamento();
+  const editorManha = criarEditorFechamento({ comHerdar: true, rotuloHerdar: "Usar o padrão para todas as missas" });
+  const editorTarde = criarEditorFechamento({ comHerdar: true, rotuloHerdar: "Usar o padrão para todas as missas" });
+  document.getElementById("editorFechamentoPadrao").appendChild(editorPadrao.el);
+  document.getElementById("editorFechamentoManha").appendChild(editorManha.el);
+  document.getElementById("editorFechamentoTarde").appendChild(editorTarde.el);
+  editorPadrao.definir({ tipo: "antes", horas: 3 });
+
+  // o que vale para uma hora de missa se ela não tiver regra própria (manhã/tarde ou o padrão)
+  function regraGeralDaHora(hora) {
+    const turno = hora < 12 ? editorManha.obter() : editorTarde.obter();
+    if (turno) return turno;
+    return editorPadrao.obter() || { tipo: "antes", horas: 3 };
+  }
+  function atualizarHerancas() {
+    regrasDoDia.forEach((rd) => {
+      Object.entries(rd.editores).forEach(([hora, editor]) => editor.definirHerdado(descreverRegraDeFechamento(regraGeralDaHora(Number(hora)))));
+    });
+  }
+  [editorPadrao, editorManha, editorTarde].forEach((e) => {
+    e.el.addEventListener("change", atualizarHerancas);
+    e.el.addEventListener("input", atualizarHerancas);
+  });
 
   ORDEM_EXIBICAO.forEach((diaSemana) => {
     const quadro = document.createElement("div");
@@ -921,6 +1039,11 @@ function configurarIntencoes() {
     }
     corpo.appendChild(grade);
     gradesPorIndice[diaSemana] = grade;
+    const blocoRegras = document.createElement("div");
+    blocoRegras.className = "fechamento-dia oculto";
+    blocoRegras.innerHTML = `<p class="campo-legenda">Quando a lista de cada missa fecha</p><div data-regras></div>`;
+    corpo.appendChild(blocoRegras);
+    regrasDoDia[diaSemana] = { bloco: blocoRegras, lista: blocoRegras.querySelector("[data-regras]"), editores: {} };
 
     const resumoEl = cabecalho.querySelector("[data-resumo]");
     function atualizarResumo() {
@@ -932,6 +1055,7 @@ function configurarIntencoes() {
       cb.addEventListener("change", () => {
         cb.closest("label").classList.toggle("marcado", cb.checked);
         atualizarResumo();
+        renderizarRegrasDoDia(diaSemana);
       });
     });
     atualizarResumo();
@@ -945,6 +1069,43 @@ function configurarIntencoes() {
     quadro.appendChild(corpo);
     gradesPorDia.appendChild(quadro);
   });
+
+  // uma linha por horário marcado no dia: "Missa das 07h — [como a lista fecha]"
+  function editorDaMissa(diaSemana, hora) {
+    const rd = regrasDoDia[diaSemana];
+    if (!rd.editores[hora]) {
+      const editor = criarEditorFechamento({ comHerdar: true, rotuloHerdar: "Usar o padrão" });
+      editor.el.addEventListener("change", () => atualizarHerancas());
+      rd.editores[hora] = editor;
+    }
+    return rd.editores[hora];
+  }
+  function renderizarRegrasDoDia(diaSemana) {
+    const rd = regrasDoDia[diaSemana];
+    const horas = Array.from(gradesPorIndice[diaSemana].querySelectorAll("input:checked")).map((cb) => Number(cb.value)).sort((a, b) => a - b);
+    rd.lista.innerHTML = "";
+    rd.bloco.classList.toggle("oculto", horas.length === 0);
+    horas.forEach((hora) => {
+      const linha = document.createElement("div");
+      linha.className = "linha-regra-missa";
+      const rotulo = document.createElement("span");
+      rotulo.className = "linha-regra-missa__hora";
+      rotulo.textContent = `Missa das ${String(hora).padStart(2, "0")}h`;
+      linha.append(rotulo, editorDaMissa(diaSemana, hora).el);
+      rd.lista.appendChild(linha);
+    });
+    atualizarHerancas();
+  }
+  function regrasMarcadasDoDia(diaSemana) {
+    const rd = regrasDoDia[diaSemana];
+    const mapa = {};
+    for (const hora of horasMarcadas(diaSemana)) {
+      const regra = rd.editores[hora] ? rd.editores[hora].obter() : null;
+      if (regra === false) return { erro: hora };
+      if (regra) mapa[String(hora)] = regra;
+    }
+    return { mapa };
+  }
 
   function marcarHoras(diaSemana, horas) {
     const ativos = new Set(horas || []);
@@ -966,7 +1127,16 @@ function configurarIntencoes() {
 
   const preencherHorariosMissas = (config) => {
     for (let d = 0; d < 7; d++) marcarHoras(d, config.horariosPorDia[d]);
-    campoHorasAntes.value = config.horasAntes;
+    editorPadrao.definir(config.fechamento.padrao);
+    editorManha.definir(config.fechamento.manha);
+    editorTarde.definir(config.fechamento.tarde);
+    for (let d = 0; d < 7; d++) {
+      const salvas = (config.fechamentoPorDiaHora || {})[String(d)] || {};
+      const rd = regrasDoDia[d];
+      Object.keys(salvas).forEach((hora) => editorDaMissa(d, Number(hora)));
+      Object.entries(rd.editores).forEach(([hora, editor]) => editor.definir(salvas[hora] || null));
+      renderizarRegrasDoDia(d);
+    }
   };
   obterConfigIntencoes(preencherHorariosMissas).then(preencherHorariosMissas);
 
@@ -974,16 +1144,31 @@ function configurarIntencoes() {
     e.preventDefault();
     const horariosPorDia = [];
     for (let d = 0; d < 7; d++) horariosPorDia.push(horasMarcadas(d));
-    const horasAntes = Number(campoHorasAntes.value) || 3;
     if (horariosPorDia.every((h) => h.length === 0)) {
       mostrarToast("Selecione pelo menos um horário de missa.");
       return;
+    }
+    const padrao = editorPadrao.obter();
+    const manha = editorManha.obter();
+    const tarde = editorTarde.obter();
+    if (padrao === false || manha === false || tarde === false) {
+      mostrarToast("Confira o horário de fechamento da lista: preencha as horas ou o horário.");
+      return;
+    }
+    const fechamentoPorDiaHora = {};
+    for (let d = 0; d < 7; d++) {
+      const { mapa, erro } = regrasMarcadasDoDia(d);
+      if (erro !== undefined) {
+        mostrarToast(`Confira o fechamento da missa das ${String(erro).padStart(2, "0")}h de ${DIAS_SEMANA_COMPLETO[d]}.`);
+        return;
+      }
+      if (Object.keys(mapa).length) fechamentoPorDiaHora[String(d)] = mapa;
     }
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
-      await salvarConfigIntencoes({ horariosPorDia, horasAntes });
+      await salvarConfigIntencoes({ horariosPorDia, fechamento: { padrao, manha, tarde }, fechamentoPorDiaHora });
       mostrarToast("Horários das missas atualizados!");
     } catch (err) {
       console.error(err);
@@ -995,7 +1180,7 @@ function configurarIntencoes() {
   });
 
   /* ---------- Dias com horário diferente (calendário + janela de horários) ---------- */
-  let configIntencoes = { horariosPorDia: [[], [], [], [], [], [], []], horasAntes: 3, horariosEspeciais: {}, categoriasPorMissa: {} };
+  let configIntencoes = { horariosPorDia: [[], [], [], [], [], [], []], horasAntes: 3, horariosEspeciais: {}, categoriasPorMissa: {}, fechamento: { padrao: { tipo: "antes", horas: 3 }, manha: null, tarde: null }, fechamentoPorDiaHora: {}, fechamentoPorMissa: {} };
   const modalEspecial = document.getElementById("modalHorarioEspecial");
   const gradeEspecial = document.getElementById("especialGrade");
   const calendarioEspeciaisEl = document.getElementById("calendarioEspeciais");
@@ -1009,6 +1194,7 @@ function configurarIntencoes() {
     label.querySelector("input").addEventListener("change", (e) => {
       label.classList.toggle("marcado", e.target.checked);
       renderizarCategoriasDoModal();
+      renderizarFechamentoDoModal();
     });
     gradeEspecial.appendChild(label);
   }
@@ -1062,6 +1248,52 @@ function configurarIntencoes() {
       listaCategoriasEspecial.appendChild(caixa);
     });
   }
+  // Fechamento da lista de cada missa do dia (só vale se o administrador escolher algo; senão vale o normal).
+  const blocoFechamentoEspecial = document.getElementById("especialFechamento");
+  const listaFechamentoEspecial = document.getElementById("especialFechamentoLista");
+  let editoresFechamentoEspecial = {}; // hora → editor
+  function renderizarFechamentoDoModal() {
+    const horas = horasDaGradeEspecial();
+    listaFechamentoEspecial.innerHTML = "";
+    blocoFechamentoEspecial.classList.toggle("oculto", horas.length === 0);
+    // o que valeria sem a regra própria deste dia (dia da semana, manhã/tarde ou padrão)
+    const semRegraDoDia = { ...configIntencoes, fechamentoPorMissa: {} };
+    horas.forEach((hora) => {
+      if (!editoresFechamentoEspecial[hora]) {
+        editoresFechamentoEspecial[hora] = criarEditorFechamento({ comHerdar: true, rotuloHerdar: "Usar o fechamento normal" });
+      }
+      const editor = editoresFechamentoEspecial[hora];
+      editor.definirHerdado(diaEspecialEditando ? descreverRegraDeFechamento(regraDeFechamentoDaMissa(semRegraDoDia, diaEspecialEditando, hora).regra) : "");
+      const caixa = document.createElement("div");
+      caixa.className = "especial-missa";
+      const topo = document.createElement("div");
+      topo.className = "especial-missa__topo";
+      const titulo = document.createElement("span");
+      titulo.className = "especial-missa__hora";
+      titulo.textContent = `Missa das ${String(hora).padStart(2, "0")}h`;
+      topo.appendChild(titulo);
+      if (horas.length > 1) {
+        const copiar = document.createElement("button");
+        copiar.type = "button";
+        copiar.className = "especial-missa__copiar";
+        copiar.textContent = "Usar o mesmo nas outras missas";
+        copiar.addEventListener("click", () => {
+          const regra = editor.obter();
+          if (regra === false) { mostrarToast("Confira o horário de fechamento antes de copiar."); return; }
+          horas.forEach((h) => { if (h !== hora && editoresFechamentoEspecial[h]) editoresFechamentoEspecial[h].definir(regra); });
+        });
+        topo.appendChild(copiar);
+      }
+      caixa.append(topo, editor.el);
+      listaFechamentoEspecial.appendChild(caixa);
+    });
+  }
+  // texto curto com o fechamento próprio de cada missa do dia (para a lista de dias)
+  function resumoFechamentoDoDia(iso) {
+    const porHora = (configIntencoes.fechamentoPorMissa || {})[iso] || {};
+    return Object.keys(porHora).map(Number).sort((a, b) => a - b).map((h) =>
+      `${String(h).padStart(2, "0")}h: fecha ${descreverRegraDeFechamento(porHora[String(h)])}`).join(" · ");
+  }
   // texto curto com as categorias liberadas de cada missa que tem restrição (para a lista de dias)
   function resumoCategoriasDoDia(iso) {
     const porHora = (configIntencoes.categoriasPorMissa || {})[iso] || {};
@@ -1095,6 +1327,14 @@ function configurarIntencoes() {
       selecaoCategorias[Number(hora)] = new Set(validas.length ? validas : todasAsChaves());
     });
     renderizarCategoriasDoModal();
+    // fechamento próprio de cada missa deste dia (as sem regra própria ficam em "usar o fechamento normal")
+    editoresFechamentoEspecial = {};
+    Object.entries((configIntencoes.fechamentoPorMissa || {})[iso] || {}).forEach(([hora, regra]) => {
+      const editor = criarEditorFechamento({ comHerdar: true, rotuloHerdar: "Usar o fechamento normal" });
+      editor.definir(regra);
+      editoresFechamentoEspecial[Number(hora)] = editor;
+    });
+    renderizarFechamentoDoModal();
     document.getElementById("especialData").textContent = formatarDataComDiaSemana(iso);
     document.getElementById("especialAviso").textContent = temEspecial
       ? "Este dia já tem um horário diferente do padrão."
@@ -1105,11 +1345,17 @@ function configurarIntencoes() {
   function fecharHorarioEspecial() { fecharModal(modalEspecial); diaEspecialEditando = null; }
 
   // guarda o mapa inteiro de dias especiais; datas que já passaram são descartadas (não servem mais pra nada)
-  async function gravarHorariosEspeciais(mapa, categorias = configIntencoes.categoriasPorMissa) {
+  async function gravarHorariosEspeciais(mapa, categorias = configIntencoes.categoriasPorMissa, fechamentos = configIntencoes.fechamentoPorMissa) {
     const hoje = hojeIso();
     const limpo = {};
     Object.entries(mapa).forEach(([iso, horas]) => { if (iso >= hoje) limpo[iso] = horas; });
-    await salvarHorariosEspeciais(limpo, categorias || {});
+    await salvarHorariosEspeciais(limpo, categorias || {}, fechamentos || {});
+  }
+  // mapa de fechamentos sem a data "iso" (quando o dia volta ao padrão)
+  function fechamentosSemDia(iso) {
+    const f = { ...(configIntencoes.fechamentoPorMissa || {}) };
+    delete f[iso];
+    return f;
   }
   // mapa de categorias sem a data "iso" (quando o dia volta ao padrão)
   function categoriasSemDia(iso) {
@@ -1144,14 +1390,29 @@ function configurarIntencoes() {
     const categorias = categoriasSemDia(iso);
     const temRestricao = Object.keys(restritas).length > 0;
     if (temRestricao) categorias[iso] = restritas;
+    // fechamento próprio de cada missa do dia (só as que o administrador mudou)
+    const regrasDoDiaEspecial = {};
+    for (const hora of horas) {
+      const editor = editoresFechamentoEspecial[hora];
+      if (!editor) continue;
+      const regra = editor.obter();
+      if (regra === false) {
+        mostrarToast(`Confira o horário de fechamento da missa das ${String(hora).padStart(2, "0")}h.`);
+        return;
+      }
+      if (regra) regrasDoDiaEspecial[String(hora)] = regra;
+    }
+    const fechamentos = fechamentosSemDia(iso);
+    const temFechamento = Object.keys(regrasDoDiaEspecial).length > 0;
+    if (temFechamento) fechamentos[iso] = regrasDoDiaEspecial;
     let aviso;
-    if (igualAoPadrao && !temRestricao) { delete mapa[iso]; aviso = "Esses são os horários padrão da semana — este dia voltou ao normal."; }
+    if (igualAoPadrao && !temRestricao && !temFechamento) { delete mapa[iso]; aviso = "Esses são os horários padrão da semana — este dia voltou ao normal."; }
     else { mapa[iso] = horas; aviso = horas.length ? "Horários do dia salvos!" : "Salvo: este dia ficou sem missa."; }
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
-      await gravarHorariosEspeciais(mapa, categorias);
-      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias };
+      await gravarHorariosEspeciais(mapa, categorias, fechamentos);
+      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias, fechamentoPorMissa: fechamentos };
       renderizarEspeciais();
       fecharHorarioEspecial();
       mostrarToast(aviso);
@@ -1170,10 +1431,11 @@ function configurarIntencoes() {
     const mapa = { ...configIntencoes.horariosEspeciais };
     delete mapa[iso];
     const categorias = categoriasSemDia(iso);
+    const fechamentos = fechamentosSemDia(iso);
     btn.disabled = true;
     try {
-      await gravarHorariosEspeciais(mapa, categorias);
-      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias };
+      await gravarHorariosEspeciais(mapa, categorias, fechamentos);
+      configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias, fechamentoPorMissa: fechamentos };
       renderizarEspeciais();
       fecharHorarioEspecial();
       mostrarToast("Este dia voltou ao horário padrão da semana.");
@@ -1213,7 +1475,7 @@ function configurarIntencoes() {
         if (Array.isArray(especial)) {
           btn.classList.add("especial");
           if (especial.length === 0) btn.classList.add("sem-missa");
-          btn.title = especial.length ? `Missa às ${textoHoras(especial)}${resumoCategoriasDoDia(iso) ? ` — ${resumoCategoriasDoDia(iso)}` : ""}` : "Sem missa neste dia";
+          btn.title = especial.length ? `Missa às ${textoHoras(especial)}${resumoCategoriasDoDia(iso) ? ` — ${resumoCategoriasDoDia(iso)}` : ""}${resumoFechamentoDoDia(iso) ? ` — ${resumoFechamentoDoDia(iso)}` : ""}` : "Sem missa neste dia";
         }
         btn.addEventListener("click", () => abrirHorarioEspecial(iso));
       }
@@ -1257,6 +1519,13 @@ function configurarIntencoes() {
         linhaCats.textContent = resumoCats;
         texto.appendChild(linhaCats);
       }
+      const resumoFecha = resumoFechamentoDoDia(iso);
+      if (resumoFecha && horas.length) {
+        const linhaFecha = document.createElement("span");
+        linhaFecha.className = "item-especial__cats";
+        linhaFecha.textContent = resumoFecha;
+        texto.appendChild(linhaFecha);
+      }
       const acoes = document.createElement("span");
       acoes.className = "item-especial__acoes";
       const btnEditar = criarBotaoIcone("intencao-item__btn--editar", "Editar horários deste dia", ICONE_LAPIS);
@@ -1266,9 +1535,10 @@ function configurarIntencoes() {
         const mapa = { ...configIntencoes.horariosEspeciais };
         delete mapa[iso];
         const categorias = categoriasSemDia(iso);
+        const fechamentos = fechamentosSemDia(iso);
         try {
-          await gravarHorariosEspeciais(mapa, categorias);
-          configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias };
+          await gravarHorariosEspeciais(mapa, categorias, fechamentos);
+          configIntencoes = { ...configIntencoes, horariosEspeciais: mapa, categoriasPorMissa: categorias, fechamentoPorMissa: fechamentos };
           renderizarEspeciais();
           mostrarToast("Este dia voltou ao horário padrão da semana.");
         } catch (err) {
@@ -1293,7 +1563,7 @@ function configurarIntencoes() {
     // rascunhos de listas que já fecharam não servem mais: apaga (uma vez por abertura do painel)
     if (!rascunhosLimpos) {
       rascunhosLimpos = true;
-      limparRascunhosVencidos(config.horasAntes).catch((err) => console.error(err));
+      limparRascunhosVencidos(config).catch((err) => console.error(err));
     }
   });
 

@@ -15,7 +15,7 @@
 <script>try{if(localStorage.getItem("arautos_admin_sessao"))document.documentElement.classList.add("com-sessao");}catch(e){}</script>
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/admin.css?v=75" />
+<link rel="stylesheet" href="css/admin.css?v=76" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -313,9 +313,26 @@
             </p>
             <form id="formHorariosMissas">
               <div id="gradesPorDia"></div>
-              <div class="campo" style="margin-top:16px; max-width:220px;">
-                <label for="campoHorasAntes">Fechar a lista quantas horas antes da missa</label>
-                <input type="number" id="campoHorasAntes" min="1" max="12" step="1" required />
+              <div class="fechamento-bloco" id="blocoFechamentoGeral">
+                <p class="campo-legenda">⏰ Quando a lista de cada missa fecha</p>
+                <p class="fechamento-dica">
+                  Escolha o padrão para todas as missas: fechar algumas horas antes da missa ou num horário fixo
+                  (por exemplo, às 21h do dia anterior). Se quiser, dê um fechamento próprio para as missas da manhã e
+                  para as da tarde/noite. E, dentro de cada dia da semana (nos quadros acima), você ainda pode ajustar
+                  o fechamento de cada horário de missa.
+                </p>
+                <div class="fechamento-card">
+                  <div class="fechamento-card__titulo">Padrão para todas as missas</div>
+                  <div id="editorFechamentoPadrao"></div>
+                </div>
+                <div class="fechamento-card">
+                  <div class="fechamento-card__titulo">Missas da manhã <small>(até 11h)</small></div>
+                  <div id="editorFechamentoManha"></div>
+                </div>
+                <div class="fechamento-card">
+                  <div class="fechamento-card__titulo">Missas da tarde e da noite <small>(12h em diante)</small></div>
+                  <div id="editorFechamentoTarde"></div>
+                </div>
               </div>
               <button type="submit" class="btn btn-dourado" style="margin-top:10px;">Salvar horários das missas</button>
             </form>
@@ -324,7 +341,7 @@
               <p class="especiais__texto">
                 Vai ter missa em um horário diferente em algum dia (por exemplo, às 10h numa data especial)?
                 Toque no dia no calendário e escolha os horários daquela data — ela passa a valer no lugar dos
-                horários da semana, e a lista fecha automaticamente a quantidade de horas definida acima antes da missa.
+                horários da semana. Ali você também pode escolher quando a lista de cada missa daquela data fecha.
               </p>
               <div class="calendario-grande especiais__calendario" id="calendarioEspeciais">
                 <div class="calendario__cabecalho">
@@ -347,7 +364,7 @@
 
             <div class="aviso-info" style="margin-top:20px;">
               <span class="aviso-info__icone">ℹ️</span>
-              <p><strong>Como funciona:</strong> a lista de intenções da próxima missa fica aberta até a quantidade de horas configurada acima antes do horário da missa. Depois disso ela fecha, e assim que a missa acontece a lista da missa seguinte já abre automaticamente no site público.</p>
+              <p><strong>Como funciona:</strong> a lista de intenções da próxima missa fica aberta até o horário de fechamento configurado acima (que pode ser diferente para cada missa). Depois disso ela fecha, e assim que a missa acontece a lista da missa seguinte já abre automaticamente no site público.</p>
             </div>
             </div>
           </div>
@@ -1146,6 +1163,11 @@
         <p class="especial-aviso" id="especialAviso"></p>
         <div class="grade-checkbox" id="especialGrade"></div>
         <p class="especial-dica">Marque os horários em que haverá missa neste dia. Sem nenhum horário marcado, este dia fica <strong>sem missa</strong> (e sem lista de intenções).</p>
+        <div class="especial-categorias oculto" id="especialFechamento">
+          <p class="campo-legenda">Quando a lista de cada missa fecha</p>
+          <p class="especial-dica especial-dica--curta">Por padrão vale o fechamento normal da missa. Se quiser, escolha outro horário de fechamento só para este dia.</p>
+          <div id="especialFechamentoLista"></div>
+        </div>
         <div class="especial-categorias oculto" id="especialCategorias">
           <p class="campo-legenda">Categorias de cada missa</p>
           <p class="especial-dica especial-dica--curta">Escolha quais categorias de intenção aparecem na lista do site e no documento Word de cada missa. Com todas marcadas, vale o normal.</p>

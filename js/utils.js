@@ -522,27 +522,158 @@ export function categoriasPermitidasDaMissa(config, iso, hora) {
   return Array.isArray(lista) && lista.length ? lista : null;
 }
 
+/* ---------- Regras de fechamento da lista ----------
+   Uma regra diz QUANDO a lista de uma missa fecha. Dois tipos:
+     { tipo: "antes", horas: 3 }                         → fecha 3 horas antes da missa
+     { tipo: "fixo", hora: 21, minuto: 0, diasAntes: 1 } → fecha às 21:00, 1 dia antes (0 = no mesmo dia da missa)
+   Qual regra vale para uma missa (da mais específica para a mais geral):
+     1. a regra daquela missa num dia com horário diferente      (fechamentoPorMissa[data][hora])
+     2. a regra daquele dia da semana + horário                  (fechamentoPorDiaHora[diaSemana][hora])
+     3. a regra das missas da manhã (até 11h) ou da tarde/noite (12h em diante)  (fechamento.manha / fechamento.tarde)
+     4. a regra padrão                                           (fechamento.padrao — por omissão, "horasAntes" horas antes) */
+export const HORA_CORTE_MANHA = 12; // missas das 0h às 11h = "manhã"; de 12h em diante = "tarde e noite"
+
+export function normalizarRegraFechamento(r) {
+  if (!r || typeof r !== "object" || Array.isArray(r)) return null;
+  if (r.tipo === "antes") {
+    const horas = Number(r.horas);
+    if (!(horas > 0) || horas > 72) return null;
+    return { tipo: "antes", horas: Math.round(horas * 2) / 2 || 0.5 };
+  }
+  if (r.tipo === "fixo") {
+    const hora = Number(r.hora);
+    const minuto = Number(r.minuto || 0);
+    const diasAntes = Number(r.diasAntes || 0);
+    if (!Number.isInteger(hora) || hora < 0 || hora > 23) return null;
+    if (!Number.isInteger(minuto) || minuto < 0 || minuto > 59) return null;
+    if (!Number.isInteger(diasAntes) || diasAntes < 0 || diasAntes > 7) return null;
+    return { tipo: "fixo", hora, minuto, diasAntes };
+  }
+  return null;
+}
+
+// { "0": { "7": regra, "19": regra }, ... } (dia da semana → hora → regra), só com regras válidas
+export function normalizarFechamentoPorDiaHora(bruto) {
+  const limpo = {};
+  if (bruto && typeof bruto === "object" && !Array.isArray(bruto)) {
+    Object.entries(bruto).forEach(([dia, porHora]) => {
+      const d = Number(dia);
+      if (!Number.isInteger(d) || d < 0 || d > 6 || !porHora || typeof porHora !== "object" || Array.isArray(porHora)) return;
+      const mapa = {};
+      Object.entries(porHora).forEach(([hora, regra]) => {
+        const h = Number(hora);
+        const r = normalizarRegraFechamento(regra);
+        if (Number.isInteger(h) && h >= 0 && h <= 23 && r) mapa[String(h)] = r;
+      });
+      if (Object.keys(mapa).length) limpo[String(d)] = mapa;
+    });
+  }
+  return limpo;
+}
+
+// { "aaaa-mm-dd": { "8": regra } } (dia com horário diferente → hora → regra)
+export function normalizarFechamentoPorMissa(bruto) {
+  const limpo = {};
+  if (bruto && typeof bruto === "object" && !Array.isArray(bruto)) {
+    Object.entries(bruto).forEach(([iso, porHora]) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || !porHora || typeof porHora !== "object" || Array.isArray(porHora)) return;
+      const mapa = {};
+      Object.entries(porHora).forEach(([hora, regra]) => {
+        const h = Number(hora);
+        const r = normalizarRegraFechamento(regra);
+        if (Number.isInteger(h) && h >= 0 && h <= 23 && r) mapa[String(h)] = r;
+      });
+      if (Object.keys(mapa).length) limpo[iso] = mapa;
+    });
+  }
+  return limpo;
+}
+
+// { padrao, manha, tarde } — manha/tarde ficam null quando não há regra própria
+export function normalizarFechamentoGeral(bruto, horasAntes) {
+  const b = bruto && typeof bruto === "object" && !Array.isArray(bruto) ? bruto : {};
+  return {
+    padrao: normalizarRegraFechamento(b.padrao) || { tipo: "antes", horas: horasAntes },
+    manha: normalizarRegraFechamento(b.manha),
+    tarde: normalizarRegraFechamento(b.tarde)
+  };
+}
+
+// A regra que vale para a missa de "iso" às "hora" (veja a ordem lá em cima). Devolve também de onde ela veio.
+export function regraDeFechamentoDaMissa(config, iso, hora) {
+  const h = Number(hora);
+  const cfg = config || {};
+  const daMissa = cfg.fechamentoPorMissa && cfg.fechamentoPorMissa[iso] && cfg.fechamentoPorMissa[iso][String(h)];
+  if (daMissa) return { regra: daMissa, origem: "missa" };
+  const diaSemana = isoParaData(iso).getDay();
+  const doDia = cfg.fechamentoPorDiaHora && cfg.fechamentoPorDiaHora[String(diaSemana)] && cfg.fechamentoPorDiaHora[String(diaSemana)][String(h)];
+  if (doDia) return { regra: doDia, origem: "dia" };
+  const geral = cfg.fechamento || {};
+  const turno = h < HORA_CORTE_MANHA ? geral.manha : geral.tarde;
+  if (turno) return { regra: turno, origem: h < HORA_CORTE_MANHA ? "manha" : "tarde" };
+  if (geral.padrao) return { regra: geral.padrao, origem: "padrao" };
+  const horas = Number(cfg.horasAntes) > 0 ? Number(cfg.horasAntes) : HORAS_ANTES_PADRAO;
+  return { regra: { tipo: "antes", horas }, origem: "padrao" };
+}
+
+// Soma dias (negativos voltam) a uma data "aaaa-mm-dd", só na aritmética do calendário.
+export function somarDiasNoIso(iso, dias) {
+  const d = isoParaData(iso);
+  return dataParaIso(new Date(d.getFullYear(), d.getMonth(), d.getDate() + dias));
+}
+
+// Em termos simples, quando a lista fecha: { horasAntes } ou { iso, hora, minuto } (data e hora do relógio).
+export function momentoDeFechamento(regra, iso) {
+  if (regra.tipo === "fixo") return { iso: somarDiasNoIso(iso, -regra.diasAntes), hora: regra.hora, minuto: regra.minuto };
+  return { horasAntes: regra.horas };
+}
+
+const doisDigitosHora = (n) => String(n).padStart(2, "0");
+// "21h" ou "21h30"
+export function textoHoraMinuto(hora, minuto = 0) {
+  return minuto ? `${doisDigitosHora(hora)}h${doisDigitosHora(minuto)}` : `${doisDigitosHora(hora)}h`;
+}
+function textoHoras(horas) {
+  const n = Number(horas);
+  const txt = Number.isInteger(n) ? String(n) : String(n).replace(".", ",");
+  return `${txt} ${n === 1 ? "hora" : "horas"}`;
+}
+// Texto curto de uma regra: "3 horas antes da missa", "às 21h, na véspera", "às 21h, 2 dias antes", "às 6h, no mesmo dia"
+export function descreverRegraDeFechamento(regra) {
+  if (!regra) return "";
+  if (regra.tipo === "fixo") {
+    const quando = regra.diasAntes === 0 ? "no mesmo dia da missa" : regra.diasAntes === 1 ? "na véspera" : `${regra.diasAntes} dias antes`;
+    return `às ${textoHoraMinuto(regra.hora, regra.minuto)}, ${quando}`;
+  }
+  return `${textoHoras(regra.horas)} antes da missa`;
+}
+
 // Aceita o formato atual (mapa), o formato "lista de 7 listas" (salvo antes) e o formato bem antigo
-// (horariosSemana/horariosDomingo), sempre devolvendo { horariosPorDia, horasAntes, horariosEspeciais }.
+// (horariosSemana/horariosDomingo), sempre devolvendo { horariosPorDia, horasAntes, horariosEspeciais,
+// categoriasPorMissa, fechamento, fechamentoPorDiaHora, fechamentoPorMissa }.
 export function normalizarConfigIntencoes(dados) {
-  if (!dados || typeof dados !== "object") {
-    return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), horasAntes: HORAS_ANTES_PADRAO, horariosEspeciais: {}, categoriasPorMissa: {} };
-  }
-  const horasAntes = Number(dados.horasAntes) > 0 ? Number(dados.horasAntes) : HORAS_ANTES_PADRAO;
-  const horariosEspeciais = normalizarHorariosEspeciais(dados.horariosEspeciais);
-  const categoriasPorMissa = normalizarCategoriasPorMissa(dados.categoriasPorMissa);
-  const bruto = dados.horariosPorDia;
+  const d = dados && typeof dados === "object" ? dados : {};
+  const horasAntes = Number(d.horasAntes) > 0 ? Number(d.horasAntes) : HORAS_ANTES_PADRAO;
+  const comum = {
+    horasAntes,
+    horariosEspeciais: normalizarHorariosEspeciais(d.horariosEspeciais),
+    categoriasPorMissa: normalizarCategoriasPorMissa(d.categoriasPorMissa),
+    fechamento: normalizarFechamentoGeral(d.fechamento, horasAntes),
+    fechamentoPorDiaHora: normalizarFechamentoPorDiaHora(d.fechamentoPorDiaHora),
+    fechamentoPorMissa: normalizarFechamentoPorMissa(d.fechamentoPorMissa)
+  };
+  const bruto = d.horariosPorDia;
   const ehLista = Array.isArray(bruto) && bruto.length === 7;
-  const ehMapa = bruto && typeof bruto === "object" && !Array.isArray(bruto) && [0, 1, 2, 3, 4, 5, 6].some((d) => Array.isArray(bruto[d]));
+  const ehMapa = bruto && typeof bruto === "object" && !Array.isArray(bruto) && [0, 1, 2, 3, 4, 5, 6].some((x) => Array.isArray(bruto[x]));
   if (ehLista || ehMapa) {
-    return { horariosPorDia: [0, 1, 2, 3, 4, 5, 6].map((d) => listaDeHoras(bruto[d])), horasAntes, horariosEspeciais, categoriasPorMissa };
+    return { horariosPorDia: [0, 1, 2, 3, 4, 5, 6].map((x) => listaDeHoras(bruto[x])), ...comum };
   }
-  if (Array.isArray(dados.horariosSemana) || Array.isArray(dados.horariosDomingo)) {
-    const semana = listaDeHoras(dados.horariosSemana);
-    const domingo = listaDeHoras(dados.horariosDomingo);
-    return { horariosPorDia: [domingo, semana, semana, semana, semana, semana, semana], horasAntes, horariosEspeciais, categoriasPorMissa };
+  if (Array.isArray(d.horariosSemana) || Array.isArray(d.horariosDomingo)) {
+    const semana = listaDeHoras(d.horariosSemana);
+    const domingo = listaDeHoras(d.horariosDomingo);
+    return { horariosPorDia: [domingo, semana, semana, semana, semana, semana, semana], ...comum };
   }
-  return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), horasAntes, horariosEspeciais, categoriasPorMissa };
+  return { horariosPorDia: HORARIOS_POR_DIA_PADRAO.map((h) => [...h]), ...comum };
 }
 
 // Converte a lista de 7 listas para o formato aceito pelo Firestore (mapa "0".."6").
@@ -563,16 +694,28 @@ export function horariosDoDia(config, iso) {
 }
 
 // Decide o status da lista de intenções de UMA missa específica (data + hora): se ainda está
-// aberta para preenchimento, se já fechou (dentro da janela de "horasAntes" antes da missa) ou
-// se a missa já aconteceu.
-export function statusMissaEspecifica(iso, hora, horasAntes, agora = new Date()) {
+// aberta para preenchimento, se já fechou ou se a missa já aconteceu. O terceiro parâmetro é a
+// configuração dos horários (usa a regra de fechamento daquela missa) ou, no formato antigo, só a
+// quantidade de horas antes.
+export function statusMissaEspecifica(iso, hora, configOuHoras, agora = new Date()) {
   const d = isoParaData(iso);
   const missa = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hora, 0, 0, 0);
-  const horas = Number(horasAntes) > 0 ? Number(horasAntes) : 3;
-  const fechamento = new Date(missa.getTime() - horas * 3600000);
+  const regra = configOuHoras && typeof configOuHoras === "object"
+    ? regraDeFechamentoDaMissa(configOuHoras, iso, hora).regra
+    : { tipo: "antes", horas: Number(configOuHoras) > 0 ? Number(configOuHoras) : HORAS_ANTES_PADRAO };
+  const momento = momentoDeFechamento(regra, iso);
+  let fechamento;
+  if (momento.horasAntes != null) {
+    fechamento = new Date(missa.getTime() - momento.horasAntes * 3600000);
+  } else {
+    const df = isoParaData(momento.iso);
+    fechamento = new Date(df.getFullYear(), df.getMonth(), df.getDate(), momento.hora, momento.minuto, 0, 0);
+  }
+  if (fechamento > missa) fechamento = missa; // a lista nunca fecha depois da missa começar
   return {
     missa,
     fechamento,
+    regra,
     jaAconteceu: agora >= missa,
     aberta: agora < fechamento
   };

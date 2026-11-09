@@ -297,33 +297,83 @@ export function criarCrm(opcoes) {
     });
     blocoNotas.append(campoNotas, btnSalvar);
 
-    // histórico
+    // intenções enviadas: separadas por missa e, dentro de cada missa, por categoria
     const blocoHist = document.createElement("div");
-    blocoHist.className = "crm-bloco";
-    blocoHist.innerHTML = `<p class="campo-legenda">Tudo o que enviou (${c.itens.length})</p>`;
-    const ul = document.createElement("ul");
-    ul.className = "crm-historico";
-    const rotulos = new Map((opcoes.obterCategorias() || []).map((k) => [k.chave, k.rotulo]));
+    blocoHist.className = "crm-bloco crm-intencoes";
+    const nI = c.itens.length;
+    const nL = c.listas.size;
+    blocoHist.innerHTML = `<p class="campo-legenda">Intenções enviadas — ${nI} ${nI === 1 ? "intenção" : "intenções"} em ${nL} ${nL === 1 ? "missa" : "missas"}</p>`;
+    const categorias = opcoes.obterCategorias() || [];
+    const ordemCat = new Map(categorias.map((k, i) => [k.chave, i]));
+    const rotulos = new Map(categorias.map((k) => [k.chave, k.rotulo]));
+    const porLista = new Map();
     c.itens.forEach((it) => {
-      const li = document.createElement("li");
-      const quando = document.createElement("span");
-      quando.className = "crm-historico__quando";
-      quando.textContent = `${formatarDataBR(it.dataMissa)} · ${String(it.horaMissa).padStart(2, "0")}h`;
-      const cat = document.createElement("strong");
-      cat.textContent = (rotulos.get(it.categoria) || "Outras intenções") + ": ";
-      const txt = document.createElement("span");
-      const base = (it.texto || "").trim();
-      txt.textContent = it.tempo ? `${base} (${it.tempo})` : base;
-      const corpo = document.createElement("span");
-      corpo.className = "crm-historico__texto";
-      corpo.append(cat, txt);
-      li.append(quando, corpo);
-      ul.appendChild(li);
+      const chave = `${it.dataMissa}|${String(it.horaMissa).padStart(2, "0")}`;
+      if (!porLista.has(chave)) porLista.set(chave, { dataMissa: it.dataMissa, horaMissa: it.horaMissa, itens: [] });
+      porLista.get(chave).itens.push(it);
     });
-    blocoHist.appendChild(ul);
+    // missas mais recentes primeiro
+    [...porLista.entries()].sort((x, y) => y[0].localeCompare(x[0])).forEach(([, grupo]) => {
+      const missa = document.createElement("details");
+      missa.className = "crm-missa";
+      missa.open = true;
+      const resumoMissa = document.createElement("summary");
+      resumoMissa.className = "crm-missa__topo";
+      const titulo = document.createElement("span");
+      titulo.className = "crm-missa__titulo";
+      titulo.textContent = opcoes.rotuloLista
+        ? opcoes.rotuloLista(grupo.dataMissa, grupo.horaMissa)
+        : `${formatarDataBR(grupo.dataMissa)} · ${String(grupo.horaMissa).padStart(2, "0")}h`;
+      const selos = document.createElement("span");
+      selos.className = "crm-missa__selos";
+      const total = document.createElement("span");
+      total.className = "crm-missa__total";
+      total.textContent = `${grupo.itens.length} ${grupo.itens.length === 1 ? "intenção" : "intenções"}`;
+      selos.appendChild(total);
+      if (opcoes.ehArquivada && opcoes.ehArquivada(grupo.dataMissa, grupo.horaMissa)) {
+        const arq = document.createElement("span");
+        arq.className = "crm-missa__arquivada";
+        arq.textContent = "Arquivo";
+        selos.appendChild(arq);
+      }
+      resumoMissa.append(titulo, selos);
+      missa.appendChild(resumoMissa);
+
+      // categorias na mesma ordem do formulário; as que não existem mais vão juntas no fim
+      const porCategoria = new Map();
+      grupo.itens.forEach((it) => {
+        const chaveCat = ordemCat.has(it.categoria) ? it.categoria : "__outras";
+        if (!porCategoria.has(chaveCat)) porCategoria.set(chaveCat, []);
+        porCategoria.get(chaveCat).push(it);
+      });
+      const chavesCat = [...porCategoria.keys()].sort((x, y) =>
+        (x === "__outras" ? 9999 : ordemCat.get(x)) - (y === "__outras" ? 9999 : ordemCat.get(y)));
+      const corpoMissa = document.createElement("div");
+      corpoMissa.className = "crm-missa__corpo";
+      chavesCat.forEach((chaveCat) => {
+        const itens = porCategoria.get(chaveCat);
+        const blocoCat = document.createElement("div");
+        blocoCat.className = "crm-categoria";
+        const tituloCat = document.createElement("p");
+        tituloCat.className = "crm-categoria__titulo";
+        tituloCat.textContent = chaveCat === "__outras" ? "Outras intenções" : (rotulos.get(chaveCat) || chaveCat);
+        const ul = document.createElement("ul");
+        ul.className = "crm-categoria__itens";
+        itens.forEach((it) => {
+          const li = document.createElement("li");
+          if (it.destaque) li.classList.add("destaque");
+          li.textContent = (it.texto || "").trim();
+          ul.appendChild(li);
+        });
+        blocoCat.append(tituloCat, ul);
+        corpoMissa.appendChild(blocoCat);
+      });
+      missa.appendChild(corpoMissa);
+      blocoHist.appendChild(missa);
+    });
 
     desenharChips();
-    det.append(blocoEt, blocoNotas, blocoHist);
+    det.append(blocoHist, blocoEt, blocoNotas);
     return det;
   }
 

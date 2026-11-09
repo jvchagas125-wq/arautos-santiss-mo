@@ -7,7 +7,8 @@ import {
 import { normalizarCurso, idInscricao } from "./cursos-comum.js";
 import {
   normalizarConfigIntencoes, normalizarFormularioIntencoes, horariosPorDiaParaFirestore,
-  normalizarHorariosEspeciais, normalizarCategoriasPorMissa, statusMissaEspecifica
+  normalizarHorariosEspeciais, normalizarCategoriasPorMissa, statusMissaEspecifica,
+  normalizarFechamentoGeral, normalizarFechamentoPorDiaHora, normalizarFechamentoPorMissa
 } from "./utils.js";
 
 /* ---------------- Configurações gerais (frase do dia, logo, fundo) ---------------- */
@@ -488,7 +489,7 @@ export function ouvirTodosAgendamentos(status, callback) {
 /* ---------------- Intenções da missa ---------------- */
 
 // Configuração dos horários (doc configuracoes/intencoes). Em memória: { horariosPorDia: [7 listas],
-// horasAntes, horariosEspeciais: { "aaaa-mm-dd": [horas] } } — a leitura tolerante (formato atual e antigos)
+// horasAntes, horariosEspeciais: { "aaaa-mm-dd": [horas] }, fechamento, fechamentoPorDiaHora, fechamentoPorMissa } — a leitura tolerante (formato atual e antigos)
 // fica em js/utils.js (normalizarConfigIntencoes), a mesma usada pelo servidor.
 export async function obterConfigIntencoes(aoAtualizar) {
   return obterCacheado("config_intencoes", async () => {
@@ -504,29 +505,39 @@ export function ouvirConfigIntencoes(callback) {
   });
 }
 
-// Salva os horários da semana + "fechar quantas horas antes". O Firestore NÃO aceita lista dentro de
-// lista, então os 7 dias vão como um mapa {"0": [..], ..., "6": [..]} (era isso que dava
-// "Nested arrays are not supported" ao salvar).
-export async function salvarConfigIntencoes({ horariosPorDia, horasAntes }) {
-  // mergeFields troca esses dois campos por inteiro (inclusive se antes "horariosPorDia" era uma lista) e
-  // não encosta nos demais, como os dias com horário diferente
-  await setDoc(REF_INTENCOES_CONFIG, {
+// Salva os horários da semana + as regras de fechamento da lista (padrão, manhã, tarde/noite e as de cada
+// dia da semana + horário). O Firestore NÃO aceita lista dentro de lista, então os 7 dias vão como um mapa
+// {"0": [..], ..., "6": [..]} (era isso que dava "Nested arrays are not supported" ao salvar).
+// "fechamento.padrao" do tipo "antes" também grava "horasAntes" (o campo antigo, que o servidor e versões
+// antigas do site ainda leem).
+export async function salvarConfigIntencoes({ horariosPorDia, fechamento, fechamentoPorDiaHora, horasAntes }) {
+  const f = normalizarFechamentoGeral(fechamento, 3);
+  const dados = {
     horariosPorDia: horariosPorDiaParaFirestore(horariosPorDia),
-    horasAntes
-  }, { mergeFields: ["horariosPorDia", "horasAntes"] });
+    fechamento: { padrao: f.padrao, manha: f.manha || null, tarde: f.tarde || null },
+    fechamentoPorDiaHora: normalizarFechamentoPorDiaHora(fechamentoPorDiaHora),
+    horasAntes: f.padrao.tipo === "antes" ? f.padrao.horas : (Number(horasAntes) > 0 ? Number(horasAntes) : 3)
+  };
+  // mergeFields troca esses campos por inteiro (inclusive se antes "horariosPorDia" era uma lista) e
+  // não encosta nos demais, como os dias com horário diferente
+  await setDoc(REF_INTENCOES_CONFIG, dados, { mergeFields: ["horariosPorDia", "fechamento", "fechamentoPorDiaHora", "horasAntes"] });
 }
 
 // Salva TODOS os dias com horário diferente de uma vez ({ "aaaa-mm-dd": [horas] }). Usa updateDoc
 // (que troca o campo inteiro) pra que um dia removido realmente suma — setDoc com merge só
 // acrescentaria chaves.
-export async function salvarHorariosEspeciais(mapa, categoriasPorMissa = {}) {
+export async function salvarHorariosEspeciais(mapa, categoriasPorMissa = {}, fechamentoPorMissa = {}) {
   const limpo = normalizarHorariosEspeciais(mapa);
-  // só guarda categorias de datas que continuam como dia especial
+  // só guarda categorias e regras de fechamento de datas que continuam como dia especial
   const categorias = {};
   Object.entries(normalizarCategoriasPorMissa(categoriasPorMissa)).forEach(([iso, porHora]) => {
     if (limpo[iso]) categorias[iso] = porHora;
   });
-  const dados = { horariosEspeciais: limpo, categoriasPorMissa: categorias };
+  const fechamentos = {};
+  Object.entries(normalizarFechamentoPorMissa(fechamentoPorMissa)).forEach(([iso, porHora]) => {
+    if (limpo[iso]) fechamentos[iso] = porHora;
+  });
+  const dados = { horariosEspeciais: limpo, categoriasPorMissa: categorias, fechamentoPorMissa: fechamentos };
   const snap = await getDoc(REF_INTENCOES_CONFIG);
   if (snap.exists()) await updateDoc(REF_INTENCOES_CONFIG, dados);
   else await setDoc(REF_INTENCOES_CONFIG, dados, { merge: true });
@@ -748,12 +759,12 @@ export async function excluirListaIntencoes(dataMissa, horaMissa) {
 
 // Apaga os rascunhos de listas que já fecharam (ninguém mais pode editar). O que a pessoa chegou a
 // ENVIAR continua guardado normalmente — só o "rascunho" some do site e do banco de dados.
-export async function limparRascunhosVencidos(horasAntes, agora = new Date()) {
+export async function limparRascunhosVencidos(configOuHoras, agora = new Date()) {
   const snap = await getDocs(query(collection(db, "intencoes"), where("tipo", "==", "rascunho")));
   const vencidos = snap.docs.filter((d) => {
     const dados = d.data();
     if (!dados.dataMissa || dados.horaMissa === undefined) return true;
-    return !statusMissaEspecifica(dados.dataMissa, Number(dados.horaMissa), horasAntes, agora).aberta;
+    return !statusMissaEspecifica(dados.dataMissa, Number(dados.horaMissa), configOuHoras, agora).aberta;
   });
   await Promise.all(vencidos.map((d) => deleteDoc(doc(db, "intencoes", d.id))));
   return vencidos.length;

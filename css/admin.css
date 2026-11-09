@@ -754,3 +754,63 @@
 .btn-voltar-inicio:active{ transform: translateY(0) scale(.97); }
 .admin-conteudo:not(:has(#secao-inicio:not(.oculto))){ padding-bottom: 96px; }
 @media (max-width: 380px){ .btn-voltar-inicio__texto small{ display:none; } }
+
+/* ---------- fechamento da lista de intenções (regras por missa) ---------- */
+.fechamento-bloco{ margin-top:18px; border-top:1px dashed rgba(157,122,31,.4); padding-top:14px; }
+.fechamento-dica{ margin:2px 0 12px; font-size:.82rem; color: var(--texto-suave); line-height:1.55; }
+.fechamento-card{
+  border:1.5px solid rgba(157,122,31,.3); border-radius:12px; padding:10px 12px; margin-bottom:10px; background:#fffefb;
+}
+.fechamento-card__titulo{ font-family:'Cinzel'; font-size:.86rem; color: var(--vermelho-escuro); font-weight:600; margin-bottom:8px; }
+.fechamento-card__titulo small{ font-family:inherit; font-weight:400; color: var(--texto-suave); font-size:.74rem; }
+.regra-fechamento{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.regra-fechamento select, .regra-fechamento input{
+  font:inherit; font-size:.9rem; padding:8px 10px; border-radius:10px; border:1.5px solid rgba(157,122,31,.4);
+  background:#fff; color: var(--texto); min-width:0;
+}
+.regra-fechamento input[type=number]{ width:78px; }
+.regra-fechamento input[type=time]{ width:112px; }
+.regra-fechamento__grupo{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:.88rem; color: var(--texto-suave); }
+.regra-fechamento__herdado{ font-size:.8rem; color: var(--dourado-escuro); font-style:italic; }
+.fechamento-dia{ border-top:1px dashed rgba(157,122,31,.35); margin-top:12px; padding-top:8px; }
+.fechamento-dia .campo-legenda{ margin:0 0 6px; }
+.linha-regra-missa{ padding:8px 0; border-bottom:1px solid rgba(157,122,31,.15); }
+.linha-regra-missa:last-child{ border-bottom:none; }
+.linha-regra-missa__hora{ display:block; font-family:'Cinzel'; font-size:.82rem; color: var(--vermelho-escuro); font-weight:600; margin-bottom:6px; }
+.especial-missa .regra-fechamento{ margin-top:2px; }
+.regra-fechamento [hidden]{ display:none !important; }
+
+/* ---------- CRM: intenções de um contato, por missa e por categoria ---------- */
+.crm-intencoes{ display:flex; flex-direction:column; gap:10px; }
+.crm-intencoes .campo-legenda{ margin:6px 0 0; }
+.crm-missa{
+  border:1.5px solid rgba(157,122,31,.3); border-radius:12px; background:#fffefb; overflow:hidden;
+}
+.crm-missa__topo{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  padding:10px 12px; cursor:pointer; list-style:none; user-select:none;
+  background: linear-gradient(180deg, rgba(205,164,52,.16), rgba(205,164,52,.06));
+}
+.crm-missa__topo::-webkit-details-marker{ display:none; }
+.crm-missa__titulo{ font-family:'Cinzel'; font-size:.84rem; color: var(--vermelho-escuro); font-weight:600; flex:1; min-width:180px; }
+.crm-missa__selos{ display:flex; gap:6px; align-items:center; }
+.crm-missa__total{
+  font-size:.72rem; color: var(--dourado-escuro); background: rgba(205,164,52,.18); border-radius:999px; padding:3px 10px; font-family:'Cinzel';
+}
+.crm-missa__arquivada{
+  font-size:.68rem; color:#fff; background: var(--vermelho-escuro); border-radius:999px; padding:3px 9px; font-family:'Cinzel';
+}
+.crm-missa__corpo{ padding:6px 12px 10px; display:flex; flex-direction:column; gap:10px; }
+.crm-categoria__titulo{
+  margin:6px 0 4px; font-family:'Cinzel'; font-size:.76rem; letter-spacing:.04em; text-transform:uppercase; color: var(--dourado-escuro);
+  border-bottom:1px solid rgba(157,122,31,.25); padding-bottom:3px;
+}
+.crm-categoria__itens{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+.crm-categoria__itens li{
+  position:relative; padding:5px 8px 5px 20px; font-size:.88rem; line-height:1.45; overflow-wrap:anywhere;
+  background: rgba(205,164,52,.07); border-radius:8px;
+}
+.crm-categoria__itens li::before{
+  content:""; position:absolute; left:8px; top:.95em; width:6px; height:6px; border-radius:50%; background: var(--dourado);
+}
+.crm-categoria__itens li.destaque{ font-weight:700; }

@@ -90,6 +90,7 @@ function atualizarAvisoLimite() {
 atualizarAvisoLimite();
 
 const formatarHoraSimples = (hora) => `${String(hora).padStart(2, "0")}:00`;
+const formatarHoraDeFechamento = (data) => `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
 
 /* =========================================================
    Calendário + escolha do horário da missa
@@ -118,13 +119,13 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function statusDaMissa(hora, agora = new Date()) {
-  return statusMissaEspecifica(diaSelecionado, hora, configAtual.horasAntes, agora);
+  return statusMissaEspecifica(diaSelecionado, hora, configAtual, agora);
 }
 
 function textoStatusFechado(status) {
   if (status.jaAconteceu) return "Esta missa já aconteceu — a lista de intenções está encerrada.";
   return `As intenções para esta missa já fecharam. O preenchimento encerrou às ` +
-    `${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.`;
+    `${formatarHoraDeFechamento(status.fechamento)} de ${formatarDataBR(dataParaIso(status.fechamento))}.`;
 }
 
 // Cartões na própria página (um por horário de missa do dia): servem pra reabrir a lista depois
@@ -157,7 +158,7 @@ function renderizarDia() {
       </div>
     `;
     linha.querySelector("small").textContent = status.aberta
-      ? `Preenchimento aberto até ${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}.`
+      ? `Preenchimento aberto até ${formatarHoraDeFechamento(status.fechamento)} de ${formatarDataBR(dataParaIso(status.fechamento))}.`
       : textoStatusFechado(status);
     const btn = document.createElement("button");
     btn.type = "button";
@@ -186,7 +187,7 @@ function abrirEscolhaDeLista() {
     btn.disabled = !status.aberta;
     btn.innerHTML = `<span class="opcao-lista__hora">${status.aberta ? "🙏" : "🔒"} Missa das ${formatarHoraSimples(hora)}</span><small></small>`;
     btn.querySelector("small").textContent = status.aberta
-      ? `Aberta até ${formatarHoraSimples(status.fechamento.getHours())} de ${formatarDataBR(dataParaIso(status.fechamento))}`
+      ? `Aberta até ${formatarHoraDeFechamento(status.fechamento)} de ${formatarDataBR(dataParaIso(status.fechamento))}`
       : status.jaAconteceu ? "Esta missa já aconteceu" : "Lista encerrada";
     if (status.aberta) btn.addEventListener("click", () => abrirLista(hora));
     caixa.appendChild(btn);
@@ -849,7 +850,7 @@ el("btnListaEnviar").addEventListener("click", async () => {
   const sessao = lista;
   if (commitarEditor()) { sessao.editor = editorVazio(); alterouLista(); renderizarEditor(); }
 
-  const status = statusMissaEspecifica(sessao.iso, sessao.hora, configAtual.horasAntes);
+  const status = statusMissaEspecifica(sessao.iso, sessao.hora, configAtual);
   if (!status.aberta) { mostrarToast("O prazo desta lista terminou."); encerrarListaAberta(); return; }
   if (sessao.itens.length === 0 && !sessao.assinaturaEnviada) {
     mostrarToast("Adicione pelo menos uma intenção antes de enviar.");
@@ -908,7 +909,7 @@ function encerrarListaAberta() {
 
 function conferirPrazoDaListaAberta() {
   if (!lista || !configAtual) return;
-  const status = statusMissaEspecifica(lista.iso, lista.hora, configAtual.horasAntes);
+  const status = statusMissaEspecifica(lista.iso, lista.hora, configAtual);
   if (!status.aberta) {
     mostrarToast("O prazo desta lista terminou — ela foi encerrada.");
     encerrarListaAberta();
@@ -933,7 +934,7 @@ ouvirConfigIntencoes((config) => {
   // apaga os rascunhos das listas que já fecharam (uma vez por abertura da página)
   if (!limpezaFeita) {
     limpezaFeita = true;
-    limparRascunhosVencidos(config.horasAntes).catch((err) => console.error(err));
+    limparRascunhosVencidos(config).catch((err) => console.error(err));
   }
 });
 ouvirFormularioIntencoes((form) => {

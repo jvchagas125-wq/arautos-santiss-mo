@@ -8,7 +8,10 @@
 // menos "horas antes") e ainda não foram enviadas, gera o documento Word de cada uma e manda por e-mail
 // pros endereços cadastrados no painel administrativo. Cada lista é enviada uma única vez —
 // o "carimbo" de envio fica guardado no Firestore (coleção configuracoes, doc "envio_DATA_HORA").
-import { horariosDoDia, normalizarConfigIntencoes, normalizarFormularioIntencoes, categoriasPermitidasDaMissa } from "../js/utils.js";
+import {
+  horariosDoDia, normalizarConfigIntencoes, normalizarFormularioIntencoes, categoriasPermitidasDaMissa,
+  regraDeFechamentoDaMissa, momentoDeFechamento
+} from "../js/utils.js";
 import { rotuloListaIntencao, nomeArquivoDocx } from "../js/docx-intencoes.js";
 
 // Brasil não tem mais horário de verão desde 2019: Brasília é sempre UTC-3.
@@ -42,9 +45,21 @@ function somarDiasIso(iso, dias) {
 }
 
 // Instante (UTC) exato em que a missa de "iso" às "hora" (horário de Brasília) começa.
-export function instanteDaMissa(iso, hora) {
+export function instanteDaMissa(iso, hora, minuto = 0) {
   const [ano, mes, dia] = iso.split("-").map(Number);
-  return new Date(Date.UTC(ano, mes - 1, dia, Number(hora) - DESLOCAMENTO_BRASILIA_HORAS, 0, 0, 0));
+  return new Date(Date.UTC(ano, mes - 1, dia, Number(hora) - DESLOCAMENTO_BRASILIA_HORAS, Number(minuto), 0, 0));
+}
+
+// Instante (UTC) em que a lista da missa de "iso" às "hora" fecha, seguindo a regra que vale para ela
+// (horas antes ou horário fixo — veja regraDeFechamentoDaMissa em js/utils.js). Nunca depois da missa.
+export function instanteDeFechamento(config, iso, hora) {
+  const missa = instanteDaMissa(iso, hora);
+  const { regra } = regraDeFechamentoDaMissa(config, iso, hora);
+  const momento = momentoDeFechamento(regra, iso);
+  const fechamento = momento.horasAntes != null
+    ? new Date(missa.getTime() - momento.horasAntes * 3600000)
+    : instanteDaMissa(momento.iso, momento.hora, momento.minuto);
+  return fechamento > missa ? missa : fechamento;
 }
 
 /* ---------------- Configurações ---------------- */
@@ -68,15 +83,16 @@ export function normalizarConfigEnvio(dados) {
 /* ---------------- Quais listas já fecharam? ---------------- */
 
 // Devolve as listas (data + hora) cujo fechamento já passou e cuja missa ainda não está "velha
-// demais" pra valer o envio. Olha ontem, hoje e amanhã (amanhã: se "horasAntes" for grande, a lista
-// de uma missa de madrugada pode fechar na véspera).
+// demais" pra valer o envio. Olha de ontem até uma semana à frente (uma lista pode fechar dias antes da
+// missa, se o horário de fechamento for na véspera ou antes).
 export function listasParaEnviar(config, agora = new Date()) {
   const hoje = isoDe(dataNoBrasil(agora));
   const resultado = [];
-  for (const iso of [somarDiasIso(hoje, -1), hoje, somarDiasIso(hoje, 1)]) {
+  for (let delta = -1; delta <= 8; delta++) {
+    const iso = somarDiasIso(hoje, delta);
     for (const hora of horariosDoDia(config, iso)) {
       const missa = instanteDaMissa(iso, hora);
-      const fechamento = new Date(missa.getTime() - config.horasAntes * 3600000);
+      const fechamento = instanteDeFechamento(config, iso, hora);
       const limite = new Date(missa.getTime() + FOLGA_APOS_MISSA_HORAS * 3600000);
       if (agora >= fechamento && agora < limite) resultado.push({ dataMissa: iso, horaMissa: Number(hora) });
     }
