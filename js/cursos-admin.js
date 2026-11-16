@@ -9,7 +9,7 @@ import {
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, TIPOS_PERGUNTA, TIPOS_COM_OPCOES, perguntaTemOpcoes, opcoesDaPergunta, normalizarCurso, novoIdCurto,
-  tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailsParaAvisos, inscritosParaAvisos, emailValido, valorComoTexto, dataParaTexto
+  estadoInscricoes, rotuloDataHora, tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailsParaAvisos, inscritosParaAvisos, emailValido, valorComoTexto, dataParaTexto
 } from "./cursos-comum.js";
 import { exportarInscritos } from "./exportar-inscritos.js";
 
@@ -121,6 +121,8 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
   const caixaPerguntas = document.getElementById("cursoPerguntas");
 
   const campoAceite = document.getElementById("cursoPedirAceite");
+  const campoAbreEm = document.getElementById("cursoAbreEm");
+  const campoFechaEm = document.getElementById("cursoFechaEm");
   let edicao = null; // { id, ordem, imagemUrl, novaImagem: File|null, campos, perguntas, pedirAceiteContato }
 
   function cursoVazio() {
@@ -365,7 +367,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     edicao = curso
       ? {
         id: curso.id, ordem: curso.ordem, imagemUrl: curso.imagemUrl, novaImagem: null,
-        pedirAceiteContato: curso.pedirAceiteContato,
+        pedirAceiteContato: curso.pedirAceiteContato, encerradoEmMs: curso.encerradoEmMs,
         campos: JSON.parse(JSON.stringify(curso.campos)), perguntas: JSON.parse(JSON.stringify(curso.perguntas))
       }
       : cursoVazio();
@@ -373,6 +375,8 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     campoNome.value = curso ? curso.nome : "";
     campoObs.value = curso ? curso.observacoes : "";
     campoAtivo.checked = curso ? curso.ativo : true;
+    campoAbreEm.value = curso ? curso.abreEm : "";
+    campoFechaEm.value = curso ? curso.fechaEm : "";
     campoAceite.checked = !!edicao.pedirAceiteContato;
     mostrarImagemEditor();
     desenharCamposPadrao();
@@ -403,6 +407,8 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
         mostrarToast(`Confira quando a pergunta extra "${q.rotulo.trim()}" deve aparecer.`); return;
       }
     }
+    const abreEm = campoAbreEm.value, fechaEm = campoFechaEm.value;
+    if (abreEm && fechaEm && fechaEm <= abreEm) { mostrarToast("O encerramento precisa ser depois do início das inscrições."); campoFechaEm.focus(); return; }
     btn.disabled = true;
     btn.textContent = "Salvando...";
     try {
@@ -411,6 +417,9 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       const dados = {
         nome, imagemUrl, observacoes: campoObs.value.trim(), ativo: campoAtivo.checked,
         pedirAceiteContato: edicao.pedirAceiteContato,
+        abreEm, fechaEm,
+        // encerrado na mão: guarda o momento (identifica o encerramento para o envio da lista por e-mail)
+        encerradoEmMs: campoAtivo.checked ? 0 : (edicao.encerradoEmMs || Date.now()),
         campos: edicao.campos, perguntas: edicao.perguntas.map((q) => ({ ...q, rotulo: q.rotulo.trim() })), ordem: edicao.ordem
       };
       await salvarCurso(edicao.id, dados);
@@ -443,6 +452,13 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     const p1 = criar("p", "curso-resumo__linha");
     p1.append(criar("strong", "", "Dados pedidos: "), document.createTextNode(pedidos.join(", ")));
     corpo.appendChild(p1);
+    if (curso.abreEm || curso.fechaEm) {
+      const pp = criar("p", "curso-resumo__linha");
+      pp.append(criar("strong", "", "Programação: "), document.createTextNode([
+        curso.abreEm ? `começam em ${rotuloDataHora(curso.abreEm)}` : "", curso.fechaEm ? `encerram em ${rotuloDataHora(curso.fechaEm)}` : ""
+      ].filter(Boolean).join(" · ")));
+      corpo.appendChild(pp);
+    }
     if (curso.pedirAceiteContato) {
       const pa = criar("p", "curso-resumo__linha");
       pa.append(criar("strong", "", "Aceite de contato: "), document.createTextNode("pergunta se a pessoa aceita receber convites e informativos por e-mail"));
@@ -473,14 +489,21 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       const n = contarInscritos(curso.id);
       const { quadro, cabecalho, corpo, titulo } = criarQuadro(`${curso.nome} — ${n} ${n === 1 ? "inscrito" : "inscritos"}`, abertosCursos.has(curso.id),
         (abriu) => { if (abriu) abertosCursos.add(curso.id); else abertosCursos.delete(curso.id); });
-      titulo.after(criar("span", `quadro-intencao__selo${curso.ativo ? "" : " quadro-intencao__selo--erro"}`, curso.ativo ? "inscrições abertas" : "encerrado"));
-      const btnAbrir = botaoIcone("pdf", curso.ativo ? "Encerrar inscrições (some do site)" : "Reabrir inscrições", curso.ativo ? "⏸" : "▶");
+      const { estado } = estadoInscricoes(curso);
+      const textoSelo = estado === "abertas" ? "inscrições abertas" : estado === "emBreve" ? `começam em ${rotuloDataHora(curso.abreEm)}` : "inscrições encerradas";
+      titulo.after(criar("span", `quadro-intencao__selo${estado === "encerradas" ? " quadro-intencao__selo--erro" : ""}`, textoSelo));
+      const btnAbrir = botaoIcone("pdf", curso.ativo ? "Encerrar inscrições agora (continua no site como \"Inscrições encerradas\")" : "Reabrir inscrições", curso.ativo ? "⏸" : "▶");
       const btnEditar = botaoIcone("pdf", "Editar curso", ICONE_LAPIS);
       const btnApagar = botaoIcone("lixeira", "Apagar curso", ICONE_LIXEIRA);
       cabecalho.append(btnAbrir, btnEditar, btnApagar);
       btnAbrir.addEventListener("click", async (e) => {
         e.stopPropagation();
-        try { await alterarAberturaDoCurso(curso.id, !curso.ativo); mostrarToast(curso.ativo ? "Inscrições encerradas." : "Inscrições reabertas!"); }
+        try {
+          await alterarAberturaDoCurso(curso.id, !curso.ativo);
+          if (curso.ativo) mostrarToast("Inscrições encerradas.");
+          else if (estadoInscricoes({ ...curso, ativo: true }).estado === "encerradas") mostrarToast("O prazo de encerramento já passou. Para reabrir de fato, clique em Editar e mude a data.");
+          else mostrarToast("Inscrições reabertas!");
+        }
         catch (err) { console.error(err); mostrarToast("Não foi possível alterar. Tente novamente."); }
       });
       btnEditar.addEventListener("click", (e) => { e.stopPropagation(); abrirEditor(curso); });
@@ -615,6 +638,22 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
         });
         exp.appendChild(b);
       });
+      const btnEmail = criar("button", "btn btn-contorno btn-pequeno", "Enviar por e-mail");
+      btnEmail.type = "button";
+      btnEmail.title = "Envia agora a lista de presença (Excel, Word e PDF) para os e-mails cadastrados em Intenções > Envio automático";
+      btnEmail.addEventListener("click", () => {
+        if (!dele.length) { mostrarToast("Ainda não há inscritos neste curso."); return; }
+        pedirConfirmacao({
+          titulo: "Enviar lista por e-mail",
+          texto: `Enviar agora a lista dos ${dele.length} ${dele.length === 1 ? "inscrito" : "inscritos"} de "${curso.nome}" (Excel, Word e PDF) para os e-mails cadastrados em Intenções da Missa > Envio automático por e-mail?`,
+          botao: "Enviar e-mail",
+          acao: async () => {
+            try { const r = await chamarApiEnvio({ acao: "listaCurso", cursoId: curso.id }); mostrarToast(`Lista enviada para ${r.destinatarios.length} ${r.destinatarios.length === 1 ? "e-mail" : "e-mails"}.`); }
+            catch (err) { console.error(err); mostrarToast(err.message || "Não foi possível enviar o e-mail."); }
+          }
+        });
+      });
+      exp.appendChild(btnEmail);
       barra.appendChild(exp);
       corpo.appendChild(barra);
 

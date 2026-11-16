@@ -15,7 +15,7 @@
 <script>try{if(localStorage.getItem("arautos_admin_sessao"))document.documentElement.classList.add("com-sessao");}catch(e){}</script>
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/admin.css?v=79" />
+<link rel="stylesheet" href="css/admin.css?v=80" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -595,6 +595,11 @@
                 <div class="campo">
                   <label for="campoSimposioDescricao">Descrição do curso ou evento</label>
                   <textarea id="campoSimposioDescricao" rows="5" placeholder="Datas, horários, local, programação, quem pode participar..."></textarea>
+                </div>
+                <div class="campo">
+                  <label for="campoSimposioCurso">Curso ou evento vinculado (opcional)</label>
+                  <select id="campoSimposioCurso"><option value="">Nenhum</option></select>
+                  <span class="campo-ajuda">Se escolher, o botão deste cartão acompanha as inscrições do curso: mostra "Inscrições em breve" antes de começar e "Inscrições encerradas" depois que encerrarem.</span>
                 </div>
                 <div class="campo campo-checkbox-simples">
                   <label><input type="checkbox" id="campoSimposioParaCursos" /> <span>O botão leva para a página <strong>Inscrições de cursos</strong> do site
@@ -1323,7 +1328,18 @@
           <textarea id="cursoObservacoes" rows="4" maxlength="4000" placeholder="Datas, horário, local, o que levar..."></textarea>
         </div>
         <div class="campo campo-checkbox-simples">
-          <label><input type="checkbox" id="cursoAtivo" checked /> <span>Inscrições abertas (aparece no site)</span></label>
+          <label><input type="checkbox" id="cursoAtivo" checked /> <span>Inscrições abertas
+            <small>Desmarque para encerrar agora: o curso continua no site com o aviso "Inscrições encerradas" até você apagá-lo.</small></span></label>
+        </div>
+        <p class="campo-legenda curso-editor__secao">Programar as inscrições (opcional)</p>
+        <div class="campo">
+          <label for="cursoAbreEm">As inscrições começam em</label>
+          <input type="datetime-local" id="cursoAbreEm" />
+        </div>
+        <div class="campo">
+          <label for="cursoFechaEm">As inscrições encerram em</label>
+          <input type="datetime-local" id="cursoFechaEm" />
+          <span class="campo-ajuda">Horário de Brasília. Antes do início, o site mostra "Inscrições em breve". No horário de encerramento, mostra "Inscrições encerradas" e o site envia automaticamente, por e-mail, a lista dos inscritos em Excel, Word e PDF para os endereços cadastrados em <strong>Intenções da Missa &gt; Envio automático por e-mail</strong>. Deixe em branco para não programar.</span>
         </div>
 
         <p class="campo-legenda curso-editor__secao">Dados que a pessoa preenche</p>

@@ -810,13 +810,14 @@ export function ouvirSimposio(callback) {
 }
 
 // novos itens entram no topo (como os avisos); use trocarOrdemSimposio para reordenar depois
-export async function criarItemSimposio({ titulo, descricao, imagemUrl, linkUrl, linkTexto }) {
+export async function criarItemSimposio({ titulo, descricao, imagemUrl, linkUrl, linkTexto, cursoId }) {
   const ref = doc(collection(db, "avisos"));
   const agora = Date.now();
   await setDoc(ref, {
     secao: SECAO_SIMPOSIO,
     titulo, descricao: descricao || "", imagemUrl: imagemUrl || "",
     linkUrl: linkUrl || "", linkTexto: linkTexto || "",
+    cursoId: cursoId || "", // curso vinculado: o cartão mostra "Inscrições encerradas" quando ele encerrar
     criadoEmOrdenacao: agora,
     ordem: -agora,
     criadoEm: serverTimestamp()
@@ -824,8 +825,8 @@ export async function criarItemSimposio({ titulo, descricao, imagemUrl, linkUrl,
   return ref.id;
 }
 
-export async function atualizarItemSimposio(id, { titulo, descricao, imagemUrl, linkUrl, linkTexto }) {
-  const dados = { titulo, descricao: descricao || "", linkUrl: linkUrl || "", linkTexto: linkTexto || "" };
+export async function atualizarItemSimposio(id, { titulo, descricao, imagemUrl, linkUrl, linkTexto, cursoId }) {
+  const dados = { titulo, descricao: descricao || "", linkUrl: linkUrl || "", linkTexto: linkTexto || "", cursoId: cursoId || "" };
   // só troca o banner quando o administrador escolheu uma imagem nova
   if (imagemUrl !== undefined) dados.imagemUrl = imagemUrl;
   await updateDoc(doc(db, "avisos", id), dados);
@@ -972,8 +973,10 @@ export async function salvarCurso(id, dados) {
   return ref.id;
 }
 
+// Abrir/encerrar "na mão". Ao encerrar, guarda o momento: é ele que identifica o encerramento para o
+// envio automático da lista de inscritos por e-mail (uma vez por encerramento).
 export async function alterarAberturaDoCurso(id, ativo) {
-  await updateDoc(doc(db, "cursos", id), { ativo: !!ativo });
+  await updateDoc(doc(db, "cursos", id), { ativo: !!ativo, encerradoEmMs: ativo ? 0 : Date.now() });
 }
 
 // Apaga o curso, as inscrições e os avisos dele.

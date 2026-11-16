@@ -3,7 +3,7 @@
 // que só abrem quando a pessoa clica.
 import { mostrarToast, abrirModal, fecharModal, normalizarLinkSimposio } from "./utils.js";
 import {
-  ouvirSimposio, criarItemSimposio, atualizarItemSimposio, trocarOrdemSimposio, excluirItemSimposio
+  ouvirSimposio, ouvirCursos, criarItemSimposio, atualizarItemSimposio, trocarOrdemSimposio, excluirItemSimposio
 } from "./dados.js";
 
 function criar(tag, classe, texto) {
@@ -42,6 +42,21 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
   const campoDescricao = document.getElementById("campoSimposioDescricao");
   const campoLink = document.getElementById("campoSimposioLink");
   const campoLinkTexto = document.getElementById("campoSimposioLinkTexto");
+  const campoCurso = document.getElementById("campoSimposioCurso");
+  // cursos cadastrados (para vincular um cartão a um curso)
+  let cursosLista = [];
+  const preencherCursos = (select, valorAtual) => {
+    select.innerHTML = "";
+    const nenhum = document.createElement("option"); nenhum.value = ""; nenhum.textContent = "Nenhum";
+    select.appendChild(nenhum);
+    cursosLista.forEach((c) => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.nome; select.appendChild(o); });
+    // curso apagado: continua selecionável enquanto o cartão aponta para ele (some do site sozinho)
+    if (valorAtual && !cursosLista.some((c) => c.id === valorAtual)) {
+      const o = document.createElement("option"); o.value = valorAtual; o.textContent = "(curso apagado)"; select.appendChild(o);
+    }
+    select.value = valorAtual || "";
+  };
+  ouvirCursos((lista) => { cursosLista = lista.filter((c) => c.nome); preencherCursos(campoCurso, campoCurso.value); }, () => {});
   const campoParaCursos = document.getElementById("campoSimposioParaCursos");
   const caixaLink = document.getElementById("campoSimposioLinkCaixa");
   const LINK_CURSOS = "/cursos";
@@ -75,9 +90,10 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
       btn.textContent = "Publicando...";
       await criarItemSimposio({
         titulo, descricao: campoDescricao.value.trim(), imagemUrl,
-        linkUrl: link, linkTexto: resolverTexto(campoParaCursos.checked, link, campoLinkTexto)
+        linkUrl: link, linkTexto: resolverTexto(campoParaCursos.checked, link, campoLinkTexto), cursoId: campoCurso.value
       });
       form.reset();
+      campoCurso.value = "";
       caixaLink.classList.remove("oculto");
       preview.classList.add("oculto");
       mostrarToast("Publicado no Simpósio!");
@@ -118,6 +134,10 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
     const corpo = criar("div", "cartao-aviso-admin__corpo");
     corpo.appendChild(criar("div", "cartao-aviso-admin__titulo", item.titulo || ""));
     if (item.descricao) corpo.appendChild(criar("p", "cartao-aviso-admin__texto", item.descricao));
+    if (item.cursoId) {
+      const c = cursosLista.find((x) => x.id === item.cursoId);
+      corpo.appendChild(criar("div", "cartao-simposio-admin__link", `🎓 Curso vinculado: ${c ? c.nome : "(curso apagado)"}`));
+    }
     if (item.linkUrl) corpo.appendChild(criar("div", "cartao-simposio-admin__link", `🔗 ${item.linkTexto || "Saiba mais"} → ${item.linkUrl}`));
 
     const acoes = criar("div", "cartao-aviso-admin__acoes");
@@ -139,6 +159,7 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
     const edParaCursos = criar("input"); edParaCursos.type = "checkbox"; edParaCursos.checked = item.linkUrl === LINK_CURSOS;
     const edLink = criar("input"); edLink.type = "text"; edLink.maxLength = 500; edLink.value = item.linkUrl === LINK_CURSOS ? "" : (item.linkUrl || ""); edLink.placeholder = "Ex: https://forms.gle/... ou cursos"; edLink.autocomplete = "off";
     const edLinkTexto = criar("input"); edLinkTexto.type = "text"; edLinkTexto.maxLength = 40; edLinkTexto.value = item.linkTexto || ""; edLinkTexto.placeholder = "Saiba mais";
+    const edCurso = criar("select"); preencherCursos(edCurso, item.cursoId || "");
     const edImagem = criar("input"); edImagem.type = "file"; edImagem.accept = "image/*";
     const caixaParaCursos = criar("div", "campo campo-checkbox-simples");
     const lblParaCursos = criar("label");
@@ -152,6 +173,7 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
     formEd.append(
       campo("Título", edTitulo),
       campo("Descrição", edDescricao),
+      campo("Curso ou evento vinculado (opcional)", edCurso, "O botão acompanha as inscrições do curso: \"Inscrições em breve\" antes de começar e \"Inscrições encerradas\" depois que encerrarem."),
       caixaParaCursos,
       caixaEdLink,
       campo("Texto do botão do link (opcional)", edLinkTexto),
@@ -202,7 +224,7 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
       if (link === null) { mostrarToast("O link não parece válido. Use um endereço (https://...) ou o nome de uma página do site."); edLink.focus(); return; }
       btnSalvar.disabled = true;
       try {
-        const dados = { titulo, descricao: edDescricao.value.trim(), linkUrl: link, linkTexto: resolverTexto(edParaCursos.checked, link, edLinkTexto) };
+        const dados = { titulo, descricao: edDescricao.value.trim(), linkUrl: link, linkTexto: resolverTexto(edParaCursos.checked, link, edLinkTexto), cursoId: edCurso.value };
         const arquivo = edImagem.files[0];
         if (arquivo) {
           btnSalvar.textContent = "Enviando banner...";

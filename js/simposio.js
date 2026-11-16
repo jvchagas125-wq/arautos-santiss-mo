@@ -2,7 +2,8 @@
 // cadastradas no painel administrativo em Avisos > Simpósio.
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, linkificarTexto, definirSrcOtimizado, normalizarLinkSimposio } from "./utils.js";
-import { ouvirConfiguracoesGerais, ouvirSimposio } from "./dados.js";
+import { ouvirConfiguracoesGerais, ouvirSimposio, ouvirCursos } from "./dados.js";
+import { estadoInscricoes, rotuloDataHora } from "./cursos-comum.js";
 
 inicializarNavegacao("simposio");
 exigirCadastro();
@@ -18,6 +19,13 @@ const lista = document.getElementById("listaSimposioPublico");
 const INTERVALO_AUTOMATICO_MS = 8000; // tempo parado em cada simpósio
 const reduzirMovimento = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } };
 const ICONE_SETA = (lado) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${lado === "esq" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"}"/></svg>`;
+
+// cursos (para os cartões vinculados a um curso mostrarem "Inscrições encerradas")
+let cursosPorId = new Map();
+const situacaoDoCurso = (item) => {
+  const curso = item.cursoId ? cursosPorId.get(item.cursoId) : null;
+  return curso ? { curso, ...estadoInscricoes(curso) } : null;
+};
 
 function criarCartao(item, primeiro) {
   const cartao = document.createElement("article");
@@ -52,13 +60,26 @@ function criarCartao(item, primeiro) {
     corpo.appendChild(texto);
   }
 
-  const linkSeguro = normalizarLinkSimposio(item.linkUrl);
+  const situacao = situacaoDoCurso(item);
+  if (situacao && situacao.estado !== "abertas") {
+    // curso vinculado que ainda não começou ou já encerrou: no lugar do botão, o aviso
+    const aviso = document.createElement("p");
+    aviso.className = "cartao-simposio__estado" + (situacao.estado === "encerradas" ? " cartao-simposio__estado--encerrado" : "");
+    aviso.textContent = situacao.estado === "encerradas"
+      ? "Inscrições encerradas"
+      : `Inscrições em breve — começam em ${rotuloDataHora(situacao.curso.abreEm)}`;
+    corpo.appendChild(aviso);
+    cartao.appendChild(corpo);
+    return cartao;
+  }
+  // curso vinculado e aberto, sem link próprio: o botão leva para as inscrições
+  const linkSeguro = normalizarLinkSimposio(item.linkUrl) || (situacao ? "/cursos" : "");
   if (linkSeguro) {
     const externo = /^https?:\/\//i.test(linkSeguro);
     const a = document.createElement("a");
     a.className = "btn btn-dourado cartao-simposio__link";
     a.href = linkSeguro;
-    a.textContent = item.linkTexto || "Saiba mais";
+    a.textContent = item.linkTexto || (situacao && !item.linkUrl ? "Inscreva-se" : "Saiba mais");
     if (externo) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
     corpo.appendChild(a);
   }
@@ -233,7 +254,12 @@ function montarCarrossel(itens, indiceInicial) {
 }
 
 let carrosselAtual = null;
-ouvirSimposio((itens) => {
+let ultimosItens = null;
+let assinaturaAnterior = "";
+
+function desenhar() {
+  if (!ultimosItens) return;
+  const itens = ultimosItens;
   // se a lista mudar enquanto a pessoa está vendo, continua no mesmo simpósio
   let indiceInicial = 0;
   if (carrosselAtual) {
@@ -251,4 +277,17 @@ ouvirSimposio((itens) => {
     carrosselAtual = montarCarrossel(itens, indiceInicial);
     lista.appendChild(carrosselAtual.el);
   }
-});
+}
+// só o que muda o desenho: os itens e a situação (aberta/em breve/encerrada) dos cursos vinculados
+const assinatura = () => JSON.stringify((ultimosItens || []).map((i) => [i, (situacaoDoCurso(i) || {}).estado || "", (situacaoDoCurso(i) || {}).curso?.fechaEm || "", (situacaoDoCurso(i) || {}).curso?.abreEm || ""]));
+function redesenharSeMudou() {
+  const nova = assinatura();
+  if (nova === assinaturaAnterior) return;
+  assinaturaAnterior = nova;
+  desenhar();
+}
+
+ouvirSimposio((itens) => { ultimosItens = itens; assinaturaAnterior = ""; redesenharSeMudou(); });
+ouvirCursos((cursos) => { cursosPorId = new Map(cursos.map((c) => [c.id, c])); redesenharSeMudou(); }, () => {});
+// as inscrições abrem e encerram no horário programado: confere a cada meio minuto
+setInterval(() => { if (!document.hidden) redesenharSeMudou(); }, 30000);

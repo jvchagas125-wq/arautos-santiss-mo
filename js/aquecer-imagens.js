@@ -23,7 +23,7 @@ function baixar(url) {
 function baixarDasListas({ simposio, cursos }) {
   simposio.forEach((i) => { if (i && i.imagemUrl) baixar(otimizarImagemUrl(i.imagemUrl, 1200)); });
   cursos.forEach((c) => {
-    if (!c || !c.imagemUrl || c.ativo === false) return;
+    if (!c || !c.imagemUrl) return;
     baixar(otimizarImagemUrl(c.imagemUrl, 120));  // miniatura da lista
     baixar(otimizarImagemUrl(c.imagemUrl, 900));  // imagem do curso aberto
   });

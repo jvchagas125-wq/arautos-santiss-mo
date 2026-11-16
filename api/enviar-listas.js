@@ -11,6 +11,11 @@
 //  3) Painel admin, botão "Enviar por e-mail" numa lista:
 //       POST { "acao": "enviar", "usuarioId": "...", "chave": "...", "dataMissa": "aaaa-mm-dd", "horaMissa": 10 }
 //     → manda essa lista agora e a marca como enviada (o envio automático não repete).
+//  4) Lista de inscritos de um curso (Excel, Word e PDF por e-mail):
+//     - automático: o mesmo agendador do item 1 também envia, quando as inscrições de um curso encerram
+//       (na data programada ou "na mão"), a lista para os e-mails cadastrados em Intenções > Envio automático;
+//     - manual: painel, botão "Enviar por e-mail" em Inscrições de cursos > Inscritos:
+//       POST { "acao": "listaCurso", "usuarioId": "...", "chave": "...", "cursoId": "..." }
 //
 // Variáveis de ambiente (configuradas na Vercel — NUNCA no código):
 //   CRON_SECRET       senha do agendador (a mesma guardada no GitHub)
@@ -30,6 +35,10 @@ import {
   normalizarConfigEnvio, idDocEnvio
 } from "../servidor/envio-listas.js";
 import { enviarAvisoDoCurso } from "../servidor/avisos-curso.js";
+import { processarCursosEncerrados, enviarListaDoCurso, gerarAnexosDaLista } from "../servidor/lista-curso.js";
+
+// Arquivos da lista de inscritos de um curso (Excel, Word e PDF) — veja servidor/lista-curso.js
+const gerarAnexosCurso = (curso, inscricoes, { hoje }) => gerarAnexosDaLista(curso, inscricoes, { docx, hoje });
 
 async function gerarDocumento(rotulo, itens, opcoes = {}) {
   return docx.Packer.toBuffer(construirDocxIntencoes(rotulo, itens, { docx, categorias: opcoes.categorias, categoriasPermitidas: opcoes.categoriasPermitidas }));
@@ -53,7 +62,7 @@ function criarEnviadorDeEmail() {
   const remetente = process.env.EMAIL_REMETENTE || usuario;
   // Sem "copiaOculta": manda para a lista "para" (intenções). Com "copiaOculta": o "Para" é o próprio
   // remetente e os destinatários vão em cópia oculta (avisos de cursos — ninguém vê o e-mail dos outros).
-  return async ({ para = [], assunto, texto, anexo, copiaOculta, nomeRemetente }) => {
+  return async ({ para = [], assunto, texto, anexo, anexos, copiaOculta, nomeRemetente }) => {
     const mensagem = {
       from: `"${String(nomeRemetente || "Arautos do Evangelho - Intenções para a Santa Missa").replace(/["\r\n]/g, "")}" <${remetente}>`,
       to: copiaOculta ? remetente : para.join(", "),
@@ -61,7 +70,8 @@ function criarEnviadorDeEmail() {
       text: texto
     };
     if (copiaOculta) mensagem.bcc = copiaOculta.join(", ");
-    if (anexo) mensagem.attachments = [{ filename: anexo.nome, content: anexo.conteudo, contentType: anexo.tipo }];
+    const todosAnexos = [...(anexo ? [anexo] : []), ...(anexos || [])];
+    if (todosAnexos.length) mensagem.attachments = todosAnexos.map((a) => ({ filename: a.nome, content: a.conteudo, contentType: a.tipo }));
     await transporte.sendMail(mensagem);
   };
 }
@@ -117,7 +127,15 @@ export default async function handler(req, res) {
       const enviarEmail = async (dados) => { enviador ||= criarEnviadorDeEmail(); return enviador(dados); };
       const dependencias = { firestore, gerarDocumento, enviarEmail };
       const resultado = await processarListasFechadas({ agora: new Date() }, dependencias);
-      return res.status(200).json({ ok: true, ...resultado });
+      // inscrições de cursos que acabaram de encerrar: envia a lista de inscritos (um erro aqui não atrapalha as listas de intenção)
+      let cursos;
+      try {
+        cursos = await processarCursosEncerrados({ agora: new Date() }, { firestore, gerarAnexos: gerarAnexosCurso, enviarEmail });
+      } catch (erro) {
+        console.error("[enviar-listas] cursos:", erro?.message || erro);
+        cursos = { relatorio: [], erro: String(erro?.message || erro).slice(0, 300) };
+      }
+      return res.status(200).json({ ok: true, ...resultado, cursos });
     }
 
     /* ---------- 2) e 3) painel admin ---------- */
@@ -138,6 +156,23 @@ export default async function handler(req, res) {
       }
       const resultado = await enviarAvisoDoCurso({ avisoId: corpo.avisoId }, { firestore, criarEnviador: criarEnviadorDeEmail });
       return res.status(resultado.ok ? 200 : 400).json(resultado);
+    }
+
+    /* ---------- lista de inscritos de um curso, agora (painel "Inscrições de cursos") ---------- */
+    if (corpo.acao === "listaCurso") {
+      if (!temAcesso(conta, "inscricoes", "inscritos")) {
+        return res.status(403).json({ ok: false, erro: "Você não tem permissão para usar esta função." });
+      }
+      const docEnvioCurso = await firestore.lerDocumento("configuracoes/envioIntencoes");
+      const emails = normalizarConfigEnvio(docEnvioCurso?.dados).emails;
+      if (emails.length === 0) {
+        return res.status(400).json({ ok: false, erro: "Cadastre pelo menos um e-mail em Intenções da Missa > Envio automático por e-mail e clique em Salvar antes." });
+      }
+      const { total } = await enviarListaDoCurso(
+        { cursoId: corpo.cursoId, destinatarios: emails, encerramento: false },
+        { firestore, gerarAnexos: gerarAnexosCurso, enviarEmail: criarEnviadorDeEmail() }
+      );
+      return res.status(200).json({ ok: true, destinatarios: emails, total });
     }
 
     const parteNecessaria = corpo.acao === "teste" ? "email" : "listas";

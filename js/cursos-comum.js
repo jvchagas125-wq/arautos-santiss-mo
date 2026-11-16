@@ -39,6 +39,52 @@ export function novoIdCurto() {
 
 const texto = (v, max) => String(v ?? "").trim().slice(0, max);
 
+/* ---------- Programação das inscrições (abre / encerra) ---------- */
+// Os horários são sempre os de Brasília (UTC-3, sem horário de verão), seja qual for o fuso do aparelho.
+const DESLOCAMENTO_BRASILIA_HORAS = -3;
+export function dataHoraValida(v) {
+  const t = String(v ?? "").trim();
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(t) && Number.isFinite(instanteBrasilia(t)) ? t : "";
+}
+// "aaaa-mm-ddThh:mm" (horário de Brasília) -> milissegundos (instante real); NaN se for inválido
+export function instanteBrasilia(t) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(t ?? ""));
+  if (!m) return NaN;
+  const [ano, mes, dia, hora, minuto] = m.slice(1).map(Number);
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31 || hora > 23 || minuto > 59) return NaN;
+  return Date.UTC(ano, mes - 1, dia, hora - DESLOCAMENTO_BRASILIA_HORAS, minuto);
+}
+// "2026-11-28T12:00" -> "28/11/2026 às 12:00"
+export function rotuloDataHora(t) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(t ?? ""));
+  return m ? `${m[3]}/${m[2]}/${m[1]} às ${m[4]}:${m[5]}` : "";
+}
+// Situação das inscrições agora: "abertas", "emBreve" (ainda não começaram) ou "encerradas".
+// Encerrar na mão (botão do painel) ou passar da data de encerramento deixam "Inscrições encerradas"
+// visível no site até o administrador apagar o curso.
+export function estadoInscricoes(curso, agoraMs = Date.now()) {
+  const abre = curso.abreEm ? instanteBrasilia(curso.abreEm) : NaN;
+  const fecha = curso.fechaEm ? instanteBrasilia(curso.fechaEm) : NaN;
+  let estado = "abertas";
+  if (curso.ativo === false) estado = "encerradas";
+  else if (Number.isFinite(fecha) && agoraMs >= fecha) estado = "encerradas";
+  else if (Number.isFinite(abre) && agoraMs < abre) estado = "emBreve";
+  return { estado, porData: estado === "encerradas" && curso.ativo !== false };
+}
+// Identifica "este encerramento" (para o e-mail com a lista ser enviado uma vez só por encerramento).
+// null = não está encerrado, ou foi encerrado há tempo demais/sem registro (não envia).
+const JANELA_ENVIO_LISTA_MS = 3 * 24 * 3600 * 1000;
+export function chaveEncerramento(curso, agoraMs = Date.now()) {
+  const { estado, porData } = estadoInscricoes(curso, agoraMs);
+  if (estado !== "encerradas") return null;
+  if (porData) {
+    const fecha = instanteBrasilia(curso.fechaEm);
+    return agoraMs - fecha <= JANELA_ENVIO_LISTA_MS ? `fim:${curso.fechaEm}` : null;
+  }
+  const quando = Number(curso.encerradoEmMs) || 0;
+  return quando > 0 && agoraMs - quando <= JANELA_ENVIO_LISTA_MS ? `manual:${quando}` : null;
+}
+
 // Lê um documento de curso (de qualquer versão) e devolve sempre a mesma forma.
 export function normalizarCurso(id, dados) {
   const d = dados && typeof dados === "object" ? dados : {};
@@ -75,6 +121,11 @@ export function normalizarCurso(id, dados) {
     ativo: d.ativo !== false,
     // o formulário pergunta se a pessoa aceita receber convites e informativos por e-mail?
     pedirAceiteContato: d.pedirAceiteContato === true,
+    // programação das inscrições (horário de Brasília, "aaaa-mm-ddThh:mm"); vazio = sem data
+    abreEm: dataHoraValida(d.abreEm),
+    fechaEm: dataHoraValida(d.fechaEm),
+    // quando o administrador encerrou "na mão" (milissegundos); 0 = nunca encerrado assim
+    encerradoEmMs: Number.isFinite(Number(d.encerradoEmMs)) ? Number(d.encerradoEmMs) : 0,
     campos,
     perguntas,
     ordem: Number.isFinite(Number(d.ordem)) ? Number(d.ordem) : 0

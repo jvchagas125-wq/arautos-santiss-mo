@@ -201,6 +201,20 @@ export function criarClienteFirestore({ projectId, apiKey, fetchFn = fetch }) {
       }));
     },
 
+    // Todos os documentos de uma coleção (de página em página). Devolve [{ id, ...dados }].
+    async listarColecao(colecao) {
+      const todos = [];
+      let pagina = "";
+      for (let i = 0; i < 20; i++) {
+        const r = await chamar(`${base}/${colecao}?pageSize=100${pagina ? `&pageToken=${encodeURIComponent(pagina)}` : ""}&${sufixoChave}`);
+        if (!r.ok) throw new Error(`Firestore (listar ${colecao}) respondeu ${r.status}: ${r.json?.error?.message || ""}`);
+        (r.json?.documents || []).forEach((d) => todos.push({ id: String(d.name || "").split("/").pop(), ...decodificarCampos(d.fields || {}) }));
+        pagina = r.json?.nextPageToken || "";
+        if (!pagina) break;
+      }
+      return todos;
+    },
+
     // Todas as intenções de uma lista (data + hora).
     async intencoesDaLista(dataMissa, horaMissa) {
       const r = await chamar(`${base}:runQuery?${sufixoChave}`, {

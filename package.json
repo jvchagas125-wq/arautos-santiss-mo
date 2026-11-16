@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Site de agendamento da Adoração Eucarística — Arautos do Evangelho. O site em si não tem build; o package.json existe só para a função de envio automático de e-mails (api/enviar-listas.js).",
+  "description": "Site de agendamento da Adoração Eucarística — Arautos do Evangelho. O site em si não tem build; o package.json existe só para a função de envio automático de e-mails (api/enviar-listas.js): intenções da Missa e lista de inscritos dos cursos (Excel, Word e PDF).",
   "engines": {
     "node": "22.x"
   },
   "dependencies": {
     "docx": "9.8.1",
+    "exceljs": "4.4.0",
+    "jspdf": "2.5.2",
+    "jspdf-autotable": "3.8.4",
     "nodemailer": "^10.0.14"
   }
 }

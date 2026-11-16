@@ -9,7 +9,7 @@ import {
   ouvirConfiguracoesGerais, ouvirCursos, inscricoesDaPessoa, salvarInscricao, excluirInscricao, ouvirAvisosDoCurso
 } from "./dados.js";
 import {
-  CAMPOS_PADRAO, perguntaVisivel, opcoesDaPergunta, validarInscricao, montarInscricao, mascaraCpf,
+  estadoInscricoes, rotuloDataHora, CAMPOS_PADRAO, perguntaVisivel, opcoesDaPergunta, validarInscricao, montarInscricao, mascaraCpf,
   valorComoTexto, idInscricao, dataParaTexto
 } from "./cursos-comum.js";
 
@@ -186,6 +186,11 @@ function montarFormulario(curso, existente, aoConcluir) {
       mostrarToast("Confira os campos marcados.");
       return;
     }
+    if (estadoInscricoes(curso).estado !== "abertas") {
+      mostrarToast("As inscrições deste curso não estão abertas no momento.");
+      renderizar();
+      return;
+    }
     enviar.disabled = true;
     enviar.textContent = "Enviando...";
     try {
@@ -231,6 +236,7 @@ function montarAvisos(curso) {
 
 /* ---------- Cartão (lista fechada) de um curso ---------- */
 function criarCartao(curso) {
+  const { estado } = estadoInscricoes(curso); // "abertas", "emBreve" ou "encerradas"
   const cartao = criar("div", "curso-card");
   const cab = criar("button", "curso-card__cab");
   cab.type = "button";
@@ -254,12 +260,20 @@ function criarCartao(curso) {
   cartao.appendChild(corpo);
   let pararAvisos = null;
 
+  function atualizarSelo() {
+    const minha = minhasInscricoes.get(curso.id);
+    if (estado === "encerradas") selo.textContent = minha ? "✓ Você está inscrito(a) · Inscrições encerradas" : "Inscrições encerradas";
+    else if (estado === "emBreve") selo.textContent = "Inscrições em breve";
+    else selo.textContent = minha ? "✓ Você está inscrito(a)" : "Inscrições abertas";
+    selo.classList.toggle("curso-card__selo--ok", !!minha && estado !== "encerradas");
+    selo.classList.toggle("curso-card__selo--encerrado", estado === "encerradas" && !minha);
+  }
+
   function desenharCorpo() {
     if (pararAvisos) { pararAvisos(); pararAvisos = null; }
     corpo.innerHTML = "";
     const minha = minhasInscricoes.get(curso.id);
-    selo.textContent = minha ? "✓ Você está inscrito(a)" : "Inscrições abertas";
-    selo.classList.toggle("curso-card__selo--ok", !!minha);
+    atualizarSelo();
     if (curso.imagemUrl) {
       const img = criar("img", "curso-card__imagem");
       img.alt = curso.nome;
@@ -280,6 +294,14 @@ function criarCartao(curso) {
       area.appendChild(montarFormulario(curso, existente, () => desenharCorpo()));
     };
 
+    if (estado === "emBreve") {
+      area.appendChild(criar("p", "curso-aviso-estado", `Inscrições em breve. Elas começam em ${rotuloDataHora(curso.abreEm)}.`));
+      return;
+    }
+    if (estado === "encerradas" && !minha) {
+      area.appendChild(criar("p", "curso-aviso-estado curso-aviso-estado--encerrado", "Inscrições encerradas."));
+      return;
+    }
     if (!minha) {
       mostrarForm(null);
       return;
@@ -329,8 +351,12 @@ function criarCartao(curso) {
       });
       acoes.append(sim, nao);
     });
-    acoes.append(editar, cancelar);
-    ok.appendChild(acoes);
+    if (estado === "encerradas") {
+      ok.appendChild(criar("p", "curso-aviso-estado curso-aviso-estado--encerrado", "Inscrições encerradas."));
+    } else {
+      acoes.append(editar, cancelar);
+      ok.appendChild(acoes);
+    }
     area.appendChild(ok);
     const avisos = montarAvisos(curso);
     pararAvisos = avisos._parar;
@@ -348,20 +374,19 @@ function criarCartao(curso) {
   cab.addEventListener("click", alternar);
 
   // estado inicial (cartão fechado: só o selo; reabre sozinho se já estava aberto antes de uma atualização)
-  const minhaInicial = minhasInscricoes.get(curso.id);
-  selo.textContent = minhaInicial ? "✓ Você está inscrito(a)" : "Inscrições abertas";
-  selo.classList.toggle("curso-card__selo--ok", !!minhaInicial);
+  atualizarSelo();
   if (abertos.has(curso.id)) { corpo.classList.remove("oculto"); cartao.classList.add("aberto"); cab.setAttribute("aria-expanded", "true"); desenharCorpo(); }
   return cartao;
 }
 
 function renderizar() {
-  const ativos = ultimosCursos.filter((c) => c.ativo && c.nome);
+  // todos os cursos aparecem; os encerrados ficam com "Inscrições encerradas" até o administrador apagar
+  const ativos = ultimosCursos.filter((c) => c.nome);
   avisoSemCursos.classList.toggle("oculto", ativos.length > 0);
   const vivos = new Set();
   ativos.forEach((curso) => {
     vivos.add(curso.id);
-    const assinatura = JSON.stringify(curso) + (minhasInscricoes.has(curso.id) ? "|inscrito" : "");
+    const assinatura = JSON.stringify(curso) + (minhasInscricoes.has(curso.id) ? "|inscrito" : "") + "|" + estadoInscricoes(curso).estado;
     let c = cartoes.get(curso.id);
     if (c && c.assinatura === assinatura) return;
     const el = criarCartao(curso);
@@ -387,8 +412,7 @@ function lerCursosEmCache() {
 }
 function guardarCursosEmCache(cursos) {
   try {
-    // só o que o site público mostra (cursos abertos)
-    localStorage.setItem(CHAVE_CACHE_CURSOS, JSON.stringify(cursos.filter((c) => c.ativo && c.nome)));
+    localStorage.setItem(CHAVE_CACHE_CURSOS, JSON.stringify(cursos.filter((c) => c.nome)));
   } catch { /* sem armazenamento: só perde a otimização */ }
 }
 
@@ -415,3 +439,7 @@ exigirCadastro().then(async (u) => {
     renderizar(); // atualiza os selos "Você está inscrito(a)"
   } catch (err) { console.error(err); }
 });
+
+// as inscrições abrem e encerram sozinhas no horário programado: confere a cada meio minuto
+// (só redesenha o cartão cuja situação mudou)
+setInterval(() => { if (!document.hidden) renderizar(); }, 30000);
