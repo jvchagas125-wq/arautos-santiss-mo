@@ -5,7 +5,7 @@ import {
 } from "./utils.js";
 import {
   ouvirCursos, salvarCurso, alterarAberturaDoCurso, excluirCurso,
-  ouvirTodasInscricoes, excluirInscricao, ouvirTodosAvisosDosCursos, criarAvisoDoCurso, excluirAvisoDoCurso
+  ouvirTodasInscricoes, excluirInscricao, obterConfigEnvioIntencoes, salvarEmailsInscritos, ouvirTodosAvisosDosCursos, criarAvisoDoCurso, excluirAvisoDoCurso
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, TIPOS_PERGUNTA, TIPOS_COM_OPCOES, perguntaTemOpcoes, opcoesDaPergunta, normalizarCurso, novoIdCurto,
@@ -594,6 +594,49 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     return cartao;
   }
 
+  /* ---------- e-mails que recebem a lista de inscritos ---------- */
+  let emailsLista = [];
+  const caixaEmailsLista = document.getElementById("inscritosEmailsLista");
+  const campoEmailNovo = document.getElementById("inscritosEmailNovo");
+  function desenharEmailsLista() {
+    caixaEmailsLista.replaceChildren();
+    if (!emailsLista.length) {
+      caixaEmailsLista.appendChild(criar("p", "inscritos-emails__vazio", "Nenhum e-mail cadastrado ainda. Sem e-mail aqui, a lista não é enviada."));
+      return;
+    }
+    emailsLista.forEach((email) => {
+      const chip = criar("span", "inscritos-emails__chip");
+      chip.appendChild(criar("span", "inscritos-emails__endereco", email));
+      const x = criar("button", "inscritos-emails__remover", "×"); x.type = "button";
+      x.setAttribute("aria-label", `Remover ${email}`); x.title = "Remover este e-mail";
+      x.addEventListener("click", async () => {
+        x.disabled = true;
+        const novos = emailsLista.filter((e) => e !== email);
+        try { await salvarEmailsInscritos(novos); emailsLista = novos; desenharEmailsLista(); mostrarToast("E-mail removido."); }
+        catch (err) { console.error(err); x.disabled = false; mostrarToast("Não foi possível remover. Tente novamente."); }
+      });
+      chip.appendChild(x);
+      caixaEmailsLista.appendChild(chip);
+    });
+  }
+  const preencherEmailsLista = (cfg) => { emailsLista = [...new Set((cfg.emailsInscritos || []).map((e) => e.trim()).filter(Boolean))]; desenharEmailsLista(); };
+  obterConfigEnvioIntencoes(preencherEmailsLista).then(preencherEmailsLista).catch((err) => { console.error(err); desenharEmailsLista(); });
+  document.getElementById("formInscritosEmail").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = campoEmailNovo.value.trim();
+    if (!email) { campoEmailNovo.focus(); return; }
+    if (!emailValido(email)) { campoEmailNovo.classList.add("invalido"); mostrarToast("Esse e-mail não parece válido. Confira e tente de novo."); campoEmailNovo.focus(); return; }
+    campoEmailNovo.classList.remove("invalido");
+    if (emailsLista.some((x) => x.toLowerCase() === email.toLowerCase())) { mostrarToast("Esse e-mail já está na lista."); campoEmailNovo.value = ""; return; }
+    const btn = document.getElementById("btnAdicionarEmailInscritos");
+    btn.disabled = true;
+    const novos = [...emailsLista, email];
+    try { await salvarEmailsInscritos(novos); emailsLista = novos; campoEmailNovo.value = ""; desenharEmailsLista(); mostrarToast("E-mail adicionado!"); }
+    catch (err) { console.error(err); mostrarToast("Não foi possível salvar. Tente novamente."); }
+    finally { btn.disabled = false; }
+  });
+  campoEmailNovo.addEventListener("input", () => campoEmailNovo.classList.remove("invalido"));
+
   function desenharCrm() {
     const raiz = document.getElementById("listaInscritosAdmin");
     // não refaz a tela enquanto a pessoa digita na busca (perderia o foco)
@@ -643,13 +686,19 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       });
       const btnEmail = criar("button", "btn btn-contorno btn-pequeno", "Enviar por e-mail");
       btnEmail.type = "button";
-      btnEmail.title = "Envia agora a lista de presença (Excel, Word e PDF) para os e-mails cadastrados em Intenções > Envio automático";
+      btnEmail.title = "Envia agora o Excel, o Word e o PDF para os e-mails cadastrados em \"E-mails que recebem a lista de inscritos\"";
       btnEmail.addEventListener("click", () => {
         if (!dele.length) { mostrarToast("Ainda não há inscritos neste curso."); return; }
+        if (!emailsLista.length) {
+          mostrarToast("Cadastre antes um e-mail em \"E-mails que recebem a lista de inscritos\" (no alto desta seção).");
+          document.getElementById("inscritosEmails").scrollIntoView({ behavior: "smooth", block: "center" });
+          campoEmailNovo.focus({ preventScroll: true });
+          return;
+        }
         pedirConfirmacao({
           titulo: "Enviar lista por e-mail",
-          texto: `Enviar agora a lista dos ${dele.length} ${dele.length === 1 ? "inscrito" : "inscritos"} de "${curso.nome}" (Excel, Word e PDF) para os e-mails cadastrados em Intenções da Missa > Envio automático por e-mail?`,
-          botao: "Enviar e-mail",
+          texto: `Enviar agora a lista de "${curso.nome}" (${dele.length} ${dele.length === 1 ? "inscrito" : "inscritos"}), com Excel, Word e PDF, para ${emailsLista.length === 1 ? "o e-mail cadastrado" : `os ${emailsLista.length} e-mails cadastrados`} em "E-mails que recebem a lista de inscritos" (${emailsLista.join(", ")})?`,
+          botao: "Enviar",
           acao: async () => {
             try { const r = await chamarApiEnvio({ acao: "listaCurso", cursoId: curso.id }); mostrarToast(`Lista enviada para ${r.destinatarios.length} ${r.destinatarios.length === 1 ? "e-mail" : "e-mails"}.`); }
             catch (err) { console.error(err); mostrarToast(err.message || "Não foi possível enviar o e-mail."); }
@@ -780,7 +829,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
           pedirConfirmacao({
             titulo: "Enviar aviso por e-mail",
             texto: `Enviar "${a.titulo}" por e-mail para ${emails.length} ${emails.length === 1 ? "inscrito" : "inscritos"} do curso "${curso.nome}"${curso.pedirAceiteContato ? " (só quem aceitou receber e-mails)" : ""}?`,
-            botao: "Enviar e-mail",
+            botao: "Enviar",
             acao: async () => { await enviarPorEmail(a); }
           });
         });

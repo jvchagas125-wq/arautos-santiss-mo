@@ -577,6 +577,8 @@ function normalizarConfigEnvio(dados) {
   return {
     ativo: dados?.ativo === true,
     emails: Array.isArray(dados?.emails) ? dados.emails.filter((e) => typeof e === "string") : [],
+    // e-mails que recebem só a lista de inscritos dos cursos (cadastrados em Inscritos (CRM))
+    emailsInscritos: Array.isArray(dados?.emailsInscritos) ? dados.emailsInscritos.filter((e) => typeof e === "string") : [],
     enviarVazias: dados?.enviarVazias === true
   };
 }
@@ -590,6 +592,11 @@ export async function obterConfigEnvioIntencoes(aoAtualizar) {
 
 export async function salvarConfigEnvioIntencoes({ ativo, emails, enviarVazias }) {
   await setDoc(REF_ENVIO_INTENCOES, { ativo: !!ativo, emails, enviarVazias: !!enviarVazias }, { merge: true });
+}
+
+// Lista própria de e-mails para a lista de inscritos dos cursos (fica no mesmo documento, em "emailsInscritos").
+export async function salvarEmailsInscritos(emails) {
+  await setDoc(REF_ENVIO_INTENCOES, { emailsInscritos: emails }, { merge: true });
 }
 
 // Escuta o histórico de envios registrados pelo servidor. Devolve um objeto { "aaaa-mm-dd|hora": {...} }.

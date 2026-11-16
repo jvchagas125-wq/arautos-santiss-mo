@@ -916,3 +916,28 @@
   background:#fffefb; color: var(--vermelho-escuro); font-family:'EB Garamond', serif; font-size:1.2rem; font-weight:700;
 }
 .sdh .sdh__digitar-campo:focus{ outline:none; border-color: var(--dourado); box-shadow: 0 0 0 3px rgba(205,164,52,.25); }
+
+/* e-mails que recebem a lista de inscritos (dentro de Inscritos (CRM)) */
+.inscritos-emails{ margin:0 0 18px; padding:14px; border:1.5px dashed rgba(157,122,31,.55); border-radius:14px; background: rgba(255,255,255,.55); }
+.inscritos-emails .campo-legenda{ margin-top:0; }
+.inscritos-emails__lista{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 12px; }
+.inscritos-emails__vazio{ margin:0; font-size:.88rem; font-style:italic; color: var(--texto-suave); }
+.inscritos-emails__chip{
+  display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:5px 6px 5px 12px; border-radius:999px;
+  background: linear-gradient(180deg,#fffefb,#faf3e6); border:1.5px solid rgba(157,122,31,.5); color: var(--vermelho-escuro); font-size:.95rem;
+}
+.inscritos-emails__endereco{ min-width:0; overflow-wrap:anywhere; }
+.inscritos-emails__remover{
+  flex:none; width:26px; height:26px; border-radius:50%; border:none; cursor:pointer; line-height:1; font-size:1.05rem;
+  background: rgba(122,12,30,.1); color: var(--vermelho);
+}
+.inscritos-emails__remover:hover{ background: rgba(122,12,30,.22); }
+.inscritos-emails__remover:disabled{ opacity:.5; cursor:wait; }
+.inscritos-emails__form{ display:flex; gap:8px; align-items:stretch; }
+.inscritos-emails__form input{
+  flex:1; min-width:0; padding:11px 14px; border-radius:10px; border:1.5px solid rgba(157,122,31,.45);
+  font-family:'EB Garamond', serif; font-size:1.02rem; background:#fffefb; color: var(--texto);
+}
+.inscritos-emails__form input:focus{ outline:none; border-color: var(--dourado); box-shadow: 0 0 0 3px rgba(205,164,52,.25); }
+.inscritos-emails__form input.invalido{ border-color: var(--vermelho); }
+.inscritos-emails__form .btn{ flex:none; }

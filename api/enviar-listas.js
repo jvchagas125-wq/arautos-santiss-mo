@@ -164,9 +164,9 @@ export default async function handler(req, res) {
         return res.status(403).json({ ok: false, erro: "Você não tem permissão para usar esta função." });
       }
       const docEnvioCurso = await firestore.lerDocumento("configuracoes/envioIntencoes");
-      const emails = normalizarConfigEnvio(docEnvioCurso?.dados).emails;
+      const emails = normalizarConfigEnvio(docEnvioCurso?.dados).emailsInscritos;
       if (emails.length === 0) {
-        return res.status(400).json({ ok: false, erro: "Cadastre pelo menos um e-mail em Intenções da Missa > Envio automático por e-mail e clique em Salvar antes." });
+        return res.status(400).json({ ok: false, erro: "Cadastre pelo menos um e-mail em Inscritos (CRM) > E-mails que recebem a lista de inscritos." });
       }
       const { total } = await enviarListaDoCurso(
         { cursoId: corpo.cursoId, destinatarios: emails, encerramento: false },

@@ -15,7 +15,7 @@
 <script>try{if(localStorage.getItem("arautos_admin_sessao"))document.documentElement.classList.add("com-sessao");}catch(e){}</script>
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/admin.css?v=82" />
+<link rel="stylesheet" href="css/admin.css?v=83" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -716,6 +716,15 @@
               As pessoas inscritas em cada curso, em ordem alfabética. Abra uma pessoa para ver tudo o que ela respondeu, fale com ela
               pelo WhatsApp ou e-mail e baixe a lista em Excel, Word ou PDF.
             </p>
+            <div class="inscritos-emails" id="inscritosEmails">
+              <p class="campo-legenda">E-mails que recebem a lista de inscritos</p>
+              <p class="campo-ajuda">Quando as inscrições de um curso encerram, o site envia para estes endereços a lista dos inscritos em Excel, Word e PDF. O botão "Enviar por e-mail" de cada curso também usa esta lista. Ela é separada da lista de Intenções da Missa.</p>
+              <div class="inscritos-emails__lista" id="inscritosEmailsLista"></div>
+              <form class="inscritos-emails__form" id="formInscritosEmail" novalidate>
+                <input type="email" id="inscritosEmailNovo" placeholder="nome@exemplo.com" autocomplete="off" inputmode="email" aria-label="Novo e-mail para receber a lista de inscritos" />
+                <button type="submit" class="btn btn-dourado btn-pequeno" id="btnAdicionarEmailInscritos">Adicionar</button>
+              </form>
+            </div>
             <p class="mensagem-vazia" id="avisoSemInscritos">Cadastre um curso para receber inscrições.</p>
             <div id="listaInscritosAdmin"></div>
           </div>
@@ -1339,7 +1348,7 @@
         <div class="campo">
           <label for="cursoFechaEm">As inscrições encerram em</label>
           <input type="datetime-local" id="cursoFechaEm" />
-          <span class="campo-ajuda">Horário de Brasília. Antes do início, o site mostra "Inscrições em breve". No horário de encerramento, mostra "Inscrições encerradas" e o site envia automaticamente, por e-mail, a lista dos inscritos em Excel, Word e PDF para os endereços cadastrados em <strong>Intenções da Missa &gt; Envio automático por e-mail</strong>. Deixe em branco para não programar.</span>
+          <span class="campo-ajuda">Horário de Brasília. Antes do início, o site mostra "Inscrições em breve". No horário de encerramento, mostra "Inscrições encerradas" e o site envia automaticamente, por e-mail, a lista dos inscritos em Excel, Word e PDF para os endereços cadastrados em <strong>Inscritos (CRM) &gt; E-mails que recebem a lista de inscritos</strong>. Deixe em branco para não programar.</span>
         </div>
 
         <p class="campo-legenda curso-editor__secao">Dados que a pessoa preenche</p>

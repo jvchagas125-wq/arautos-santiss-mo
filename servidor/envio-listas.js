@@ -73,9 +73,13 @@ export function normalizarConfigEnvio(dados) {
   const emails = Array.isArray(dados?.emails)
     ? dados.emails.map((e) => String(e || "").trim()).filter((e) => REGEX_EMAIL.test(e))
     : [];
+  const emailsInscritos = Array.isArray(dados?.emailsInscritos)
+    ? dados.emailsInscritos.map((e) => String(e || "").trim()).filter((e) => REGEX_EMAIL.test(e))
+    : [];
   return {
     ativo: dados?.ativo === true,
     emails: [...new Set(emails)],
+    emailsInscritos: [...new Set(emailsInscritos)],
     enviarVazias: dados?.enviarVazias === true
   };
 }

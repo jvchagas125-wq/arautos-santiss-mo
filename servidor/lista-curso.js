@@ -2,7 +2,7 @@
 // Dois jeitos de disparar (quem chama é api/enviar-listas.js):
 //  1) Automático: o agendador (GitHub Actions, a cada ~10 min) chama processarCursosEncerrados, que procura
 //     cursos cujas inscrições encerraram (na data programada ou "na mão" pelo painel) e ainda não tiveram a lista
-//     enviada, e manda para os e-mails cadastrados em Intenções da Missa > Envio automático por e-mail.
+//     enviada, e manda para os e-mails cadastrados em Inscritos (CRM) > E-mails que recebem a lista de inscritos.
 //     Cada encerramento é enviado uma única vez (o "carimbo" fica em configuracoes/envioCurso_<id>).
 //  2) Manual: botão "Enviar por e-mail" no painel (Inscrições de cursos > Inscritos) -> enviarListaDoCurso.
 // Tudo que fala com o mundo de fora (Firestore, geração dos arquivos, e-mail) entra por parâmetro, para poder
@@ -90,7 +90,7 @@ export async function processarCursosEncerrados({ agora = new Date() } = {}, dep
   const relatorio = [];
   const candidatos = cursos.filter((c) => c.nome && ID_VALIDO.test(c.id) && chaveEncerramento(c, agora.getTime()));
   if (candidatos.length === 0) return { relatorio, mensagem: "Nenhum curso com inscrições recém-encerradas." };
-  if (configEnvio.emails.length === 0) return { relatorio, mensagem: "Nenhum e-mail cadastrado em Intenções da Missa > Envio automático por e-mail." };
+  if (configEnvio.emailsInscritos.length === 0) return { relatorio, mensagem: "Nenhum e-mail cadastrado em Inscritos (CRM) > E-mails que recebem a lista de inscritos." };
 
   for (const curso of candidatos) {
     const chave = chaveEncerramento(curso, agora.getTime());
@@ -113,8 +113,8 @@ export async function processarCursosEncerrados({ agora = new Date() } = {}, dep
         }, existente.updateTime);
         if (!reservou) { relatorio.push({ ...item, resultado: "ignorada (outra execução já reservou)" }); continue; }
       }
-      const { total } = await enviarListaDoCurso({ cursoId: curso.id, destinatarios: configEnvio.emails, encerramento: true }, dependencias, agora);
-      await firestore.atualizar(caminho, { status: "enviado", total, enviadoEm: new Date().toISOString(), destinatarios: configEnvio.emails, erro: "" });
+      const { total } = await enviarListaDoCurso({ cursoId: curso.id, destinatarios: configEnvio.emailsInscritos, encerramento: true }, dependencias, agora);
+      await firestore.atualizar(caminho, { status: "enviado", total, enviadoEm: new Date().toISOString(), destinatarios: configEnvio.emailsInscritos, erro: "" });
       relatorio.push({ ...item, resultado: "enviada", total });
     } catch (erro) {
       const mensagem = String(erro?.message || erro).slice(0, 300);
