@@ -2,7 +2,7 @@ import { iniciarInicioAdmin } from "./inicio-admin.js";
 import { listaArquivada, inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
-  MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS, categoriasPermitidasDaMissa,
+  MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS, destinoAtual, categoriasPermitidasDaMissa,
   normalizarRegraFechamento, regraDeFechamentoDaMissa, descreverRegraDeFechamento, textoHoraMinuto,
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
 import {
@@ -3601,7 +3601,7 @@ function configurarBanners() {
       const opt = document.createElement("option");
       opt.value = p.href;
       opt.textContent = p.label;
-      if (p.href === valorSelecionado) opt.selected = true;
+      if (p.href === destinoAtual(valorSelecionado)) opt.selected = true;
       select.appendChild(opt);
     });
   }
@@ -3612,7 +3612,7 @@ function configurarBanners() {
   // guardados no mesmo campo "paginaDestino" no banco; um link é só um valor que não bate com
   // nenhuma página conhecida (ver ehLinkPersonalizado/normalizarLink abaixo).
   function ehLinkPersonalizado(valor) {
-    return !PAGINAS_DESTINO_BANNER.some((p) => p.href === valor);
+    return !PAGINAS_DESTINO_BANNER.some((p) => p.href === destinoAtual(valor));
   }
   function normalizarLink(valor) {
     const v = (valor || "").trim();
@@ -3680,7 +3680,7 @@ function configurarBanners() {
     bannerSemBanners.classList.toggle("oculto", lista.length > 0);
 
     lista.forEach((banner, indice) => {
-      const nomeDestino = (PAGINAS_DESTINO_BANNER.find((p) => p.href === banner.paginaDestino) || {}).label || banner.paginaDestino;
+      const nomeDestino = (PAGINAS_DESTINO_BANNER.find((p) => p.href === destinoAtual(banner.paginaDestino)) || {}).label || banner.paginaDestino;
 
       const temBotao = !!(banner.textoBotao && banner.textoBotao.trim());
       const ehLink = ehLinkPersonalizado(banner.paginaDestino);

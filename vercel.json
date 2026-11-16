@@ -1,6 +1,11 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "rewrites": [
+    { "source": "/adoração", "destination": "/agendamento.html" },
+    { "source": "/adora%C3%A7%C3%A3o", "destination": "/agendamento.html" },
+    { "source": "/adoracao", "destination": "/agendamento.html" }
+  ],
   "functions": {
     "api/enviar-listas.js": {
       "maxDuration": 30

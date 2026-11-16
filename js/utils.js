@@ -942,9 +942,11 @@ export function sessaoParaHashDeUrl() {
 */
 /* ---------- Ordem das páginas do site público (usada nos botões "Anterior / Próxima" e,
    no painel admin, como lista de páginas de destino dos banners da Home) ---------- */
+// Destinos de banner guardados antes da troca do endereço da página de agendamento.
+export const destinoAtual = (v) => (v === "agendamento" || v === "/agendamento" ? "adoração" : v);
 export const ORDEM_PAGINAS = [
   { chave: "index", label: "Início", href: "/" },
-  { chave: "agendamento", label: "Agendar Adoração", href: "agendamento" },
+  { chave: "agendamento", label: "Agendar Adoração", href: "adoração" },
   { chave: "meus-agendamentos", label: "Meus agendamentos da Adoração", href: "meus-agendamentos" },
   { chave: "intencoes", label: "Intenções para a Santa Missa", href: "intencoes" },
   { chave: "simposio", label: "Simpósio", href: "simposio" },
@@ -1059,8 +1061,11 @@ function caminhoDoLink(a) {
 }
 
 function aplicarPaginasOcultas(paginaAtual) {
+  // o endereço do link vem codificado pelo navegador (/adora%C3%A7%C3%A3o): compara pelo mesmo formato
+  const caminhoCodificado = (href) => { try { return new URL("/" + href.replace(/^\/+/, ""), location.origin).pathname; } catch { return "/" + href; } };
   const caminhos = new Map(ORDEM_PAGINAS.filter((p) => p.chave !== "index")
-    .map((p) => ["/" + p.href.replace(/^\/+/, ""), p.chave]));
+    .map((p) => [caminhoCodificado(p.href), p.chave]));
+  caminhos.set("/agendamento", "agendamento"); // endereço antigo da página
   // links do menu, dos atalhos da página inicial e do menu da conta
   document.querySelectorAll("#menuLateral nav a, .atalho-card, #dropdownPerfil a").forEach((a) => {
     const chave = a.dataset.pagina || caminhos.get(caminhoDoLink(a));
