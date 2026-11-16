@@ -15,7 +15,7 @@
 <script>try{if(localStorage.getItem("arautos_admin_sessao"))document.documentElement.classList.add("com-sessao");}catch(e){}</script>
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/admin.css?v=77" />
+<link rel="stylesheet" href="css/admin.css?v=78" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -721,7 +721,7 @@
           <div id="corpoAvisosCursos" class="oculto">
             <p class="formulario-intro">
               Cada curso tem o seu quadro de avisos: quem está inscrito vê os avisos na página do curso no site e, se você quiser,
-              também recebe o aviso por e-mail.
+              também recebe o aviso por e-mail (se o curso pedir o aceite de contato, só quem marcou que aceita).
             </p>
             <p class="mensagem-vazia" id="avisoSemCursosAvisos">Cadastre um curso para criar avisos.</p>
             <div id="listaAvisosCursosAdmin"></div>
@@ -1325,6 +1325,11 @@
         <p class="campo-legenda curso-editor__secao">Dados que a pessoa preenche</p>
         <p class="especial-dica especial-dica--curta">O nome completo é sempre pedido. Marque os outros dados que você quer e, se for o caso, se são obrigatórios.</p>
         <div id="cursoCamposPadrao" class="curso-campos-padrao"></div>
+
+        <div class="campo campo-checkbox-simples curso-aceite-adm">
+          <label><input type="checkbox" id="cursoPedirAceite" /> <span>Perguntar se a pessoa aceita ser contactada por e-mail
+            <small>Aparece no formulário: "Aceito ser contactado para receber convites e informativos por e-mail." Quem marcar recebe automaticamente por e-mail os avisos para inscritos; quem não marcar não recebe. Ao ligar esta opção, o campo E-mail passa a ser pedido.</small></span></label>
+        </div>
 
         <p class="campo-legenda curso-editor__secao">Perguntas do formulário</p>
         <p class="especial-dica especial-dica--curta">Em perguntas de Sim/Não ou de escolher opções, use <strong>"+ Pergunta extra"</strong> para abrir outra pergunta só quando a pessoa der uma resposta específica.</p>

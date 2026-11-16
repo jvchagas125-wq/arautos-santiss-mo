@@ -6,6 +6,7 @@
 export const CAMPOS_PADRAO = [
   { chave: "email", rotulo: "E-mail", tipo: "email" },
   { chave: "telefone", rotulo: "Telefone / WhatsApp", tipo: "telefone" },
+  { chave: "instagram", rotulo: "Instagram", tipo: "instagram" },
   { chave: "cpf", rotulo: "CPF", tipo: "cpf" },
   { chave: "nascimento", rotulo: "Data de nascimento", tipo: "data" },
   { chave: "endereco", rotulo: "Endereço", tipo: "texto" },
@@ -72,6 +73,8 @@ export function normalizarCurso(id, dados) {
     imagemUrl: texto(d.imagemUrl, 600),
     observacoes: texto(d.observacoes, 4000),
     ativo: d.ativo !== false,
+    // o formulário pergunta se a pessoa aceita receber convites e informativos por e-mail?
+    pedirAceiteContato: d.pedirAceiteContato === true,
     campos,
     perguntas,
     ordem: Number.isFinite(Number(d.ordem)) ? Number(d.ordem) : 0
@@ -92,6 +95,14 @@ export function perguntaVisivel(pergunta, perguntas, respostas) {
 export function emailValido(v) {
   return /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/.test(String(v || "").trim());
 }
+// Instagram: aceita "@usuario", "usuario" ou o link do perfil. Devolve "@usuario" ou null se for inválido.
+export function normalizarInstagram(v) {
+  let t = String(v || "").trim();
+  if (!t) return "";
+  t = t.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^(www\.)?instagram\.com\//i, "");
+  t = t.split(/[/?#]/)[0].replace(/^@+/, "");
+  return /^[A-Za-z0-9._]{1,30}$/.test(t) ? "@" + t : null;
+}
 export function cpfValido(v) {
   const d = String(v || "").replace(/\D/g, "");
   if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
@@ -109,7 +120,7 @@ export function mascaraCpf(v) {
 }
 
 // Confere as respostas de uma inscrição. Devolve { erros: { chave: "mensagem" }, ok }.
-export function validarInscricao(curso, { nome, padrao, respostas }) {
+export function validarInscricao(curso, { nome, padrao, respostas, aceitaContato }) {
   const erros = {};
   if (String(nome || "").trim().split(/\s+/).filter(Boolean).length < 2) erros.nome = "Digite o nome completo (nome e sobrenome).";
   CAMPOS_PADRAO.forEach(({ chave, tipo }) => {
@@ -119,8 +130,13 @@ export function validarInscricao(curso, { nome, padrao, respostas }) {
     if (!v) { if (cfg.obrigatorio) erros[chave] = "Campo obrigatório."; return; }
     if (tipo === "email" && !emailValido(v)) erros[chave] = "Digite um e-mail válido.";
     if (tipo === "cpf" && !cpfValido(v)) erros[chave] = "CPF inválido.";
+    if (tipo === "instagram" && normalizarInstagram(v) === null) erros[chave] = "Digite um Instagram válido, por exemplo @arautos.";
     if (tipo === "telefone" && v.replace(/\D/g, "").length < 10) erros[chave] = "Digite um telefone válido, com DDD.";
   });
+  // quem aceita receber e-mails precisa ter informado um e-mail
+  if (curso.pedirAceiteContato && aceitaContato && !emailValido((padrao || {}).email) && !erros.email) {
+    erros.email = "Informe seu e-mail para receber os convites e informativos.";
+  }
   curso.perguntas.forEach((p) => {
     if (!perguntaVisivel(p, curso.perguntas, respostas || {})) return;
     const r = (respostas || {})[p.id];
@@ -132,10 +148,13 @@ export function validarInscricao(curso, { nome, padrao, respostas }) {
 
 // Monta o documento que vai para o banco. Só guarda as perguntas que apareceram para a pessoa, junto com o
 // texto da pergunta (se o administrador mudar o formulário depois, o que a pessoa respondeu continua legível).
-export function montarInscricao(curso, usuario, { nome, padrao, respostas }) {
+export function montarInscricao(curso, usuario, { nome, padrao, respostas, aceitaContato }) {
   const dadosPadrao = {};
-  CAMPOS_PADRAO.forEach(({ chave }) => {
-    if (curso.campos[chave] && curso.campos[chave].ativo) dadosPadrao[chave] = String((padrao || {})[chave] || "").trim();
+  CAMPOS_PADRAO.forEach(({ chave, tipo }) => {
+    if (curso.campos[chave] && curso.campos[chave].ativo) {
+      const v = String((padrao || {})[chave] || "").trim();
+      dadosPadrao[chave] = tipo === "instagram" ? (normalizarInstagram(v) || "") : v;
+    }
   });
   const itens = [];
   curso.perguntas.forEach((p) => {
@@ -145,7 +164,7 @@ export function montarInscricao(curso, usuario, { nome, padrao, respostas }) {
     if (Array.isArray(valor) ? valor.length === 0 : valor === "") return;
     itens.push({ id: p.id, rotulo: p.rotulo, valor });
   });
-  return {
+  const inscricao = {
     cursoId: curso.id,
     cursoNome: curso.nome,
     telefoneDigits: usuario.telefoneDigits,
@@ -153,6 +172,9 @@ export function montarInscricao(curso, usuario, { nome, padrao, respostas }) {
     padrao: dadosPadrao,
     itens
   };
+  // só guarda o aceite quando o curso perguntou (true = aceitou receber e-mails, false = não aceitou)
+  if (curso.pedirAceiteContato) inscricao.aceitaContato = aceitaContato === true;
+  return inscricao;
 }
 
 export const idInscricao = (cursoId, telefoneDigits) => `${cursoId}_${telefoneDigits}`;
@@ -182,11 +204,14 @@ export function tabelaDeInscritos(curso, inscricoes) {
     if (!perguntas.some((p) => p.id === it.id)) perguntas.push({ id: it.id, rotulo: it.rotulo });
   }));
   perguntas.forEach((p) => colunas.push({ chave: "p:" + p.id, rotulo: p.rotulo }));
+  const mostrarAceite = curso.pedirAceiteContato || inscricoes.some((i) => typeof i.aceitaContato === "boolean");
+  if (mostrarAceite) colunas.push({ chave: "aceite", rotulo: "Aceita receber e-mails" });
   const ordenadas = [...inscricoes].sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
   const linhas = ordenadas.map((i) => {
     const l = { nome: i.nome || "", telefone: formatarTelefone(i.telefoneDigits) };
     CAMPOS_PADRAO.forEach(({ chave }) => { if (chave !== "telefone") l[chave] = dataParaTexto((i.padrao && i.padrao[chave]) || ""); });
     if (i.padrao && i.padrao.telefone) l.telefone = i.padrao.telefone;
+    if (mostrarAceite) l.aceite = i.aceitaContato === true ? "Sim" : "Não";
     perguntas.forEach((p) => {
       const it = (i.itens || []).find((x) => x.id === p.id);
       l["p:" + p.id] = it ? valorComoTexto(it.valor) : "";
@@ -219,3 +244,10 @@ export function emailsDosInscritos(inscricoes) {
   });
   return [...set];
 }
+
+// Quem recebe os avisos e convites por e-mail: se o curso pergunta o aceite, só quem marcou "aceito";
+// se não pergunta (cursos antigos), todos os inscritos que informaram e-mail.
+export function inscritosParaAvisos(curso, inscricoes) {
+  return curso && curso.pedirAceiteContato ? inscricoes.filter((i) => i.aceitaContato === true) : inscricoes;
+}
+export const emailsParaAvisos = (curso, inscricoes) => emailsDosInscritos(inscritosParaAvisos(curso, inscricoes));

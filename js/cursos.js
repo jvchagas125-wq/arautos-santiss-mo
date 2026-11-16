@@ -47,6 +47,7 @@ function montarFormulario(curso, existente, aoConcluir) {
     (existente.itens || []).forEach((it) => { respostas[it.id] = it.valor; });
   }
   let nome = existente ? existente.nome : usuario.nome || "";
+  let aceitaContato = !!(existente && existente.aceitaContato === true);
 
   const erroDe = new Map(); // chave -> elemento de erro
   function campo(chave, rotulo, obrigatorio, criarEntrada) {
@@ -83,6 +84,7 @@ function montarFormulario(curso, existente, aoConcluir) {
       if (tipo === "email") { tipoInput = "email"; extras.autocomplete = "email"; extras.inputmode = "email"; }
       if (tipo === "telefone") { tipoInput = "tel"; extras.inputmode = "numeric"; extras.placeholder = "(00) 00000-0000"; extras.autocomplete = "tel"; }
       if (tipo === "cpf") { extras.inputmode = "numeric"; extras.placeholder = "000.000.000-00"; }
+      if (tipo === "instagram") { extras.placeholder = "@seuusuario"; extras.autocapitalize = "none"; extras.autocorrect = "off"; extras.spellcheck = "false"; extras.autocomplete = "off"; }
       if (tipo === "data") {
         // data de nascimento: calendário personalizado (mês e ano para escolher), sem datas futuras
         return criarCampoData({ valorIso: padrao[chave], maxIso: hojeIso(), anoInicial: new Date().getFullYear() - 30, aoMudar: (iso) => { padrao[chave] = iso; } });
@@ -146,6 +148,19 @@ function montarFormulario(curso, existente, aoConcluir) {
   });
   atualizarVisibilidade();
 
+  // aceite para receber convites e informativos por e-mail (só aparece se o administrador ativou)
+  if (curso.pedirAceiteContato) {
+    const caixaAceite = criar("div", "curso-aceite");
+    const lblAceite = criar("label", "curso-aceite__rotulo");
+    const cbAceite = document.createElement("input");
+    cbAceite.type = "checkbox";
+    cbAceite.checked = aceitaContato;
+    cbAceite.addEventListener("change", () => { aceitaContato = cbAceite.checked; });
+    lblAceite.append(cbAceite, criar("span", "", "Aceito ser contactado para receber convites e informativos por e-mail."));
+    caixaAceite.append(lblAceite, criar("p", "curso-aceite__dica", "Se marcar, você recebe no e-mail informado acima os avisos e convites deste curso. Se não marcar, não enviaremos e-mails."));
+    form.appendChild(caixaAceite);
+  }
+
   const nota = criar("p", "curso-form__nota", "Seus dados serão usados somente para a organização deste curso ou evento.");
   form.appendChild(nota);
   const botoes = criar("div", "curso-form__botoes");
@@ -162,7 +177,7 @@ function montarFormulario(curso, existente, aoConcluir) {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const { erros, ok } = validarInscricao(curso, { nome, padrao, respostas });
+    const { erros, ok } = validarInscricao(curso, { nome, padrao, respostas, aceitaContato });
     erroDe.forEach(({ caixa, erro }, chave) => {
       erro.textContent = erros[chave] || "";
       caixa.classList.toggle("invalido", !!erros[chave]);
@@ -176,7 +191,7 @@ function montarFormulario(curso, existente, aoConcluir) {
     enviar.disabled = true;
     enviar.textContent = "Enviando...";
     try {
-      const dados = montarInscricao(curso, usuario, { nome, padrao, respostas });
+      const dados = montarInscricao(curso, usuario, { nome, padrao, respostas, aceitaContato });
       await salvarInscricao(dados);
       const salva = { id: idInscricao(curso.id, usuario.telefoneDigits), ...dados };
       minhasInscricoes.set(curso.id, salva);
@@ -285,6 +300,7 @@ function criarCartao(curso) {
     addLinha("Nome", minha.nome);
     CAMPOS_PADRAO.forEach(({ chave, rotulo }) => addLinha(rotulo, dataParaTexto((minha.padrao || {})[chave])));
     (minha.itens || []).forEach((it) => addLinha(it.rotulo, valorComoTexto(it.valor)));
+    if (curso.pedirAceiteContato) addLinha("Receber convites e informativos por e-mail", minha.aceitaContato === true ? "Sim" : "Não");
     ok.appendChild(resumo);
     const acoes = criar("div", "curso-form__botoes");
     const editar = criar("button", "btn btn-contorno btn-full", "Editar minha inscrição");

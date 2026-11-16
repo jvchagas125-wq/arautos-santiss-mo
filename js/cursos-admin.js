@@ -9,7 +9,7 @@ import {
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, TIPOS_PERGUNTA, TIPOS_COM_OPCOES, perguntaTemOpcoes, opcoesDaPergunta, normalizarCurso, novoIdCurto,
-  tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailValido, valorComoTexto, dataParaTexto
+  tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailsParaAvisos, inscritosParaAvisos, emailValido, valorComoTexto, dataParaTexto
 } from "./cursos-comum.js";
 import { exportarInscritos } from "./exportar-inscritos.js";
 
@@ -120,11 +120,12 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
   const caixaCamposPadrao = document.getElementById("cursoCamposPadrao");
   const caixaPerguntas = document.getElementById("cursoPerguntas");
 
-  let edicao = null; // { id, ordem, imagemUrl, novaImagem: File|null, campos, perguntas }
+  const campoAceite = document.getElementById("cursoPedirAceite");
+  let edicao = null; // { id, ordem, imagemUrl, novaImagem: File|null, campos, perguntas, pedirAceiteContato }
 
   function cursoVazio() {
     return {
-      id: null, ordem: 0, imagemUrl: "", novaImagem: null,
+      id: null, ordem: 0, imagemUrl: "", novaImagem: null, pedirAceiteContato: false,
       campos: Object.fromEntries(CAMPOS_PADRAO.map(({ chave }) => [chave, { ativo: chave === "email" || chave === "telefone", obrigatorio: false }])),
       perguntas: []
     };
@@ -145,12 +146,17 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     caixaCamposPadrao.appendChild(fixo);
     CAMPOS_PADRAO.forEach(({ chave, rotulo }) => {
       const cfg = edicao.campos[chave];
+      // com o aceite de e-mail ligado, o campo E-mail precisa ser pedido
+      const emailFixo = chave === "email" && edicao.pedirAceiteContato;
+      if (emailFixo) cfg.ativo = true;
       const linha = criar("div", "curso-campo-padrao");
       const pedir = criar("label", "curso-campo-padrao__nome");
       const cbPedir = document.createElement("input");
       cbPedir.type = "checkbox";
       cbPedir.checked = cfg.ativo;
+      cbPedir.disabled = emailFixo;
       pedir.append(cbPedir, document.createTextNode(" " + rotulo));
+      if (emailFixo) pedir.append(criar("small", "curso-campo-padrao__fixo curso-campo-padrao__fixo--nota", "  (necessário para o aceite de e-mail)"));
       const obrig = criar("label", "curso-campo-padrao__obrig");
       const cbObrig = document.createElement("input");
       cbObrig.type = "checkbox";
@@ -359,6 +365,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     edicao = curso
       ? {
         id: curso.id, ordem: curso.ordem, imagemUrl: curso.imagemUrl, novaImagem: null,
+        pedirAceiteContato: curso.pedirAceiteContato,
         campos: JSON.parse(JSON.stringify(curso.campos)), perguntas: JSON.parse(JSON.stringify(curso.perguntas))
       }
       : cursoVazio();
@@ -366,12 +373,18 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     campoNome.value = curso ? curso.nome : "";
     campoObs.value = curso ? curso.observacoes : "";
     campoAtivo.checked = curso ? curso.ativo : true;
+    campoAceite.checked = !!edicao.pedirAceiteContato;
     mostrarImagemEditor();
     desenharCamposPadrao();
     desenharPerguntas();
     abrirModal(modalCurso);
     document.getElementById("cursoEditor").scrollTop = 0;
   }
+  campoAceite.addEventListener("change", () => {
+    if (!edicao) return;
+    edicao.pedirAceiteContato = campoAceite.checked;
+    desenharCamposPadrao();
+  });
   const fecharEditor = () => { fecharModal(modalCurso); edicao = null; };
   document.getElementById("fecharModalCurso").addEventListener("click", fecharEditor);
   document.getElementById("btnCancelarCurso").addEventListener("click", fecharEditor);
@@ -397,6 +410,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       if (edicao.novaImagem) imagemUrl = await enviarImagem(edicao.novaImagem);
       const dados = {
         nome, imagemUrl, observacoes: campoObs.value.trim(), ativo: campoAtivo.checked,
+        pedirAceiteContato: edicao.pedirAceiteContato,
         campos: edicao.campos, perguntas: edicao.perguntas.map((q) => ({ ...q, rotulo: q.rotulo.trim() })), ordem: edicao.ordem
       };
       await salvarCurso(edicao.id, dados);
@@ -429,6 +443,11 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     const p1 = criar("p", "curso-resumo__linha");
     p1.append(criar("strong", "", "Dados pedidos: "), document.createTextNode(pedidos.join(", ")));
     corpo.appendChild(p1);
+    if (curso.pedirAceiteContato) {
+      const pa = criar("p", "curso-resumo__linha");
+      pa.append(criar("strong", "", "Aceite de contato: "), document.createTextNode("pergunta se a pessoa aceita receber convites e informativos por e-mail"));
+      corpo.appendChild(pa);
+    }
     if (curso.perguntas.length) {
       corpo.appendChild(criar("strong", "curso-resumo__linha", "Perguntas:"));
       const ul = criar("ul", "curso-resumo__perguntas");
@@ -530,6 +549,9 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       };
       CAMPOS_PADRAO.forEach(({ chave, rotulo }) => linha(rotulo, dataParaTexto(insc.padrao && insc.padrao[chave])));
       (insc.itens || []).forEach((it) => linha(it.rotulo, valorComoTexto(it.valor)));
+      if (curso.pedirAceiteContato || typeof insc.aceitaContato === "boolean") {
+        linha("Aceita receber convites e informativos por e-mail", insc.aceitaContato === true ? "Sim" : "Não");
+      }
       linha("Inscrito em", dataDoMs(insc.criadoEmMs));
       det.appendChild(dl);
       const apagar = criar("button", "btn btn-contorno btn-pequeno btn-perigo", "Remover esta inscrição");
@@ -561,7 +583,9 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       const emails = emailsDosInscritos(dele);
       const comZap = dele.filter((i) => numeroWhatsApp(i.telefoneDigits)).length;
       const resumo = criar("div", "crm-resumo");
-      [[dele.length, dele.length === 1 ? "inscrito" : "inscritos"], [emails.length, "com e-mail"], [comZap, "com WhatsApp"]].forEach(([n, t]) => {
+      const itensResumo = [[dele.length, dele.length === 1 ? "inscrito" : "inscritos"], [emails.length, "com e-mail"], [comZap, "com WhatsApp"]];
+      if (curso.pedirAceiteContato) itensResumo.push([emailsParaAvisos(curso, dele).length, "aceitaram receber e-mails"]);
+      itensResumo.forEach(([n, t]) => {
         const s = criar("span", "crm-resumo__item");
         s.innerHTML = `<strong>${n}</strong> ${t}`;
         resumo.appendChild(s);
@@ -640,8 +664,9 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     document.getElementById("avisoSemCursosAvisos").classList.toggle("oculto", cursos.length > 0);
     cursos.forEach((curso) => {
       const dele = avisos.filter((a) => a.cursoId === curso.id);
-      const emails = emailsDosInscritos(inscricoes.filter((i) => i.cursoId === curso.id));
-      const total = inscricoes.filter((i) => i.cursoId === curso.id).length;
+      const doCurso = inscricoes.filter((i) => i.cursoId === curso.id);
+      const emails = emailsParaAvisos(curso, doCurso);
+      const total = doCurso.length;
       const { quadro, corpo } = criarQuadro(`${curso.nome} — ${dele.length} ${dele.length === 1 ? "aviso" : "avisos"}`, abertosAvisos.has(curso.id),
         (abriu) => { if (abriu) abertosAvisos.add(curso.id); else abertosAvisos.delete(curso.id); });
 
@@ -658,9 +683,13 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       cbEmail.type = "checkbox";
       cbEmail.checked = emails.length > 0;
       cbEmail.disabled = emails.length === 0;
-      lblEmail.append(cbEmail, document.createTextNode(emails.length
-        ? ` Enviar também por e-mail agora para todos os inscritos (${emails.length} com e-mail${total > emails.length ? `, ${total - emails.length} sem e-mail` : ""})`
-        : " Enviar por e-mail (nenhum inscrito informou e-mail — peça o e-mail no formulário do curso)"));
+      lblEmail.append(cbEmail, document.createTextNode(curso.pedirAceiteContato
+        ? (emails.length
+          ? ` Enviar também por e-mail agora (${emails.length} ${emails.length === 1 ? "inscrito aceitou" : "inscritos aceitaram"} receber e-mails${total > emails.length ? `; ${total - emails.length} não ${total - emails.length === 1 ? "receberá" : "receberão"}` : ""})`
+          : " Enviar por e-mail (nenhum inscrito aceitou receber e-mails ainda)")
+        : (emails.length
+          ? ` Enviar também por e-mail agora para todos os inscritos (${emails.length} com e-mail${total > emails.length ? `, ${total - emails.length} sem e-mail` : ""})`
+          : " Enviar por e-mail (nenhum inscrito informou e-mail — peça o e-mail no formulário do curso)")));
       const publicar = criar("button", "btn btn-dourado btn-pequeno", "Publicar aviso");
       publicar.type = "submit";
       form.append(titulo, texto, lblEmail, publicar);
@@ -703,12 +732,12 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
         const btnMail = criar("button", "btn btn-contorno btn-pequeno", a.emailEnviadoEm ? "Reenviar por e-mail" : "Enviar por e-mail");
         btnMail.type = "button";
         btnMail.disabled = emails.length === 0;
-        btnMail.title = emails.length ? "" : "Nenhum inscrito informou e-mail";
+        btnMail.title = emails.length ? "" : (curso.pedirAceiteContato ? "Nenhum inscrito aceitou receber e-mails" : "Nenhum inscrito informou e-mail");
         btnMail.addEventListener("click", () => {
           if (!podeAvisar()) { mostrarToast("Você não tem permissão para enviar e-mails."); return; }
           pedirConfirmacao({
             titulo: "Enviar aviso por e-mail",
-            texto: `Enviar "${a.titulo}" por e-mail para ${emails.length} ${emails.length === 1 ? "inscrito" : "inscritos"} do curso "${curso.nome}"?`,
+            texto: `Enviar "${a.titulo}" por e-mail para ${emails.length} ${emails.length === 1 ? "inscrito" : "inscritos"} do curso "${curso.nome}"${curso.pedirAceiteContato ? " (só quem aceitou receber e-mails)" : ""}?`,
             botao: "Enviar e-mail",
             acao: async () => { await enviarPorEmail(a); }
           });

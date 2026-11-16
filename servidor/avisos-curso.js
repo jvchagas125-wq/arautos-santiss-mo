@@ -1,6 +1,6 @@
 // Envio de um aviso do quadro de avisos de um curso para todos os inscritos que informaram e-mail.
 // Roda no servidor (chamado por api/enviar-listas.js, ação "avisoCurso").
-import { normalizarCurso, emailsDosInscritos } from "../js/cursos-comum.js";
+import { normalizarCurso, emailsParaAvisos, inscritosParaAvisos } from "../js/cursos-comum.js";
 
 const TAMANHO_LOTE = 40; // destinatários por e-mail (em cópia oculta)
 
@@ -22,11 +22,16 @@ export async function enviarAvisoDoCurso({ avisoId }, { firestore, criarEnviador
   const curso = normalizarCurso(cursoId, docCurso.dados);
 
   const inscricoes = await firestore.consultarColecao("inscricoes", "cursoId", cursoId);
-  const emails = emailsDosInscritos(inscricoes);
-  const semEmail = inscricoes.length - inscricoes.filter((i) => emailsDosInscritos([i]).length > 0).length;
+  const emails = emailsParaAvisos(curso, inscricoes);
+  const semEmail = inscricoes.length - emails.length;
   if (inscricoes.length === 0) return { ok: false, erro: "Este curso ainda não tem inscritos." };
   if (emails.length === 0) {
-    return { ok: false, erro: "Nenhum inscrito informou e-mail. Peça o e-mail no formulário do curso para poder enviar avisos." };
+    return {
+      ok: false,
+      erro: curso.pedirAceiteContato && inscritosParaAvisos(curso, inscricoes).length === 0
+        ? "Nenhum inscrito aceitou receber e-mails neste curso."
+        : "Nenhum inscrito informou e-mail. Peça o e-mail no formulário do curso para poder enviar avisos."
+    };
   }
 
   const titulo = limpar(aviso.titulo, 200) || "Aviso";
@@ -41,7 +46,9 @@ export async function enviarAvisoDoCurso({ avisoId }, { firestore, criarEnviador
     corpo,
     ``,
     `— Arautos do Evangelho, Campos dos Goytacazes`,
-    `Você recebeu este e-mail porque se inscreveu em "${curso.nome}".`
+    curso.pedirAceiteContato
+      ? `Você recebeu este e-mail porque se inscreveu em "${curso.nome}" e aceitou ser contactado para receber convites e informativos.`
+      : `Você recebeu este e-mail porque se inscreveu em "${curso.nome}".`
   ].join("\n");
 
   const enviar = criarEnviador();

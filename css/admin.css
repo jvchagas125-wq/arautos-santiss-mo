@@ -828,3 +828,9 @@
 .simposio-intro{ margin:0 0 16px; font-size:.88rem; line-height:1.6; color: var(--texto-suave); }
 .cartao-simposio-admin__img{ width:100%; aspect-ratio: 2 / 1; object-fit:cover; display:block; background:#efe6d3; }
 .cartao-simposio-admin__link{ font-size:.8rem; color: var(--dourado-escuro); margin:-4px 0 12px; overflow-wrap:anywhere; }
+
+/* aceite de contato por e-mail no editor de cursos */
+.curso-editor .curso-aceite-adm{ margin-top:4px; margin-bottom:6px; padding:10px 12px; border:1px dashed var(--dourado-escuro, #b8912f); border-radius:10px; background: rgba(255,255,255,.5); }
+.curso-editor .curso-aceite-adm label{ align-items:flex-start; }
+.curso-editor .curso-aceite-adm input{ margin-top:3px; }
+.curso-campo-padrao__fixo--nota{ font-size:.72rem; font-style:italic; }

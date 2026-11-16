@@ -1610,3 +1610,9 @@ body.pagina-indisponivel main.conteudo > *:not(.pagina-indisponivel__aviso){ dis
 .cartao-simposio__texto{ margin:0 0 14px; font-size:.94rem; line-height:1.7; color: var(--texto); white-space:pre-wrap; overflow-wrap:anywhere; }
 .cartao-simposio__texto:last-child{ margin-bottom:0; }
 .cartao-simposio__link{ display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
+
+/* aceite de contato por e-mail (formulário de inscrição) */
+.curso-aceite{ margin:4px 0 10px; padding:12px 14px; border:1px solid var(--dourado-claro, #e6d49a); border-radius:12px; background: rgba(255,255,255,.65); }
+.curso-aceite__rotulo{ display:flex; gap:10px; align-items:flex-start; cursor:pointer; text-transform:none !important; letter-spacing:0 !important; font-family:'EB Garamond', serif !important; font-size:1rem; line-height:1.4; color: var(--texto); }
+.curso-aceite__rotulo input{ width:20px; height:20px; flex-shrink:0; margin-top:2px; accent-color: var(--vermelho, #7a0c1e); }
+.curso-aceite__dica{ margin:6px 0 0 30px; font-size:.78rem; color: var(--texto-suave); line-height:1.45; }
