@@ -2,9 +2,38 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/adoração", "destination": "/agendamento.html" },
-    { "source": "/adora%C3%A7%C3%A3o", "destination": "/agendamento.html" },
-    { "source": "/adoracao", "destination": "/agendamento.html" }
+    {
+      "source": "/adoração",
+      "destination": "/agendamento.html"
+    },
+    {
+      "source": "/adora%C3%A7%C3%A3o",
+      "destination": "/agendamento.html"
+    },
+    {
+      "source": "/adoracao",
+      "destination": "/agendamento.html"
+    },
+    {
+      "source": "/intenções",
+      "destination": "/intencoes.html"
+    },
+    {
+      "source": "/inten%C3%A7%C3%B5es",
+      "destination": "/intencoes.html"
+    },
+    {
+      "source": "/simpósio",
+      "destination": "/simposio.html"
+    },
+    {
+      "source": "/simp%C3%B3sio",
+      "destination": "/simposio.html"
+    },
+    {
+      "source": "/agenda",
+      "destination": "/avisos.html"
+    }
   ],
   "functions": {
     "api/enviar-listas.js": {

@@ -6,14 +6,22 @@
 <title>Intenções para a Santa Missa - Arautos do Evangelho Campos</title>
 <meta name="description" content="Envie suas intenções para a Santa Missa (por alma, aniversários, graças e outras) aos Arautos do Evangelho em Campos dos Goytacazes (RJ)." />
 <meta name="robots" content="index, follow, max-image-preview:large" />
-<link rel="canonical" href="https://www.arautoscampos.org.br/intencoes" />
+<link rel="canonical" href="https://www.arautoscampos.org.br/inten%C3%A7%C3%B5es" />
+<script>
+  // quem abriu o endereço antigo (/intencoes) passa a ver o novo, sem recarregar
+  (function () {
+    if (/^\/intencoes(\.html)?\/?$/.test(location.pathname)) {
+      try { history.replaceState(null, "", "/inten\u00e7\u00f5es" + location.search + location.hash); } catch (e) { /* ok */ }
+    }
+  })();
+</script>
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="pt_BR" />
 <meta property="og:site_name" content="Arautos do Evangelho Campos" />
 <meta name="application-name" content="Arautos do Evangelho Campos" />
 <meta property="og:title" content="Intenções para a Santa Missa - Arautos do Evangelho Campos" />
 <meta property="og:description" content="Envie suas intenções para a Santa Missa (por alma, aniversários, graças e outras) aos Arautos do Evangelho em Campos dos Goytacazes (RJ)." />
-<meta property="og:url" content="https://www.arautoscampos.org.br/intencoes" />
+<meta property="og:url" content="https://www.arautoscampos.org.br/inten%C3%A7%C3%B5es" />
 <meta property="og:image" content="https://www.arautoscampos.org.br/assets/og-imagem.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -51,10 +59,10 @@
       <a href="/" data-pagina="index"><span class="emoji">🏠</span> Início</a>
       <a href="adoração" data-pagina="agendamento"><span class="emoji">📅</span> Agendar Adoração</a>
       <a href="meus-agendamentos" data-pagina="meus-agendamentos"><span class="emoji">🗓️</span> Meus agendamentos da Adoração</a>
-      <a href="intencoes" data-pagina="intencoes"><span class="emoji">🙏</span> Intenções para a Santa Missa</a>
-      <a href="simposio" data-pagina="simposio"><span class="emoji">📖</span> Simpósio</a>
+      <a href="intenções" data-pagina="intencoes"><span class="emoji">🙏</span> Intenções para a Santa Missa</a>
+      <a href="simpósio" data-pagina="simposio"><span class="emoji">📖</span> Simpósio</a>
       <a href="cursos" data-pagina="cursos"><span class="emoji">🎓</span> Inscrições de cursos</a>
-      <a href="avisos" data-pagina="avisos"><span class="emoji">📢</span> Agenda da semana</a>
+      <a href="agenda" data-pagina="avisos"><span class="emoji">📢</span> Agenda da semana</a>
       <a href="contatos" data-pagina="contatos"><span class="emoji">📍</span> Contatos</a>
       <a href="sobre" data-pagina="sobre"><span class="emoji">ℹ️</span> Sobre</a>
     </nav>

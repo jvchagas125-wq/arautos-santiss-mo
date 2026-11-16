@@ -943,15 +943,16 @@ export function sessaoParaHashDeUrl() {
 /* ---------- Ordem das páginas do site público (usada nos botões "Anterior / Próxima" e,
    no painel admin, como lista de páginas de destino dos banners da Home) ---------- */
 // Destinos de banner guardados antes da troca do endereço da página de agendamento.
-export const destinoAtual = (v) => (v === "agendamento" || v === "/agendamento" ? "adoração" : v);
+const DESTINOS_ANTIGOS = { agendamento: "adoração", intencoes: "intenções", simposio: "simpósio", avisos: "agenda" };
+export const destinoAtual = (v) => DESTINOS_ANTIGOS[String(v || "").replace(/^\//, "")] || v;
 export const ORDEM_PAGINAS = [
   { chave: "index", label: "Início", href: "/" },
   { chave: "agendamento", label: "Agendar Adoração", href: "adoração" },
   { chave: "meus-agendamentos", label: "Meus agendamentos da Adoração", href: "meus-agendamentos" },
-  { chave: "intencoes", label: "Intenções para a Santa Missa", href: "intencoes" },
-  { chave: "simposio", label: "Simpósio", href: "simposio" },
+  { chave: "intencoes", label: "Intenções para a Santa Missa", href: "intenções" },
+  { chave: "simposio", label: "Simpósio", href: "simpósio" },
   { chave: "cursos", label: "Inscrições de cursos", href: "cursos" },
-  { chave: "avisos", label: "Agenda da semana", href: "avisos" },
+  { chave: "avisos", label: "Agenda da semana", href: "agenda" },
   { chave: "contatos", label: "Contatos", href: "contatos" },
   { chave: "sobre", label: "Sobre", href: "sobre" }
 ];
@@ -1065,7 +1066,8 @@ function aplicarPaginasOcultas(paginaAtual) {
   const caminhoCodificado = (href) => { try { return new URL("/" + href.replace(/^\/+/, ""), location.origin).pathname; } catch { return "/" + href; } };
   const caminhos = new Map(ORDEM_PAGINAS.filter((p) => p.chave !== "index")
     .map((p) => [caminhoCodificado(p.href), p.chave]));
-  caminhos.set("/agendamento", "agendamento"); // endereço antigo da página
+  // endereços antigos das páginas
+  Object.entries({ agendamento: "agendamento", intencoes: "intencoes", simposio: "simposio", avisos: "avisos" }).forEach(([a, c]) => caminhos.set("/" + a, c));
   // links do menu, dos atalhos da página inicial e do menu da conta
   document.querySelectorAll("#menuLateral nav a, .atalho-card, #dropdownPerfil a").forEach((a) => {
     const chave = a.dataset.pagina || caminhos.get(caminhoDoLink(a));
@@ -1669,7 +1671,7 @@ export function normalizarLinkSimposio(texto) {
   const proprio = /^https?:\/\/(www\.)?arautoscampos\.org\.br(\/[^\s]*)?$/i.exec(t);
   if (proprio) return proprio[2] && proprio[2] !== "/" ? proprio[2].replace(/\/+$/, "") || "/" : "/";
   if (/^https?:\/\/[^\s]+$/i.test(t)) return t;
-  if (/^\/?[a-z0-9][a-z0-9-]*(\/[a-z0-9-]+)*$/i.test(t) && !t.includes(".")) return "/" + t.replace(/^\//, "");
+  if (/^\/?[a-z0-9À-ſ][a-z0-9À-ſ-]*(\/[a-z0-9À-ſ-]+)*$/i.test(t) && !t.includes(".")) return "/" + t.replace(/^\//, "");
   if (/^www\.[^\s]+\.[a-z]{2,}[^\s]*$/i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i.test(t)) return "https://" + t;
   return null;
 }

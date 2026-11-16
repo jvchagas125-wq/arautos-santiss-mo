@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v92";
+const CACHE_NAME = "arautos-shell-v93";
 
 // Só o que o site PÚBLICO usa é baixado na instalação (o painel administrativo e seus arquivos pesados
 // — admin.js, exportações, CRM — entram no cache sozinhos quando o administrador abre o painel).
@@ -123,13 +123,19 @@ function ehNavegacao(requisicao) {
   return requisicao.mode === "navigate";
 }
 
+const ENDERECOS_NOVOS = {
+  "/adoração": "./agendamento.html", "/adoracao": "./agendamento.html",
+  "/intenções": "./intencoes.html", "/simpósio": "./simposio.html", "/agenda": "./avisos.html"
+};
+
 async function acharNoCache(cache, requisicao, url) {
   let achado = await cache.match(requisicao, { ignoreSearch: ehNavegacao(requisicao) });
   if (!achado && ehNavegacao(requisicao)) {
     // o Vercel serve /agendamento (sem .html) — o cache inicial guardou como agendamento.html
-    // /adoração (e /adoracao) é a página guardada como agendamento.html
-    const ehAdoracao = /^\/(adora%C3%A7%C3%A3o|adoração|adoracao)\/?$/i.test(url.pathname);
-    const caminho = ehAdoracao ? "./agendamento.html" : url.pathname === "/" ? "./index.html" : "." + url.pathname.replace(/\/$/, "") + ".html";
+    // endereços novos das páginas (acentuados) apontam para os arquivos guardados
+    let decodificado = url.pathname; try { decodificado = decodeURIComponent(url.pathname); } catch { /* mantém */ }
+    const apelido = ENDERECOS_NOVOS[decodificado.replace(/\/$/, "")];
+    const caminho = apelido || (url.pathname === "/" ? "./index.html" : "." + url.pathname.replace(/\/$/, "") + ".html");
     achado = await cache.match(caminho);
   }
   return semRedirecionamento(achado);

@@ -6,14 +6,22 @@
 <title>Simpósio - Arautos do Evangelho Campos dos Goytacazes</title>
 <meta name="description" content="Conheça os cursos e eventos do Simpósio dos Arautos do Evangelho em Campos dos Goytacazes (RJ): programação, informações e links." />
 <meta name="robots" content="index, follow, max-image-preview:large" />
-<link rel="canonical" href="https://www.arautoscampos.org.br/simposio" />
+<link rel="canonical" href="https://www.arautoscampos.org.br/simp%C3%B3sio" />
+<script>
+  // quem abriu o endereço antigo (/simposio) passa a ver o novo, sem recarregar
+  (function () {
+    if (/^\/simposio(\.html)?\/?$/.test(location.pathname)) {
+      try { history.replaceState(null, "", "/simp\u00f3sio" + location.search + location.hash); } catch (e) { /* ok */ }
+    }
+  })();
+</script>
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="pt_BR" />
 <meta property="og:site_name" content="Arautos do Evangelho Campos" />
 <meta name="application-name" content="Arautos do Evangelho Campos" />
 <meta property="og:title" content="Simpósio - Arautos do Evangelho Campos dos Goytacazes" />
 <meta property="og:description" content="Conheça os cursos e eventos do Simpósio dos Arautos do Evangelho em Campos dos Goytacazes (RJ): programação, informações e links." />
-<meta property="og:url" content="https://www.arautoscampos.org.br/simposio" />
+<meta property="og:url" content="https://www.arautoscampos.org.br/simp%C3%B3sio" />
 <meta property="og:image" content="https://www.arautoscampos.org.br/assets/og-imagem.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -51,10 +59,10 @@
       <a href="/" data-pagina="index"><span class="emoji">🏠</span> Início</a>
       <a href="adoração" data-pagina="agendamento"><span class="emoji">📅</span> Agendar Adoração</a>
       <a href="meus-agendamentos" data-pagina="meus-agendamentos"><span class="emoji">🗓️</span> Meus agendamentos da Adoração</a>
-      <a href="intencoes" data-pagina="intencoes"><span class="emoji">🙏</span> Intenções para a Santa Missa</a>
-      <a href="simposio" data-pagina="simposio"><span class="emoji">📖</span> Simpósio</a>
+      <a href="intenções" data-pagina="intencoes"><span class="emoji">🙏</span> Intenções para a Santa Missa</a>
+      <a href="simpósio" data-pagina="simposio"><span class="emoji">📖</span> Simpósio</a>
       <a href="cursos" data-pagina="cursos"><span class="emoji">🎓</span> Inscrições de cursos</a>
-      <a href="avisos" data-pagina="avisos"><span class="emoji">📢</span> Agenda da semana</a>
+      <a href="agenda" data-pagina="avisos"><span class="emoji">📢</span> Agenda da semana</a>
       <a href="contatos" data-pagina="contatos"><span class="emoji">📍</span> Contatos</a>
       <a href="sobre" data-pagina="sobre"><span class="emoji">ℹ️</span> Sobre</a>
     </nav>
