@@ -156,13 +156,11 @@ function montarFormulario(curso, existente, aoConcluir) {
     cbAceite.type = "checkbox";
     cbAceite.checked = aceitaContato;
     cbAceite.addEventListener("change", () => { aceitaContato = cbAceite.checked; });
-    lblAceite.append(cbAceite, criar("span", "", "Aceito ser contactado para receber convites e informativos por e-mail."));
-    caixaAceite.append(lblAceite, criar("p", "curso-aceite__dica", "Se marcar, você recebe no e-mail informado acima os avisos e convites deste curso. Se não marcar, não enviaremos e-mails."));
+    lblAceite.append(cbAceite, criar("span", "", "Aceito ser contactado para receber convites e informativos."));
+    caixaAceite.appendChild(lblAceite);
     form.appendChild(caixaAceite);
   }
 
-  const nota = criar("p", "curso-form__nota", "Seus dados serão usados somente para a organização deste curso ou evento.");
-  form.appendChild(nota);
   const botoes = criar("div", "curso-form__botoes");
   const enviar = criar("button", "btn btn-dourado btn-full", existente ? "Salvar alterações" : "Enviar inscrição");
   enviar.type = "submit";
