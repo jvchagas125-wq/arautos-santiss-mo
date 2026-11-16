@@ -1660,6 +1660,9 @@ export function listaArquivada(envio, dataMissa, horaMissa, agora = new Date()) 
 export function normalizarLinkSimposio(texto) {
   const t = String(texto || "").trim();
   if (!t) return "";
+  // endereço do próprio site (ex.: https://www.arautoscampos.org.br/cursos) vira link interno: abre na mesma aba, na hora
+  const proprio = /^https?:\/\/(www\.)?arautoscampos\.org\.br(\/[^\s]*)?$/i.exec(t);
+  if (proprio) return proprio[2] && proprio[2] !== "/" ? proprio[2].replace(/\/+$/, "") || "/" : "/";
   if (/^https?:\/\/[^\s]+$/i.test(t)) return t;
   if (/^\/?[a-z0-9][a-z0-9-]*(\/[a-z0-9-]+)*$/i.test(t) && !t.includes(".")) return "/" + t.replace(/^\//, "");
   if (/^www\.[^\s]+\.[a-z]{2,}[^\s]*$/i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i.test(t)) return "https://" + t;

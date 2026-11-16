@@ -42,6 +42,13 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
   const campoDescricao = document.getElementById("campoSimposioDescricao");
   const campoLink = document.getElementById("campoSimposioLink");
   const campoLinkTexto = document.getElementById("campoSimposioLinkTexto");
+  const campoParaCursos = document.getElementById("campoSimposioParaCursos");
+  const caixaLink = document.getElementById("campoSimposioLinkCaixa");
+  const LINK_CURSOS = "/cursos";
+  // "Levar para Inscrições de cursos" marcado: o botão aponta para /cursos e o campo de link some
+  const resolverLink = (marcado, input) => (marcado ? LINK_CURSOS : normalizarLinkSimposio(input.value));
+  const resolverTexto = (marcado, link, input) => (link ? (input.value.trim() || (marcado ? "Inscreva-se" : "")) : "");
+  campoParaCursos.addEventListener("change", () => { caixaLink.classList.toggle("oculto", campoParaCursos.checked); });
 
   campoImagem.addEventListener("change", () => {
     const arquivo = campoImagem.files[0];
@@ -54,7 +61,7 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
     e.preventDefault();
     const titulo = campoTitulo.value.trim();
     if (!titulo) { mostrarToast("Escreva o título."); return; }
-    const link = normalizarLinkSimposio(campoLink.value);
+    const link = resolverLink(campoParaCursos.checked, campoLink);
     if (link === null) { mostrarToast("O link não parece válido. Use um endereço (https://...) ou o nome de uma página do site."); campoLink.focus(); return; }
     const btn = form.querySelector("button[type=submit]");
     btn.disabled = true;
@@ -68,9 +75,10 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
       btn.textContent = "Publicando...";
       await criarItemSimposio({
         titulo, descricao: campoDescricao.value.trim(), imagemUrl,
-        linkUrl: link, linkTexto: link ? campoLinkTexto.value.trim() : ""
+        linkUrl: link, linkTexto: resolverTexto(campoParaCursos.checked, link, campoLinkTexto)
       });
       form.reset();
+      caixaLink.classList.remove("oculto");
       preview.classList.add("oculto");
       mostrarToast("Publicado no Simpósio!");
     } catch (err) {
@@ -128,13 +136,24 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
     const formEd = criar("form", "form-editar-aviso oculto");
     const edTitulo = criar("input"); edTitulo.type = "text"; edTitulo.maxLength = 120; edTitulo.required = true; edTitulo.value = item.titulo || "";
     const edDescricao = criar("textarea"); edDescricao.rows = 5; edDescricao.value = item.descricao || "";
-    const edLink = criar("input"); edLink.type = "text"; edLink.maxLength = 500; edLink.value = item.linkUrl || ""; edLink.placeholder = "Ex: https://forms.gle/... ou cursos"; edLink.autocomplete = "off";
+    const edParaCursos = criar("input"); edParaCursos.type = "checkbox"; edParaCursos.checked = item.linkUrl === LINK_CURSOS;
+    const edLink = criar("input"); edLink.type = "text"; edLink.maxLength = 500; edLink.value = item.linkUrl === LINK_CURSOS ? "" : (item.linkUrl || ""); edLink.placeholder = "Ex: https://forms.gle/... ou cursos"; edLink.autocomplete = "off";
     const edLinkTexto = criar("input"); edLinkTexto.type = "text"; edLinkTexto.maxLength = 40; edLinkTexto.value = item.linkTexto || ""; edLinkTexto.placeholder = "Saiba mais";
     const edImagem = criar("input"); edImagem.type = "file"; edImagem.accept = "image/*";
+    const caixaParaCursos = criar("div", "campo campo-checkbox-simples");
+    const lblParaCursos = criar("label");
+    const spanParaCursos = criar("span");
+    spanParaCursos.innerHTML = "O botão leva para a página <strong>Inscrições de cursos</strong> do site<small>A pessoa é levada direto para a página de cursos e eventos ao clicar no botão.</small>";
+    lblParaCursos.append(edParaCursos, document.createTextNode(" "), spanParaCursos);
+    caixaParaCursos.appendChild(lblParaCursos);
+    const caixaEdLink = campo("Link para outra página (opcional)", edLink, "Endereço de um site/formulário, ou o nome de uma página do site (ex.: <strong>avisos</strong>).");
+    caixaEdLink.classList.toggle("oculto", edParaCursos.checked);
+    edParaCursos.addEventListener("change", () => caixaEdLink.classList.toggle("oculto", edParaCursos.checked));
     formEd.append(
       campo("Título", edTitulo),
       campo("Descrição", edDescricao),
-      campo("Link para outra página (opcional)", edLink, "Endereço de um site/formulário, ou o nome de uma página do site (ex.: <strong>cursos</strong>)."),
+      caixaParaCursos,
+      caixaEdLink,
       campo("Texto do botão do link (opcional)", edLinkTexto),
       campo("Trocar banner (opcional)", edImagem, "📐 Tamanho ideal: <strong>1200 × 600 px</strong> (horizontal).")
     );
@@ -179,11 +198,11 @@ export function iniciarSimposioAdmin({ enviarImagem, ligarListaFechada }) {
       e.preventDefault();
       const titulo = edTitulo.value.trim();
       if (!titulo) { mostrarToast("Escreva o título."); return; }
-      const link = normalizarLinkSimposio(edLink.value);
+      const link = resolverLink(edParaCursos.checked, edLink);
       if (link === null) { mostrarToast("O link não parece válido. Use um endereço (https://...) ou o nome de uma página do site."); edLink.focus(); return; }
       btnSalvar.disabled = true;
       try {
-        const dados = { titulo, descricao: edDescricao.value.trim(), linkUrl: link, linkTexto: link ? edLinkTexto.value.trim() : "" };
+        const dados = { titulo, descricao: edDescricao.value.trim(), linkUrl: link, linkTexto: resolverTexto(edParaCursos.checked, link, edLinkTexto) };
         const arquivo = edImagem.files[0];
         if (arquivo) {
           btnSalvar.textContent = "Enviando banner...";
