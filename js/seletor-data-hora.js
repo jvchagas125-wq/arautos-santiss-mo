@@ -58,15 +58,28 @@ function criarJanela() {
   const rotuloMin = el("p", "sdh__rotulo sdh__rotulo--min", "Minutos");
   const minutos = el("div", "sdh__minutos");
 
+  // digitar o horário (para minutos fora do passo de 5 em 5)
+  const digitar = el("div", "sdh__digitar");
+  const rotuloDigitar = el("span", "sdh__digitar-rotulo", "Ou digite o horário");
+  const campos = el("div", "sdh__digitar-campos");
+  const mkCampo = (rot, max) => {
+    const i = el("input", "sdh__digitar-campo"); i.type = "text"; i.inputMode = "numeric"; i.maxLength = 2; i.autocomplete = "off";
+    i.placeholder = max === 23 ? "hh" : "mm"; i.setAttribute("aria-label", rot);
+    return i;
+  };
+  const campoHora = mkCampo("Hora (0 a 23)", 23), campoMin = mkCampo("Minutos (0 a 59)", 59);
+  campos.append(campoHora, el("span", "sdh__digitar-sep", ":"), campoMin);
+  digitar.append(rotuloDigitar, campos);
+
   const acoes = el("div", "sdh__acoes");
   const limpar = el("button", "btn btn-contorno", "Limpar"); limpar.type = "button";
   const confirmar = el("button", "btn btn-dourado", "Confirmar"); confirmar.type = "button";
   acoes.append(limpar, confirmar);
 
-  caixa.append(fechar, titulo, resumo, navegacao, semana, grade, rotuloHora, horas, rotuloMin, minutos, acoes);
+  caixa.append(fechar, titulo, resumo, navegacao, semana, grade, rotuloHora, horas, rotuloMin, minutos, digitar, acoes);
   overlay.appendChild(caixa);
   document.body.appendChild(overlay);
-  return { overlay, caixa, fechar, titulo, resumo, anterior, proximo, mesAno, grade, horas, minutos, limpar, confirmar };
+  return { overlay, caixa, fechar, titulo, resumo, anterior, proximo, mesAno, grade, horas, minutos, campoHora, campoMin, limpar, confirmar };
 }
 
 function abrirJanela({ tituloTexto, valorAtual, aoConfirmar, aoLimpar }) {
@@ -123,6 +136,9 @@ function abrirJanela({ tituloTexto, valorAtual, aoConfirmar, aoLimpar }) {
       b.addEventListener("click", () => { estado.minuto = m; desenhar(); });
       j.minutos.appendChild(b);
     });
+    // os campos de digitar só são reescritos quando a pessoa não está digitando neles
+    if (document.activeElement !== j.campoHora) j.campoHora.value = pad(estado.hora);
+    if (document.activeElement !== j.campoMin) j.campoMin.value = pad(estado.minuto);
     const pronto = estado.dia > 0;
     j.confirmar.disabled = !pronto;
     j.resumo.textContent = pronto
@@ -142,6 +158,21 @@ function abrirJanela({ tituloTexto, valorAtual, aoConfirmar, aoLimpar }) {
     aoConfirmar(escrever({ ano: estado.diaAno, mes: estado.diaMes, dia: estado.dia, hora: estado.hora, minuto: estado.minuto }));
     fechar();
   });
+  const ligarCampo = (campo, chave, max) => {
+    campo.oninput = () => {
+      let t = campo.value.replace(/\D/g, "").slice(0, 2);
+      if (t !== "" && +t > max) t = String(max);
+      campo.value = t;
+      if (t !== "") { estado[chave] = +t; desenhar(); }
+    };
+    campo.onfocus = () => campo.select();
+    campo.onblur = () => { campo.value = pad(estado[chave]); };
+    campo.onkeydown = (e) => {
+      if (e.key === "Enter") { e.preventDefault(); campo.blur(); if (estado.dia > 0) j.confirmar.click(); }
+    };
+  };
+  ligarCampo(j.campoHora, "hora", 23);
+  ligarCampo(j.campoMin, "minuto", 59);
   j.overlay.onclick = (e) => { if (e.target === j.overlay) fechar(); };
   document.addEventListener("keydown", aoTeclar, true);
 

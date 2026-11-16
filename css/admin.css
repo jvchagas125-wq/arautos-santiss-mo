@@ -907,3 +907,12 @@
 .sdh__acoes .btn{ flex:1; padding:12px 10px; }
 .sdh__acoes .btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
 @media (max-width:360px){ .sdh__horas{ grid-template-columns: repeat(6, 1fr); } }
+.sdh__digitar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; padding-top:12px; border-top:1px dashed rgba(157,122,31,.4); }
+.sdh__digitar-rotulo{ font-family:'Cinzel', serif; font-size:.74rem; letter-spacing:.05em; text-transform:uppercase; color: var(--dourado-escuro, #9c7a1f); text-align:left; }
+.sdh__digitar-campos{ display:flex; align-items:center; gap:6px; }
+.sdh__digitar-sep{ font-weight:700; color: var(--vermelho-escuro); font-size:1.2rem; }
+.sdh .sdh__digitar-campo{
+  width:56px; padding:8px 4px; text-align:center; border-radius:9px; border:1.5px solid rgba(157,122,31,.45);
+  background:#fffefb; color: var(--vermelho-escuro); font-family:'EB Garamond', serif; font-size:1.2rem; font-weight:700;
+}
+.sdh .sdh__digitar-campo:focus{ outline:none; border-color: var(--dourado); box-shadow: 0 0 0 3px rgba(205,164,52,.25); }
