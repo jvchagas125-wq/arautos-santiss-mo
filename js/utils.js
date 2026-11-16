@@ -774,22 +774,166 @@ export function fecharModal(elModal) {
   document.body.style.overflow = "";
 }
 
-/* ---------- Sessão local (login automático) ---------- */
+/* ---------- Sessão local (login automático) ----------
+   Quem já se identificou (telefone + nome) NÃO precisa se identificar de novo — a não ser que toque em "Sair".
+   Para a identificação não se perder, ela é guardada em quatro lugares ao mesmo tempo:
+     1. localStorage          (o principal, lido na hora)
+     2. cookie do navegador   (400 dias — sobrevive se o localStorage for limpo)
+     3. IndexedDB             (outro depósito do navegador)
+     4. cookie do SERVIDOR    (api/sessao.js: HttpOnly, 400 dias — o iPhone/Safari apaga o que o site grava
+                               sozinho depois de 7 dias sem uso, mas não esse)
+   Ao abrir o site, se um deles falhar, o que sobrou restaura os outros. "Sair" apaga todos. */
 const CHAVE_SESSAO = "arautos_usuario";
+const CHAVE_COOKIE_SESSAO = "arautos_u";
+const CHAVE_SAIU = "arautos_saiu"; // "Sair" tocado e o servidor ainda não confirmou: não restaura até entrar de novo
+const DIAS_SESSAO = 400;
+const API_SESSAO = "/api/sessao";
+
+function sessaoValida(u) {
+  return !!(u && typeof u === "object" && typeof u.nome === "string" && u.nome.trim()
+    && typeof u.telefone === "string" && /^\d{10,13}$/.test(String(u.telefoneDigits || "")));
+}
+function sessaoLimpa(u) {
+  return { nome: String(u.nome), telefone: String(u.telefone), telefoneDigits: String(u.telefoneDigits) };
+}
+
+function lerCookieSessao() {
+  try {
+    const m = document.cookie.split("; ").find((c) => c.startsWith(CHAVE_COOKIE_SESSAO + "="));
+    if (!m) return null;
+    const u = JSON.parse(decodeURIComponent(m.slice(CHAVE_COOKIE_SESSAO.length + 1)));
+    return sessaoValida(u) ? sessaoLimpa(u) : null;
+  } catch { return null; }
+}
+function gravarCookieSessao(u) {
+  try {
+    const seguro = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${CHAVE_COOKIE_SESSAO}=${encodeURIComponent(JSON.stringify(sessaoLimpa(u)))}; Max-Age=${DIAS_SESSAO * 86400}; Path=/; SameSite=Lax${seguro}`;
+  } catch { /* sem cookies */ }
+}
+function apagarCookieSessao() {
+  try { document.cookie = `${CHAVE_COOKIE_SESSAO}=; Max-Age=0; Path=/; SameSite=Lax`; } catch { /* ok */ }
+}
+
+// IndexedDB (assíncrono): pequeno depósito de chave/valor só para a identificação
+function abrirBancoSessao() {
+  return new Promise((resolve, rejeitar) => {
+    if (!window.indexedDB) { rejeitar(new Error("sem IndexedDB")); return; }
+    const req = indexedDB.open("arautos_sessao", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("kv");
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => rejeitar(req.error);
+  });
+}
+async function lerBancoSessao() {
+  try {
+    const bd = await abrirBancoSessao();
+    return await new Promise((resolve) => {
+      const r = bd.transaction("kv").objectStore("kv").get("usuario");
+      r.onsuccess = () => { bd.close(); resolve(sessaoValida(r.result) ? sessaoLimpa(r.result) : null); };
+      r.onerror = () => { bd.close(); resolve(null); };
+    });
+  } catch { return null; }
+}
+async function gravarBancoSessao(u) {
+  try {
+    const bd = await abrirBancoSessao();
+    await new Promise((resolve) => {
+      const t = bd.transaction("kv", "readwrite");
+      if (u) t.objectStore("kv").put(sessaoLimpa(u), "usuario"); else t.objectStore("kv").delete("usuario");
+      t.oncomplete = () => { bd.close(); resolve(); };
+      t.onerror = () => { bd.close(); resolve(); };
+      t.onabort = () => { bd.close(); resolve(); };
+    });
+  } catch { /* sem IndexedDB */ }
+}
+
+// cookie do servidor (só em http/https; falhas são ignoradas — os outros depósitos continuam valendo)
+function chamarApiSessao(metodo, corpo, ms = 2500) {
+  if (!/^https?:$/.test(location.protocol)) return Promise.resolve(null);
+  const controle = new AbortController();
+  const timer = setTimeout(() => controle.abort(), ms);
+  return fetch(API_SESSAO, {
+    method: metodo, credentials: "same-origin", cache: "no-store", signal: controle.signal,
+    headers: corpo ? { "Content-Type": "application/json" } : undefined,
+    body: corpo ? JSON.stringify(corpo) : undefined
+  })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)
+    .finally(() => clearTimeout(timer));
+}
+
+// Quem foi identificado neste aparelho (leitura imediata: localStorage, com o cookie como reserva).
 export function obterUsuarioSessao() {
   try {
     const bruto = localStorage.getItem(CHAVE_SESSAO);
-    return bruto ? JSON.parse(bruto) : null;
-  } catch {
-    return null;
-  }
+    const u = bruto ? JSON.parse(bruto) : null;
+    if (u) return u;
+  } catch { /* cai no cookie */ }
+  const doCookie = lerCookieSessao();
+  if (doCookie) { try { localStorage.setItem(CHAVE_SESSAO, JSON.stringify(doCookie)); } catch { /* ok */ } }
+  return doCookie;
 }
 export function salvarUsuarioSessao(usuario) {
-  localStorage.setItem(CHAVE_SESSAO, JSON.stringify(usuario));
+  try { localStorage.setItem(CHAVE_SESSAO, JSON.stringify(usuario)); } catch { /* sem armazenamento */ }
+  try { localStorage.removeItem(CHAVE_SAIU); } catch { /* ok */ }
+  if (!sessaoValida(usuario)) return;
+  gravarCookieSessao(usuario);
+  gravarBancoSessao(usuario);
+  chamarApiSessao("POST", { telefoneDigits: usuario.telefoneDigits });
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch { /* ok */ }
 }
-export function limparUsuarioSessao() {
-  localStorage.removeItem(CHAVE_SESSAO);
+// "Sair": apaga a identificação de todos os lugares (inclusive do servidor) — só isso faz o site pedir o telefone de novo.
+export async function limparUsuarioSessao() {
+  try { localStorage.setItem(CHAVE_SAIU, "1"); } catch { /* ok */ }
+  try { localStorage.removeItem(CHAVE_SESSAO); } catch { /* ok */ }
+  apagarCookieSessao();
+  await Promise.all([gravarBancoSessao(null), chamarApiSessao("DELETE", null, 2500).then((r) => {
+    if (r && r.ok) { try { localStorage.removeItem(CHAVE_SAIU); } catch { /* ok */ } }
+  })]);
 }
+// Quando o localStorage e o cookie sumiram (limpeza do navegador, iPhone, etc.): procura nos outros
+// depósitos (IndexedDB e cookie do servidor) e, se achar, devolve a identificação e refaz os demais.
+export async function restaurarUsuarioSessao() {
+  const agora = obterUsuarioSessao();
+  if (agora) return agora;
+  let saiu = false;
+  try { saiu = localStorage.getItem(CHAVE_SAIU) === "1"; } catch { /* ok */ }
+  if (saiu) return null; // a pessoa tocou em "Sair": só volta a entrar digitando o telefone
+  let achada = await lerBancoSessao();
+  if (!achada) {
+    const r = await chamarApiSessao("GET", null, 2500);
+    if (r && r.ok && sessaoValida(r.usuario)) achada = sessaoLimpa(r.usuario);
+  }
+  if (achada) {
+    try { localStorage.setItem(CHAVE_SESSAO, JSON.stringify(achada)); } catch { /* ok */ }
+    gravarCookieSessao(achada);
+    gravarBancoSessao(achada);
+  }
+  return achada;
+}
+
+// Mudança de endereço: quem vem do endereço antigo traz a identificação no "#" da URL — entra já identificado.
+const PARAM_SESSAO_URL = "arautos_sessao";
+export function sessaoParaHashDeUrl() {
+  const u = obterUsuarioSessao();
+  if (!sessaoValida(u)) return "";
+  try {
+    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(sessaoLimpa(u))))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    return `${PARAM_SESSAO_URL}=${b64}`;
+  } catch { return ""; }
+}
+(function importarSessaoDaUrl() {
+  try {
+    const m = location.hash.match(new RegExp(`[#&]${PARAM_SESSAO_URL}=([A-Za-z0-9_-]+)`));
+    if (!m) return;
+    const resto = location.hash.replace(new RegExp(`[#&]${PARAM_SESSAO_URL}=[A-Za-z0-9_-]+`), "").replace(/^&/, "#");
+    history.replaceState(null, "", location.pathname + location.search + (resto && resto !== "#" ? resto : ""));
+    const b64 = m[1].replace(/-/g, "+").replace(/_/g, "/");
+    const u = JSON.parse(decodeURIComponent(escape(atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4)))));
+    if (sessaoValida(u) && !obterUsuarioSessao()) salvarUsuarioSessao(sessaoLimpa(u));
+  } catch { /* link sem identificação válida: ignora */ }
+})();
 
 /* ---------- Menu lateral (hambúrguer) + dropdown de perfil ----------
    Espera encontrar no HTML da página os elementos com os IDs:
@@ -804,6 +948,7 @@ export const ORDEM_PAGINAS = [
   { chave: "meus-agendamentos", label: "Meus agendamentos da Adoração", href: "meus-agendamentos" },
   { chave: "intencoes", label: "Intenções para a Santa Missa", href: "intencoes" },
   { chave: "cursos", label: "Inscrições de cursos", href: "cursos" },
+  { chave: "simposio", label: "Simpósio", href: "simposio" },
   { chave: "avisos", label: "Agenda da semana", href: "avisos" },
   { chave: "contatos", label: "Contatos", href: "contatos" },
   { chave: "sobre", label: "Sobre", href: "sobre" }
@@ -1016,8 +1161,9 @@ export function inicializarNavegacao(paginaAtual) {
   if (usuario && telEl) telEl.textContent = usuario.telefone;
 
   const btnSair = document.getElementById("btnSair");
-  btnSair?.addEventListener("click", () => {
-    limparUsuarioSessao();
+  btnSair?.addEventListener("click", async () => {
+    btnSair.disabled = true;
+    await limparUsuarioSessao(); // apaga de todos os lugares (inclusive do servidor) antes de voltar ao início
     window.location.href = "/";
   });
 
@@ -1499,4 +1645,17 @@ export function listaArquivada(envio, dataMissa, horaMissa, agora = new Date()) 
   if (agora.getTime() - enviadoEm < ARQUIVAR_LISTA_APOS_DIAS * 24 * 3600000) return false;
   const missa = new Date(`${dataMissa}T${String(Number(horaMissa)).padStart(2, "0")}:00:00-03:00`).getTime();
   return agora.getTime() >= missa + 3 * 3600000;
+}
+
+
+/* ---------- Simpósio: link opcional de cada curso/evento ----------
+   Aceita um endereço da internet (https://... ou www...) ou o nome de uma página do próprio site
+   (ex.: "cursos" ou "/cursos"). Devolve o link pronto, "" quando vazio ou null quando não vale. */
+export function normalizarLinkSimposio(texto) {
+  const t = String(texto || "").trim();
+  if (!t) return "";
+  if (/^https?:\/\/[^\s]+$/i.test(t)) return t;
+  if (/^\/?[a-z0-9][a-z0-9-]*(\/[a-z0-9-]+)*$/i.test(t) && !t.includes(".")) return "/" + t.replace(/^\//, "");
+  if (/^www\.[^\s]+\.[a-z]{2,}[^\s]*$/i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i.test(t)) return "https://" + t;
+  return null;
 }

@@ -3,7 +3,7 @@
 import { cadastrarOuAtualizarUsuario, obterUsuario } from "./dados.js";
 import {
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits,
-  obterUsuarioSessao, salvarUsuarioSessao, limparUsuarioSessao, abrirModal, fecharModal, mostrarToast,
+  obterUsuarioSessao, salvarUsuarioSessao, limparUsuarioSessao, restaurarUsuarioSessao, abrirModal, fecharModal, mostrarToast,
   comLimiteDeTempo
 } from "./utils.js";
 
@@ -36,7 +36,18 @@ const MODAL_HTML = `
 
 export function exigirCadastro() {
   return new Promise(async (resolve) => {
-    const usuarioExistente = obterUsuarioSessao();
+    let usuarioExistente = obterUsuarioSessao();
+    if (!(usuarioExistente && usuarioExistente.nome && usuarioExistente.telefone)) {
+      // o localStorage e o cookie sumiram (limpeza do navegador, iPhone...): tenta os outros lugares onde a
+      // identificação fica guardada antes de pedir o telefone de novo (só "Sair" faz o site pedir de novo)
+      usuarioExistente = await restaurarUsuarioSessao();
+      if (usuarioExistente) {
+        const nomeEl = document.getElementById("perfilNome");
+        const telEl = document.getElementById("perfilTelefone");
+        if (nomeEl) nomeEl.textContent = usuarioExistente.nome;
+        if (telEl) telEl.textContent = usuarioExistente.telefone;
+      }
+    }
     if (usuarioExistente && usuarioExistente.nome && usuarioExistente.telefone) {
       // Quem já estava identificado neste aparelho entra NA HORA — antes a página esperava o banco
       // responder (segundos, na primeira conexão do celular) só para confirmar o cadastro. A
@@ -45,8 +56,7 @@ export function exigirCadastro() {
       resolve(usuarioExistente);
       comLimiteDeTempo(obterUsuario(usuarioExistente.telefoneDigits), 20000).then((aindaCadastrado) => {
         if (!aindaCadastrado || !aindaCadastrado.nome) {
-          limparUsuarioSessao();
-          window.location.reload();
+          limparUsuarioSessao().then(() => window.location.reload());
         }
       }).catch((err) => console.warn("Não foi possível confirmar o cadastro agora:", err)); // sem conexão: não bloqueia
       return;

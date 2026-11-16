@@ -25,7 +25,8 @@ export const CATALOGO_ACESSOS = [
     pagina: "avisos", titulo: "Avisos", emoji: "📢",
     partes: [
       { id: "publicar", titulo: "Publicar novo aviso" },
-      { id: "publicados", titulo: "Avisos publicados" }
+      { id: "publicados", titulo: "Avisos publicados" },
+      { id: "simposio", titulo: "Simpósio (cursos e eventos da página pública)" }
     ]
   },
   {

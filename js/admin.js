@@ -29,6 +29,7 @@ import { criarCredenciais, conferirSenha, chaveConfere, TAMANHO_MINIMO_SENHA } f
 import { CATALOGO_ACESSOS, PAGINA_ADMINISTRADORES, temAcesso, normalizarAcessos, resumoDeAcessos } from "./acessos.js";
 import { criarCrm } from "./crm-contatos.js";
 import { iniciarCursosAdmin } from "./cursos-admin.js";
+import { iniciarSimposioAdmin } from "./simposio-admin.js";
 import { extrairTextosCategoria, construirDocxIntencoes, nomeArquivoDocx, rotuloListaIntencao } from "./docx-intencoes.js";
 
 /* ---------------- Contas e login do painel ----------------
@@ -278,7 +279,8 @@ const ALVOS_PARTES = {
   },
   avisos: {
     publicar: painelDe("formNovoAviso"),
-    publicados: painelDe("listaAvisosAdmin")
+    publicados: painelDe("listaAvisosAdmin"),
+    simposio: () => [...painelDe("formNovoSimposio")(), ...painelDe("listaSimposioAdmin")()]
   },
   acompanhamento: {
     agendados: () => [document.querySelector('.admin-aba[data-aba="agendados"]'), document.getElementById("painelAgendados")],
@@ -333,6 +335,21 @@ function aplicarPermissoes() {
     });
   });
 
+  // Avisos: as abas "Avisos" e "Simpósio" só aparecem para quem tem acesso a elas (e a que sobrar fica aberta)
+  const podeAvisosAba = temAcesso(conta, "avisos", "publicar") || temAcesso(conta, "avisos", "publicados");
+  const podeSimposioAba = temAcesso(conta, "avisos", "simposio");
+  const abaBtnAvisos = document.getElementById("abaBtnAvisos");
+  const abaBtnSimposio = document.getElementById("abaBtnSimposio");
+  if (abaBtnAvisos && abaBtnSimposio) {
+    abaBtnAvisos.classList.toggle("sem-acesso", !podeAvisosAba);
+    abaBtnSimposio.classList.toggle("sem-acesso", !podeSimposioAba);
+    document.getElementById("abasAvisos").classList.toggle("sem-acesso", !(podeAvisosAba && podeSimposioAba));
+    document.getElementById("abaAvisosAvisos").classList.toggle("sem-acesso", !podeAvisosAba);
+    document.getElementById("abaAvisosSimposio").classList.toggle("sem-acesso", !podeSimposioAba);
+    if (podeAvisosAba && !podeSimposioAba) abaBtnAvisos.click();
+    else if (!podeAvisosAba && podeSimposioAba) abaBtnSimposio.click();
+  }
+
   // Acompanhamento: se a aba que estava aberta sumiu, abre a que sobrou
   const abaAtiva = document.querySelector(".admin-aba.ativa");
   if (abaAtiva && abaAtiva.classList.contains("sem-acesso")) {
@@ -371,6 +388,7 @@ function iniciarPainel() {
   configurarHorarios();
   configurarIntencoes();
   configurarAvisos();
+  iniciarSimposioAdmin({ enviarImagem: enviarImagemParaCloudinary, ligarListaFechada });
   configurarAcompanhamento();
   configurarInfoContato();
   configurarContatos();

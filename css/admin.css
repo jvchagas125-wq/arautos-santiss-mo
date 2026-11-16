@@ -814,3 +814,17 @@
   content:""; position:absolute; left:8px; top:.95em; width:6px; height:6px; border-radius:50%; background: var(--dourado);
 }
 .crm-categoria__itens li.destaque{ font-weight:700; }
+
+/* ---------- abas da página Avisos (Avisos | Simpósio) ---------- */
+.aba-secao{
+  flex:1; padding: 11px; border-radius:10px; border: 1.5px solid rgba(157,122,31,.3);
+  background: #fffefb; font-family:'Cinzel'; font-size:.85rem; color: var(--texto-suave); cursor:pointer;
+  transition: all .2s ease;
+}
+.aba-secao.ativa{
+  background: linear-gradient(135deg, var(--vermelho-2), var(--vermelho-escuro));
+  color:#fff; border-color: var(--vermelho-escuro);
+}
+.simposio-intro{ margin:0 0 16px; font-size:.88rem; line-height:1.6; color: var(--texto-suave); }
+.cartao-simposio-admin__img{ width:100%; aspect-ratio: 2 / 1; object-fit:cover; display:block; background:#efe6d3; }
+.cartao-simposio-admin__link{ font-size:.8rem; color: var(--dourado-escuro); margin:-4px 0 12px; overflow-wrap:anywhere; }

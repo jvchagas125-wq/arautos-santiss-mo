@@ -1594,3 +1594,19 @@ body.pagina-indisponivel main.conteudo > *:not(.pagina-indisponivel__aviso){ dis
   body:not(.admin-body) .modal--intencoes,
   body:not(.admin-body) .modal--previa{ max-height: calc(125vh - 50px); max-height: calc(125dvh - 50px); }
 }
+
+/* ---------- Simpósio (cursos e eventos) ---------- */
+.lista-simposio{ width:100%; display:flex; flex-direction:column; gap:18px; }
+.cartao-simposio{
+  background:#fffdf8; border:1.5px solid rgba(157,122,31,.3); border-radius:16px; overflow:hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,.06);
+}
+.cartao-simposio__banner{ display:block; width:100%; height:auto; aspect-ratio: 2 / 1; object-fit:cover; background:#efe6d3; }
+.cartao-simposio__corpo{ padding:16px 18px 18px; }
+.cartao-simposio__titulo{
+  margin:0 0 8px; font-family:'Cinzel'; font-weight:700; font-size:1.12rem; line-height:1.3; color: var(--vermelho-escuro);
+  overflow-wrap:anywhere;
+}
+.cartao-simposio__texto{ margin:0 0 14px; font-size:.94rem; line-height:1.7; color: var(--texto); white-space:pre-wrap; overflow-wrap:anywhere; }
+.cartao-simposio__texto:last-child{ margin-bottom:0; }
+.cartao-simposio__link{ display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }

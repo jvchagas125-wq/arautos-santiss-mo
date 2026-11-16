@@ -15,7 +15,7 @@
 <script>try{if(localStorage.getItem("arautos_admin_sessao"))document.documentElement.classList.add("com-sessao");}catch(e){}</script>
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/admin.css?v=76" />
+<link rel="stylesheet" href="css/admin.css?v=77" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -524,6 +524,12 @@
         <h1 class="titulo-pagina">Avisos</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
+        <div class="admin-abas" id="abasAvisos">
+          <button type="button" class="aba-secao ativa" data-aba-avisos="avisos" id="abaBtnAvisos">Avisos</button>
+          <button type="button" class="aba-secao" data-aba-avisos="simposio" id="abaBtnSimposio">Simpósio</button>
+        </div>
+
+        <div id="abaAvisosAvisos">
         <div class="painel">
           <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoNovoAviso" role="button" tabindex="0" aria-expanded="false">
             <span class="emoji">📢</span> Publicar novo aviso
@@ -560,6 +566,60 @@
           <div id="corpoAvisosPublicados" class="oculto">
           <p class="mensagem-vazia oculto" id="avisoSemAvisos">Nenhum aviso publicado ainda.</p>
           <div id="listaAvisosAdmin"></div>
+          </div>
+        </div>
+        </div>
+
+        <!-- Aba SIMPÓSIO: cursos e eventos mostrados na página pública "Simpósio" -->
+        <div id="abaAvisosSimposio" class="oculto">
+          <p class="simposio-intro">Aqui você cadastra o que aparece na página <strong>Simpósio</strong> do site: informações dos cursos e eventos, cada um com banner, título, descrição e, se quiser, um link para outra página.</p>
+
+          <div class="painel">
+            <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoNovoSimposio" role="button" tabindex="0" aria-expanded="false">
+              <span class="emoji">🎓</span> Cadastrar curso ou evento
+              <span class="painel__dica">Clique aqui para poder abrir</span>
+              <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div id="corpoNovoSimposio" class="oculto">
+              <form id="formNovoSimposio">
+                <div class="campo">
+                  <label for="campoSimposioImagem">Banner (topo do cartão)</label>
+                  <input type="file" id="campoSimposioImagem" accept="image/*" />
+                  <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 600 px</strong> (horizontal).</span>
+                  <img id="previewSimposioImagem" alt="" class="oculto" style="margin-top:8px; max-height:140px; border-radius:8px; display:block;" />
+                </div>
+                <div class="campo">
+                  <label for="campoSimposioTitulo">Título</label>
+                  <input type="text" id="campoSimposioTitulo" maxlength="120" placeholder="Ex: Curso de Introdução à Fé Católica" required />
+                </div>
+                <div class="campo">
+                  <label for="campoSimposioDescricao">Descrição do curso ou evento</label>
+                  <textarea id="campoSimposioDescricao" rows="5" placeholder="Datas, horários, local, programação, quem pode participar..."></textarea>
+                </div>
+                <div class="campo">
+                  <label for="campoSimposioLink">Link para outra página (opcional)</label>
+                  <input type="text" id="campoSimposioLink" maxlength="500" placeholder="Ex: https://forms.gle/... ou cursos" autocomplete="off" />
+                  <span class="campo-ajuda">Endereço de um site/formulário, ou o nome de uma página do próprio site (ex.: <strong>cursos</strong>, <strong>avisos</strong>).</span>
+                </div>
+                <div class="campo">
+                  <label for="campoSimposioLinkTexto">Texto do botão do link (opcional)</label>
+                  <input type="text" id="campoSimposioLinkTexto" maxlength="40" placeholder="Saiba mais" />
+                </div>
+                <button type="submit" class="btn btn-dourado">Publicar no Simpósio</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="painel">
+            <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoSimposioPublicados" role="button" tabindex="0" aria-expanded="false">
+              <span class="emoji">🗂️</span> Cursos e eventos publicados
+              <span class="painel__dica">Clique aqui para poder abrir</span>
+              <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+            <div id="corpoSimposioPublicados" class="oculto">
+              <p class="mensagem-vazia oculto" id="avisoSemSimposio">Nada publicado no Simpósio ainda.</p>
+              <div id="listaSimposioAdmin"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -1204,6 +1264,19 @@
       <div class="modal__acoes">
         <button class="btn btn-contorno btn-full" id="btnVoltarApagarIntencaoAdmin">Voltar</button>
         <button class="btn btn-vermelho btn-full" id="btnConfirmarApagarIntencaoAdmin">Apagar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal confirmação: apagar um item do Simpósio -->
+  <div class="modal-overlay" id="modalExcluirSimposio">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalExcluirSimposio" aria-label="Fechar">&times;</button>
+      <h3>Apagar do Simpósio</h3>
+      <p>Deseja apagar <strong id="nomeExcluirSimposio">—</strong> do Simpósio? Essa ação não pode ser desfeita.</p>
+      <div class="modal__acoes">
+        <button class="btn btn-contorno btn-full" id="btnVoltarExcluirSimposio">Voltar</button>
+        <button class="btn btn-vermelho btn-full" id="btnConfirmarExcluirSimposio">Apagar</button>
       </div>
     </div>
   </div>

@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v80";
+const CACHE_NAME = "arautos-shell-v81";
 
 // Só o que o site PÚBLICO usa é baixado na instalação (o painel administrativo e seus arquivos pesados
 // — admin.js, exportações, CRM — entram no cache sozinhos quando o administrador abre o painel).
@@ -16,6 +16,7 @@ const ARQUIVOS_APP_SHELL = [
   "./meus-agendamentos.html",
   "./contatos.html",
   "./cursos.html",
+  "./simposio.html",
   "./sobre.html",
   "./manifest.json",
   "./css/style.css",
@@ -38,6 +39,7 @@ const ARQUIVOS_APP_SHELL = [
   "./js/voz.js",
   "./js/novo-dominio.js",
   "./js/cursos.js",
+  "./js/simposio.js",
   "./js/cursos-comum.js",
   "./assets/logo.png",
   "./assets/favicon.png?v=2",
@@ -167,6 +169,9 @@ self.addEventListener("fetch", (evento) => {
   if (requisicao.method !== "GET") return;
 
   const url = new URL(requisicao.url);
+
+  // funções do servidor (/api/...): sempre direto na rede, nunca guardadas em cache
+  if (url.origin === self.location.origin && url.pathname.startsWith("/api/")) return;
 
   if (url.origin !== self.location.origin) {
     if (url.hostname === "fonts.googleapis.com") {

@@ -785,10 +785,58 @@ function ordemEfetiva(aviso) {
 export function ouvirAvisos(callback) {
   callback = cacheado("avisos", callback);
   return onSnapshot(collection(db, "avisos"), (snap) => {
-    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // os cursos/eventos do Simpósio ficam na mesma coleção (secao "simposio") e não entram na lista de avisos
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.secao !== SECAO_SIMPOSIO);
     lista.sort((a, b) => ordemEfetiva(a) - ordemEfetiva(b));
     callback(lista);
   });
+}
+
+/* ---------------- Simpósio (cursos e eventos: banner, título, descrição e link) ----------------
+   Cada item é um documento da coleção "avisos" com secao = "simposio" (assim usa as mesmas regras do Firestore
+   dos avisos, sem precisar liberar nenhuma coleção nova). */
+export const SECAO_SIMPOSIO = "simposio";
+
+export function ouvirSimposio(callback) {
+  callback = cacheado("simposio", callback);
+  return onSnapshot(query(collection(db, "avisos"), where("secao", "==", SECAO_SIMPOSIO)), (snap) => {
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    lista.sort((a, b) => ordemEfetiva(a) - ordemEfetiva(b));
+    callback(lista);
+  }, aoFalharLeitura("avisos"));
+}
+
+// novos itens entram no topo (como os avisos); use trocarOrdemSimposio para reordenar depois
+export async function criarItemSimposio({ titulo, descricao, imagemUrl, linkUrl, linkTexto }) {
+  const ref = doc(collection(db, "avisos"));
+  const agora = Date.now();
+  await setDoc(ref, {
+    secao: SECAO_SIMPOSIO,
+    titulo, descricao: descricao || "", imagemUrl: imagemUrl || "",
+    linkUrl: linkUrl || "", linkTexto: linkTexto || "",
+    criadoEmOrdenacao: agora,
+    ordem: -agora,
+    criadoEm: serverTimestamp()
+  });
+  return ref.id;
+}
+
+export async function atualizarItemSimposio(id, { titulo, descricao, imagemUrl, linkUrl, linkTexto }) {
+  const dados = { titulo, descricao: descricao || "", linkUrl: linkUrl || "", linkTexto: linkTexto || "" };
+  // só troca o banner quando o administrador escolheu uma imagem nova
+  if (imagemUrl !== undefined) dados.imagemUrl = imagemUrl;
+  await updateDoc(doc(db, "avisos", id), dados);
+}
+
+export async function trocarOrdemSimposio(itemA, itemB) {
+  await Promise.all([
+    updateDoc(doc(db, "avisos", itemA.id), { ordem: ordemEfetiva(itemB) }),
+    updateDoc(doc(db, "avisos", itemB.id), { ordem: ordemEfetiva(itemA) })
+  ]);
+}
+
+export async function excluirItemSimposio(id) {
+  await deleteDoc(doc(db, "avisos", id));
 }
 
 export async function criarAviso({ titulo, texto, imagemUrl }) {

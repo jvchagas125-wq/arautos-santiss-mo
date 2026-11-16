@@ -4,7 +4,7 @@
 // - No endereço novo: o pop-up NUNCA aparece. Quem chegou pelo pop-up vê só um lembrete curto para
 //   instalar o app com o endereço novo (um app instalado fica preso ao endereço em que foi instalado, então
 //   o navegador exige instalar de novo — o botão "Instalar app" do site faz isso).
-import { mostrarToast, abrirModal, fecharModal } from "./utils.js";
+import { mostrarToast, abrirModal, fecharModal, sessaoParaHashDeUrl } from "./utils.js";
 
 const DOMINIO_NOVO = "arautoscampos.org.br";
 const ORIGEM_NOVA = `https://www.${DOMINIO_NOVO}`;
@@ -23,7 +23,10 @@ function enderecoNovoDestino() {
   const params = new URLSearchParams(location.search);
   params.set(PARAM, comoAppInstalado() ? "app" : "1");
   const caminho = location.pathname === "/index.html" ? "/" : location.pathname;
-  return `${ORIGEM_NOVA}${caminho}?${params.toString()}${location.hash}`;
+  // leva a identificação (nome + telefone) junto: quem já estava identificado entra no endereço novo sem digitar nada
+  const sessao = sessaoParaHashDeUrl();
+  const hash = location.hash ? location.hash + (sessao ? `&${sessao}` : "") : (sessao ? `#${sessao}` : "");
+  return `${ORIGEM_NOVA}${caminho}?${params.toString()}${hash}`;
 }
 
 function lembreteNoEnderecoNovo() {
