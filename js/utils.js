@@ -1106,6 +1106,12 @@ export function inicializarNavegacao(paginaAtual) {
   // aviso de mudança de endereço (só nos links antigos) — no endereço novo nunca aparece
   if (paginaAtual !== "admin") import("./novo-dominio.js").then((m) => m.iniciarAvisoNovoDominio()).catch(() => {});
   if (paginaAtual !== "admin") import("./voz.js").then((m) => m.iniciarVoz({ aviso: mostrarToast })).catch(() => {});
+  // baixa em segundo plano as imagens do Simpósio e dos cursos, para abrirem na hora
+  if (paginaAtual !== "admin") {
+    const aquecer = () => import("./aquecer-imagens.js").then((m) => m.aquecerImagens()).catch(() => {});
+    const agendar = () => (window.requestIdleCallback ? window.requestIdleCallback(aquecer, { timeout: 4000 }) : setTimeout(aquecer, 1500));
+    if (document.readyState === "complete") agendar(); else window.addEventListener("load", agendar, { once: true });
+  }
   // faixa vermelha embaixo (só aparece em celulares cuja barra de navegação deixa o app ocupar a tela toda)
   if (!document.querySelector(".barra-inferior-app")) {
     document.body.insertAdjacentHTML("beforeend", '<div class="barra-inferior-app" aria-hidden="true"></div>');

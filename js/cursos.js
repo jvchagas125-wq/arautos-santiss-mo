@@ -240,7 +240,7 @@ function criarCartao(curso) {
   if (curso.imagemUrl) {
     const mini = criar("img", "curso-card__mini");
     mini.alt = "";
-    mini.loading = "lazy";
+    mini.decoding = "async";
     definirSrcOtimizado(mini, curso.imagemUrl, 120);
     cab.appendChild(mini);
   }
@@ -265,7 +265,7 @@ function criarCartao(curso) {
     if (curso.imagemUrl) {
       const img = criar("img", "curso-card__imagem");
       img.alt = curso.nome;
-      img.loading = "lazy";
+      img.decoding = "async";
       definirSrcOtimizado(img, curso.imagemUrl, 900);
       corpo.appendChild(img);
     }

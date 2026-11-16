@@ -797,12 +797,15 @@ export function ouvirAvisos(callback) {
    dos avisos, sem precisar liberar nenhuma coleção nova). */
 export const SECAO_SIMPOSIO = "simposio";
 
+function listaDoSimposio(snap) {
+  const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  lista.sort((a, b) => ordemEfetiva(a) - ordemEfetiva(b));
+  return lista;
+}
 export function ouvirSimposio(callback) {
   callback = cacheado("simposio", callback);
   return onSnapshot(query(collection(db, "avisos"), where("secao", "==", SECAO_SIMPOSIO)), (snap) => {
-    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    lista.sort((a, b) => ordemEfetiva(a) - ordemEfetiva(b));
-    callback(lista);
+    callback(listaDoSimposio(snap));
   }, aoFalharLeitura("avisos"));
 }
 
@@ -925,13 +928,35 @@ export async function excluirBanner(id) {
 // avisosCursos/{id}: quadro de avisos de cada curso.
 
 // Lista (em tempo real) de cursos, na ordem em que o administrador os organizou (os mais novos por último).
+function listaDeCursos(snap) {
+  const lista = snap.docs.map((d) => ({ ...normalizarCurso(d.id, d.data()), criadoEmMs: d.data().criadoEmMs || 0 }));
+  lista.sort((a, b) => (a.ordem - b.ordem) || (a.criadoEmMs - b.criadoEmMs));
+  return lista;
+}
 export function ouvirCursos(callback, aoErro) {
   callback = cacheado("cursos", callback);
   return onSnapshot(collection(db, "cursos"), (snap) => {
-    const lista = snap.docs.map((d) => ({ ...normalizarCurso(d.id, d.data()), criadoEmMs: d.data().criadoEmMs || 0 }));
-    lista.sort((a, b) => (a.ordem - b.ordem) || (a.criadoEmMs - b.criadoEmMs));
-    callback(lista);
+    callback(listaDeCursos(snap));
   }, (erro) => { aoFalharLeitura("cursos")(erro); if (aoErro) aoErro(erro); });
+}
+
+// Pré-carregamento das imagens do Simpósio e dos cursos (veja js/aquecer-imagens.js): o que já está
+// guardado no aparelho, e uma leitura única (sem ficar "ouvindo") que atualiza esse guardado.
+export function listasPublicasEmCache() {
+  const s = lerCacheDados("simposio");
+  const c = lerCacheDados("cursos");
+  return { simposio: Array.isArray(s) ? s : [], cursos: Array.isArray(c) ? c : [] };
+}
+export async function atualizarListasPublicasEmCache() {
+  const [snapS, snapC] = await Promise.all([
+    getDocs(query(collection(db, "avisos"), where("secao", "==", SECAO_SIMPOSIO))),
+    getDocs(collection(db, "cursos"))
+  ]);
+  const simposio = listaDoSimposio(snapS);
+  const cursos = listaDeCursos(snapC);
+  gravarCacheDados("simposio", simposio);
+  gravarCacheDados("cursos", cursos);
+  return { simposio, cursos };
 }
 
 export async function salvarCurso(id, dados) {

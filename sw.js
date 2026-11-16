@@ -3,7 +3,7 @@
 // público quanto no painel administrativo. Os DADOS (horários, agendamentos, avisos, frases...)
 // nunca passam por aqui: eles vêm do Firestore, que tem seu próprio cache em tempo real
 // (veja js/firebase-init.js) e por isso continuam sempre atualizados.
-const CACHE_NAME = "arautos-shell-v82";
+const CACHE_NAME = "arautos-shell-v83";
 
 // Só o que o site PÚBLICO usa é baixado na instalação (o painel administrativo e seus arquivos pesados
 // — admin.js, exportações, CRM — entram no cache sozinhos quando o administrador abre o painel).
@@ -40,6 +40,7 @@ const ARQUIVOS_APP_SHELL = [
   "./js/novo-dominio.js",
   "./js/cursos.js",
   "./js/simposio.js",
+  "./js/aquecer-imagens.js",
   "./js/cursos-comum.js",
   "./assets/logo.png",
   "./assets/favicon.png?v=2",
@@ -77,7 +78,7 @@ self.addEventListener("install", (evento) => {
 self.addEventListener("activate", (evento) => {
   evento.waitUntil(
     caches.keys()
-      .then((nomes) => Promise.all(nomes.filter((n) => n !== CACHE_NAME && n !== CACHE_EXTERNO).map((n) => caches.delete(n))))
+      .then((nomes) => Promise.all(nomes.filter((n) => n !== CACHE_NAME && n !== CACHE_EXTERNO && n !== CACHE_IMAGENS).map((n) => caches.delete(n))))
       .then(() => self.clients.claim())
   );
 });
@@ -87,6 +88,32 @@ self.addEventListener("activate", (evento) => {
 // as fontes do Google e o código do Firebase (a URL já traz a versão). Assim, depois da primeira
 // visita, nem as fontes nem o Firebase precisam ser baixados de novo pela internet do celular.
 const CACHE_EXTERNO = "arautos-externo-v1";
+
+// Imagens do Cloudinary (banners, cursos, fundo, logo): ficam guardadas à parte e só saem quando passam do
+// limite (as mais antigas primeiro). O endereço de cada imagem já muda quando ela é trocada, então o que
+// está guardado nunca fica desatualizado. A imagem é pedida com CORS pra ser guardada por inteiro.
+const CACHE_IMAGENS = "arautos-imagens-v1";
+const LIMITE_IMAGENS = 120;
+async function cacheImagem(evento, requisicao) {
+  try {
+    const cache = await caches.open(CACHE_IMAGENS);
+    const guardado = await cache.match(requisicao.url);
+    if (guardado) return guardado;
+    const resposta = await fetch(new Request(requisicao.url, { mode: "cors", credentials: "omit" }));
+    if (resposta && resposta.ok) {
+      const copia = resposta.clone();
+      evento.waitUntil(
+        cache.put(requisicao.url, copia)
+          .then(() => cache.keys())
+          .then((chaves) => Promise.all(chaves.slice(0, Math.max(0, chaves.length - LIMITE_IMAGENS)).map((c) => cache.delete(c))))
+          .catch(() => {})
+      );
+    }
+    return resposta;
+  } catch {
+    return fetch(requisicao);
+  }
+}
 
 // Painel administrativo: continua buscando a versão mais nova na rede primeiro (quem administra
 // precisa ver na hora o que acabou de ser publicado). O resto do site abre direto do cache.
@@ -176,6 +203,8 @@ self.addEventListener("fetch", (evento) => {
   if (url.origin !== self.location.origin) {
     if (url.hostname === "fonts.googleapis.com") {
       evento.respondWith(cacheExterno(evento, requisicao, true));   // CSS das fontes: atualiza em segundo plano
+    } else if (url.hostname === "res.cloudinary.com" && url.pathname.includes("/image/upload/")) {
+      evento.respondWith(cacheImagem(evento, requisicao));         // fotos do Cloudinary: guardadas, abrem na hora
     } else if (url.hostname === "fonts.gstatic.com" || (url.hostname === "www.gstatic.com" && url.pathname.startsWith("/firebasejs/"))) {
       evento.respondWith(cacheExterno(evento, requisicao, false));  // arquivos com versão fixa: nunca mudam
     }
