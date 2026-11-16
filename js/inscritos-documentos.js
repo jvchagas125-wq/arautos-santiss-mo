@@ -40,11 +40,11 @@ export function construirWord(curso, inscricoes, { docx, hoje }) {
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ShadingType, AlignmentType, PageOrientation, VerticalAlign, HeightRule } = docx;
   const { colunas, linhas } = tabelaDePresenca(curso, inscricoes);
   const larguraTotal = 15000; // A4 paisagem com margens estreitas (em twips)
-  const pesos = [0.5, ...colunas.map((c) => c.peso), 1];
+  const pesos = [0.5, ...colunas.map((c) => c.peso), 1.5];
   const somaPesos = pesos.reduce((a, b) => a + b, 0);
   const larguras = pesos.map((p) => Math.floor((larguraTotal * p) / somaPesos));
   const total = larguras.reduce((a, b) => a + b, 0);
-  const cabecalhos = ["Nº", ...colunas.map((c) => c.rotulo), "Presença"];
+  const cabecalhos = ["Nº", ...colunas.map((c) => c.rotulo), "Marque se esteve presente"];
 
   const celula = (txt, i, { cab = false, centro = false, caixa = false } = {}) => new TableCell({
     width: { size: larguras[i], type: WidthType.DXA },
@@ -107,12 +107,13 @@ export function construirPdf(curso, inscricoes, { jsPDF, autoTable, hoje }) {
   const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const larguraUtil = pdf.internal.pageSize.getWidth() - 60;
   const alturaPagina = pdf.internal.pageSize.getHeight();
-  const pesos = [0.5, ...colunas.map((c) => c.peso), 1];
+  const pesos = [0.5, ...colunas.map((c) => c.peso), 1.5];
   const soma = pesos.reduce((a, b) => a + b, 0);
   const estiloColunas = {};
   pesos.forEach((p, i) => { estiloColunas[i] = { cellWidth: (larguraUtil * p) / soma }; });
   const ultima = pesos.length - 1;
-  const cabecalho = [["Nº", ...colunas.map((c) => c.rotulo), "Presença"]];
+  estiloColunas[ultima] = { ...estiloColunas[ultima], halign: "center" };
+  const cabecalho = [["Nº", ...colunas.map((c) => c.rotulo), "Marque se esteve presente"]];
   const TAM_CAIXA = 12;
 
   const titulo = (txt, sub) => {
@@ -136,6 +137,7 @@ export function construirPdf(curso, inscricoes, { jsPDF, autoTable, hoje }) {
     headStyles: { fillColor: [122, 12, 30], textColor: 255, minCellHeight: 20, halign: "left" },
     alternateRowStyles: { fillColor: [250, 243, 230] },
     margin: { left: 30, right: 30, bottom: 30 },
+    didParseCell: (d) => { if (d.section === "head" && (d.column.index === 0 || d.column.index === ultima)) d.cell.styles.halign = "center"; },
     didDrawCell: desenharCaixa
   });
 

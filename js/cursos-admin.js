@@ -12,6 +12,7 @@ import {
   estadoInscricoes, rotuloDataHora, tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailsParaAvisos, inscritosParaAvisos, emailValido, valorComoTexto, dataParaTexto
 } from "./cursos-comum.js";
 import { exportarInscritos } from "./exportar-inscritos.js";
+import { criarSeletorDataHora } from "./seletor-data-hora.js";
 
 const ICONE_SETA = '<svg class="quadro-intencao__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 const ICONE_LAPIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>';
@@ -123,6 +124,8 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
   const campoAceite = document.getElementById("cursoPedirAceite");
   const campoAbreEm = document.getElementById("cursoAbreEm");
   const campoFechaEm = document.getElementById("cursoFechaEm");
+  criarSeletorDataHora(campoAbreEm);
+  criarSeletorDataHora(campoFechaEm);
   let edicao = null; // { id, ordem, imagemUrl, novaImagem: File|null, campos, perguntas, pedirAceiteContato }
 
   function cursoVazio() {
