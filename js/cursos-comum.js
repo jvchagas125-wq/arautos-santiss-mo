@@ -251,3 +251,23 @@ export function inscritosParaAvisos(curso, inscricoes) {
   return curso && curso.pedirAceiteContato ? inscricoes.filter((i) => i.aceitaContato === true) : inscricoes;
 }
 export const emailsParaAvisos = (curso, inscricoes) => emailsDosInscritos(inscritosParaAvisos(curso, inscricoes));
+
+/* ---------- Lista de presença (Word e PDF) ---------- */
+// Uma pessoa por linha: nome, telefone e os dados que o administrador escolheu pedir no curso (e-mail,
+// Instagram, CPF...). As respostas das perguntas do formulário ficam só no Excel. "peso" = largura relativa.
+const PESO_COLUNA = { email: 3, instagram: 1.8, cpf: 1.6, nascimento: 1.4, endereco: 3, cidade: 1.8, profissao: 2 };
+export function tabelaDePresenca(curso, inscricoes) {
+  const campos = CAMPOS_PADRAO.filter(({ chave }) => chave !== "telefone" && curso.campos[chave] && curso.campos[chave].ativo);
+  const colunas = [
+    { chave: "nome", rotulo: "Nome completo", peso: 3.2 },
+    { chave: "telefone", rotulo: "Telefone", peso: 1.7 },
+    ...campos.map(({ chave, rotulo }) => ({ chave, rotulo, peso: PESO_COLUNA[chave] || 2 }))
+  ];
+  const ordenadas = [...inscricoes].sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+  const linhas = ordenadas.map((i) => {
+    const l = { nome: i.nome || "", telefone: (i.padrao && i.padrao.telefone) || formatarTelefone(i.telefoneDigits) };
+    campos.forEach(({ chave }) => { l[chave] = dataParaTexto((i.padrao && i.padrao[chave]) || ""); });
+    return l;
+  });
+  return { colunas, linhas };
+}
