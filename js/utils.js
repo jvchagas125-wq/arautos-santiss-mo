@@ -1011,7 +1011,7 @@ function inserirNavegacaoEntrePaginas(paginaAtual) {
 const CHAVE_WIDGET_FECHADO = "arautos_widget_colabore_fechado";
 const CHAVE_WIDGET_VISTO = "arautos_widget_colabore_visto";
 function iniciarWidgetColaboracao(paginaAtual) {
-  if (paginaAtual === "contatos" || paginaAtual === "admin") return;
+  if (paginaAtual === "contatos" || paginaAtual === "admin" || paginaAtual === "index") return; // na inicial o botão já está no rodapé vermelho
   try {
     const fechadoAte = Number(localStorage.getItem(CHAVE_WIDGET_FECHADO)) || 0;
     if (Date.now() < fechadoAte) return;
