@@ -2396,8 +2396,15 @@ const CLOUDINARY_CLOUD_NAME = "dcvhqnr1c";
 const CLOUDINARY_UPLOAD_PRESET = "arautos-adoracao";
 
 async function enviarImagemParaCloudinary(file) {
+  // nome sempre único: se a configuração do Cloudinary usar o nome do arquivo como identificador, uma imagem
+  // nova com o mesmo nome (ex.: "logo.png") não pode ser confundida com a antiga e devolver o endereço dela
+  const nomeOriginal = String((file && file.name) || "imagem.png");
+  const ponto = nomeOriginal.lastIndexOf(".");
+  const base = (ponto > 0 ? nomeOriginal.slice(0, ponto) : nomeOriginal).replace(/[^\w-]+/g, "-").slice(0, 40) || "imagem";
+  const extensao = ponto > 0 ? nomeOriginal.slice(ponto) : ".png";
+  const arquivoUnico = new File([file], `${base}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}${extensao}`, { type: file.type });
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", arquivoUnico);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
   const resposta = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
     method: "POST",
