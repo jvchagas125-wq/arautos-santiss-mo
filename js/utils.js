@@ -1004,6 +1004,20 @@ function inserirNavegacaoEntrePaginas(paginaAtual) {
   }
 }
 
+/* ---------- Bolinha "Entre em contato e colabore" (no rodapé) ----------
+   Na primeira vez da visita ela abre o texto por alguns segundos e depois fecha, ficando só o coração.
+   Depois disso só abre quando o mouse passa por cima. Fica na linha do rodapé, sem tapar o nome da igreja. */
+const CHAVE_BOLINHA_VISTA = "arautos_bolinha_contato_vista";
+function animarBolinhaContato() {
+  const bolinha = document.querySelector(".rodape-vermelho__bolinha");
+  if (!bolinha) return;
+  try { if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch { /* segue */ }
+  try { if (sessionStorage.getItem(CHAVE_BOLINHA_VISTA) === "1") return; } catch { /* mostra mesmo assim */ }
+  try { sessionStorage.setItem(CHAVE_BOLINHA_VISTA, "1"); } catch { /* ignora */ }
+  setTimeout(() => bolinha.classList.add("aberto"), 2200);
+  setTimeout(() => bolinha.classList.remove("aberto"), 8200);
+}
+
 /* ---------- Páginas escondidas pelo administrador (Configurações > Páginas do site) ----------
    A lista vem do Firestore em tempo real; a última lista vista fica guardada no aparelho para
    já aparecer certa ao abrir (sem "piscar" o menu). Esconder = some do menu, dos atalhos e dos
@@ -1070,6 +1084,7 @@ function iniciarPaginasOcultas(paginaAtual) {
 
 export function inicializarNavegacao(paginaAtual) {
   aplicarConfigVisualEmCache();
+  animarBolinhaContato();
   // microfone (ditado por voz) nos campos de texto do site público — carregado à parte, sem atrasar a página
   // aviso de mudança de endereço (só nos links antigos) — no endereço novo nunca aparece
   if (paginaAtual !== "admin") import("./novo-dominio.js").then((m) => m.iniciarAvisoNovoDominio()).catch(() => {});
