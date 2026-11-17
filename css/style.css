@@ -1702,7 +1702,6 @@ html.fundo-outras-cel body.fundo-damasco::before, html.fundo-outras-cel body.fun
   min-height:64px;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) 14px;
   background: transparent; /* sem cor: deixa o fundo do site aparecer */
-  box-shadow: inset 0 2px 0 rgba(205,164,52,.55);
 }
 .rodape-vermelho__medalhao{
   flex:0 0 auto; height:40px; width:auto; display:block;
