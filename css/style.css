@@ -1694,18 +1694,24 @@ html.fundo-outras-cel body.fundo-damasco::before, html.fundo-outras-cel body.fun
   html.fundo-outras-pc body.fundo-damasco::before, html.fundo-outras-pc body.fundo-damasco::after{ display:block; }
 }
 
-/* ============ RODAPÉ INFERIOR VERMELHO (todas as páginas públicas) ============ */
+/* ============ RODAPÉ INFERIOR VERMELHO (todas as páginas públicas) ============
+   Mesma cor da barra de cima. Medalhão + texto à esquerda, bolinha de contato à direita. */
 .rodape-vermelho{
   flex-shrink:0; margin-top:auto; width:100%; box-sizing:border-box;
-  display:flex; align-items:center; justify-content:center; gap:12px;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(0deg, #6e0712 0%, #8f0a17 45%, #b0101f 100%);
-  border-top: 3px solid var(--dourado);
-  box-shadow: 0 -4px 14px rgba(60,0,8,.4);
-  text-align:center;
+  display:flex; align-items:center; justify-content:flex-start; gap:10px;
+  min-height:64px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) 14px;
+  background: linear-gradient(180deg, var(--vermelho-2) 0%, var(--vermelho) 55%, var(--vermelho-escuro) 100%);
+  box-shadow: 0 -4px 18px var(--sombra), inset 0 2px 0 rgba(205,164,52,.55);
+}
+.rodape-vermelho__medalhao{
+  flex:0 0 auto; height:40px; width:auto; display:block;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.45));
 }
 .rodape-vermelho__texto{
-  margin:0; font-family:'Cinzel'; font-size:.74rem; font-weight:600; letter-spacing:.06em; line-height:1.35;
+  flex:1 1 auto; min-width:0; margin:0; text-align:left; white-space:nowrap;
+  font-family:'Cinzel'; font-weight:600; letter-spacing:.03em; line-height:1.25;
+  font-size: clamp(.46rem, 2.75vw, .74rem);
   color: var(--dourado-claro); text-shadow:0 1px 4px rgba(40,0,5,.6);
 }
 /* bolinha que leva à página Contatos (o mesmo botão discreto de antes, agora dentro do rodapé) */
@@ -1721,14 +1727,15 @@ html.fundo-outras-cel body.fundo-damasco::before, html.fundo-outras-cel body.fun
   background: linear-gradient(180deg, #f0d78c, #cda434); color: var(--vermelho-escuro); transform: scale(1.08);
 }
 @media (min-width: 720px){
-  .rodape-vermelho{ gap:18px; padding-top:14px; padding-bottom:14px; }
-  .rodape-vermelho__texto{ font-size:.8rem; }
+  .rodape-vermelho{ justify-content:center; gap:16px; padding-top:12px; padding-bottom:12px; }
+  .rodape-vermelho__texto{ flex:0 0 auto; font-size:.82rem; }
 }
 @media (max-width: 600px) and (max-height: 680px){
-  .rodape-vermelho{ padding-top:8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
-  .rodape-vermelho__texto{ font-size:.68rem; }
+  .rodape-vermelho{ min-height:52px; padding-top:6px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .rodape-vermelho__medalhao{ height:34px; }
   .rodape-vermelho__bolinha{ width:32px; height:32px; }
 }
+
 /* página inicial: o rodapé vermelho entra na conta da altura da tela */
 @media (min-width: 720px){
   .pagina-home .conteudo{ padding-top:20px; padding-bottom:14px; }
