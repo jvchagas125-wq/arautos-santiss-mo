@@ -1669,7 +1669,7 @@ body.pagina-indisponivel main.conteudo > *:not(.pagina-indisponivel__aviso){ dis
 /* ============ PÁGINAS PÚBLICAS (sem login): sem ícone de perfil, logo ao lado do menu ============ */
 body.pagina-publica .topbar__perfil,
 body.pagina-publica .dropdown-perfil{ display:none !important; }
-body.pagina-publica .topbar{ justify-content:flex-start; padding-left:68px; }
+body.pagina-publica .topbar{ justify-content:flex-end; padding-right:12px; }
 .link-voltar-inicio{
   display:block; margin-top:16px; text-align:center; font-size:.9rem; color: var(--texto-suave);
   text-decoration: underline; text-underline-offset:3px;
