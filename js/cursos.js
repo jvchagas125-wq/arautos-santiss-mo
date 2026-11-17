@@ -17,7 +17,7 @@ inicializarNavegacao("cursos");
 
 ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "", config);
 });
 
 const lista = document.getElementById("listaCursos");

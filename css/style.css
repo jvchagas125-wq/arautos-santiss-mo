@@ -318,27 +318,32 @@ img{ max-width: 100%; display:block; }
 @media (max-width: 480px){
   .carrossel-banners__slide .carrossel-banners__botao{ padding: 4px 11px; font-size:.46rem; left:74%; bottom:6%; }
 }
+/* setas + pontos: ficam juntos numa faixa embaixo do banner (setas nas pontas, pontos no meio) */
+.carrossel-banners__controles{
+  display:flex; align-items:center; justify-content:center; gap:14px; margin-top:12px;
+}
 .carrossel-banners__seta{
-  position:absolute; top:50%; transform: translateY(-50%);
-  width:36px; height:36px; border-radius:50%; border:none; cursor:pointer; padding:0;
-  background: rgba(20,6,6,.42); color: var(--branco); display:flex; align-items:center; justify-content:center;
-  backdrop-filter: blur(3px); transition: background .2s ease, transform .2s ease;
-  z-index:2;
+  flex:0 0 auto; width:32px; height:32px; border-radius:50%; cursor:pointer; padding:0;
+  border:1.5px solid rgba(226,194,106,.75); color: var(--dourado-claro);
+  background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.04));
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.18);
+  transition: background .2s ease, color .2s ease, transform .2s ease, border-color .2s ease;
 }
-.carrossel-banners__seta svg{ width:18px; height:18px; }
-.carrossel-banners__seta:hover{ background: rgba(20,6,6,.65); transform: translateY(-50%) scale(1.06); }
-.carrossel-banners__seta--esq{ left:8px; }
-.carrossel-banners__seta--dir{ right:8px; }
-.carrossel-banners--unico .carrossel-banners__seta{ display:none; }
+.carrossel-banners__seta svg{ width:16px; height:16px; }
+.carrossel-banners__seta:hover, .carrossel-banners__seta:focus-visible{
+  background: linear-gradient(180deg, #f0d78c, #cda434); color: var(--vermelho-escuro); border-color:#f6e2a0; transform: scale(1.08);
+}
+.carrossel-banners__seta:active{ transform: scale(.92); }
+.carrossel-banners--unico .carrossel-banners__controles{ display:none; }
 .carrossel-banners__pontos{
-  display:flex; justify-content:center; gap:7px; margin-top:12px;
+  display:flex; justify-content:center; align-items:center; gap:8px; min-width:0; flex-wrap:wrap;
 }
-.carrossel-banners--unico .carrossel-banners__pontos{ display:none; }
 .carrossel-banners__ponto{
-  width:8px; height:8px; border-radius:50%; border:none; padding:0; cursor:pointer;
-  background: rgba(255,253,248,.4); transition: background .2s ease, transform .2s ease;
+  width:8px; height:8px; border-radius:6px; border:none; padding:0; cursor:pointer;
+  background: rgba(255,253,248,.38); transition: background .25s ease, width .25s ease, box-shadow .25s ease;
 }
-.carrossel-banners__ponto.ativo{ background: var(--dourado-claro); transform: scale(1.3); }
+.carrossel-banners__ponto.ativo{ width:24px; background: linear-gradient(90deg, #f6e2a0, #cda434); box-shadow: 0 0 8px rgba(226,194,106,.55); }
 
 /* ---------- Atalhos rápidos (Home) ---------- */
 .atalhos-grade{
@@ -1312,7 +1317,9 @@ img{ max-width: 100%; display:block; }
   .pagina-home .conteudo{ padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); justify-content:space-between; }
   .pagina-home .titulo-cidade{ margin-bottom: 10px; font-size:.74rem; }
   .pagina-home .carrossel-banners{ margin-bottom: 10px; }
-  .pagina-home .carrossel-banners__pontos{ margin-top:6px; }
+  .pagina-home .carrossel-banners__controles{ margin-top:7px; gap:12px; }
+  .pagina-home .carrossel-banners__seta{ width:28px; height:28px; }
+  .pagina-home .carrossel-banners__seta svg{ width:14px; height:14px; }
   .pagina-home .card-frase{ padding: 14px 16px; margin-bottom: 10px; }
   .pagina-home .card-frase__eyebrow{ margin-bottom:6px; font-size:.66rem; }
   .pagina-home .card-frase blockquote{ font-size: clamp(.9rem, 2.4dvh, 1.05rem); line-height:1.4; margin-bottom:6px; }
@@ -1706,3 +1713,17 @@ body.fundo-damasco{
 .fundo-damasco .btn-ver-planilha{ color:#f6e2a0; border-color:#e2c26a; background: rgba(60,6,14,.35); }
 .fundo-damasco .btn-ver-planilha:hover{ background: rgba(226,194,106,.2); }
 .fundo-damasco .card-vazio p, .fundo-damasco #listaCancelados > .mensagem-vazia{ color: rgba(255,253,248,.96); text-shadow:0 1px 6px rgba(40,0,5,.65); }
+
+/* ===== Fundo próprio das outras páginas (Configurações > Fundo das outras páginas) =====
+   Sem foto escolhida vale o padrão acima (vermelho adamascado). Com foto: ela cobre a tela toda, fixa, com uma
+   leve camada escura para o texto claro continuar legível. No computador usa a foto do computador (ou a do celular). */
+body.fundo-damasco::before, body.fundo-damasco::after{ content:""; position:fixed; inset:0; display:none; pointer-events:none; }
+body.fundo-damasco::before{ z-index:-2; background: #5a0a12 var(--fundo-outras-img) center 20% / cover no-repeat; }
+body.fundo-damasco::after{ z-index:-1; background: linear-gradient(180deg, rgba(40,0,6,.38) 0%, rgba(40,0,6,.28) 40%, rgba(40,0,6,.45) 100%); }
+html.fundo-outras-cel body.fundo-damasco{ background: none; }
+html.fundo-outras-cel body.fundo-damasco::before, html.fundo-outras-cel body.fundo-damasco::after{ display:block; }
+@media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
+  body.fundo-damasco::before{ background-image: var(--fundo-outras-img-pc, var(--fundo-outras-img)); }
+  html.fundo-outras-pc body.fundo-damasco{ background: none; }
+  html.fundo-outras-pc body.fundo-damasco::before, html.fundo-outras-pc body.fundo-damasco::after{ display:block; }
+}

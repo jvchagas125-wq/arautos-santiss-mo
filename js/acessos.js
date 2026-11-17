@@ -58,7 +58,7 @@ export const CATALOGO_ACESSOS = [
     partes: [
       { id: "paginas", titulo: "Páginas do site público" },
       { id: "logo", titulo: "Logo padrão" },
-      { id: "fundo", titulo: "Fotos de fundo do site (celular e computador)" },
+      { id: "fundo", titulo: "Fundos do site (página inicial e outras páginas, celular e computador)" },
       { id: "banners", titulo: "Banners da página inicial" }
     ]
   }

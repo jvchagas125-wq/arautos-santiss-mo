@@ -1254,6 +1254,26 @@ function definirFundoCss(url) {
   return otimizada;
 }
 
+// Páginas que NÃO são a inicial (body.fundo-damasco): têm fundo próprio, editado em Configurações > "Fundo das
+// outras páginas". Sem foto escolhida, o CSS mostra o padrão vermelho adamascado.
+const ehPaginaOutras = () => !!(document.body && document.body.classList.contains("fundo-damasco"));
+function definirFundoOutrasCss(celular, computador) {
+  const raiz = document.documentElement;
+  const aplicar = (url, variavel, classe, largura) => {
+    if (!url) { raiz.style.removeProperty(variavel); raiz.classList.remove(classe); return; }
+    const otimizada = otimizarImagemUrl(url, largura);
+    raiz.style.setProperty(variavel, `url('${otimizada}')`);
+    raiz.classList.add(classe);
+    if (otimizada !== url) {
+      const teste = new Image();
+      teste.onerror = () => raiz.style.setProperty(variavel, `url('${url}')`);
+      teste.src = otimizada;
+    }
+  };
+  aplicar(celular, "--fundo-outras-img", "fundo-outras-cel", 1000);
+  aplicar(computador, "--fundo-outras-img-pc", "fundo-outras-pc", 1920);
+}
+
 function precarregarImagem(url) {
   if (!url || String(url).startsWith("data:")) return; // imagem embutida já está na página — nada a pré-carregar
   try {
@@ -1275,6 +1295,13 @@ export function aplicarConfigVisualEmCache() {
   if (cache.logoUrl) {
     document.querySelectorAll(".js-logo").forEach((img) => definirSrcOtimizado(img, cache.logoUrl, 500));
   }
+  if (ehPaginaOutras()) {
+    // as demais páginas usam o fundo próprio delas (celular/computador) — ou o padrão vermelho adamascado
+    definirFundoOutrasCss(cache.fundoOutrasUrl || "", cache.fundoOutrasPcUrl || "");
+    const daVez = ehComputador() && cache.fundoOutrasPcUrl ? cache.fundoOutrasPcUrl : cache.fundoOutrasUrl;
+    if (daVez) precarregarImagem(otimizarImagemUrl(daVez, ehComputador() ? 1920 : 1000));
+    return;
+  }
   const fundoPc = cache.fundoPcUrl ? definirFundoPcCss(cache.fundoPcUrl) : "";
   if (cache.fundoUrl) {
     const celular = definirFundoCss(cache.fundoUrl);
@@ -1288,7 +1315,15 @@ export function aplicarLogo(url) {
   });
   if (url) salvarCacheVisual("logoUrl", url);
 }
-export function aplicarFundo(url, urlComputador) {
+export function aplicarFundo(url, urlComputador, config) {
+  if (ehPaginaOutras()) {
+    const cel = (config && config.fundoOutrasUrl) || "";
+    const pc = (config && config.fundoOutrasPcUrl) || "";
+    definirFundoOutrasCss(cel, pc);
+    salvarCacheVisual("fundoOutrasUrl", cel);
+    salvarCacheVisual("fundoOutrasPcUrl", pc);
+    return;
+  }
   if (urlComputador !== undefined) {
     definirFundoPcCss(urlComputador);
     salvarCacheVisual("fundoPcUrl", urlComputador || "");

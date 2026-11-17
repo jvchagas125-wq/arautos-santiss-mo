@@ -941,3 +941,4 @@
 .inscritos-emails__form input:focus{ outline:none; border-color: var(--dourado); box-shadow: 0 0 0 3px rgba(205,164,52,.25); }
 .inscritos-emails__form input.invalido{ border-color: var(--vermelho); }
 .inscritos-emails__form .btn{ flex:none; }
+.admin-preview--fundo .mensagem-vazia{ color: rgba(255,253,248,.9); padding:18px 14px; }

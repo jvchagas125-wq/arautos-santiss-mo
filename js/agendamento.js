@@ -113,7 +113,7 @@ async function iniciar() {
     usuario = await exigirCadastro();
     pararEscutaConfig = ouvirConfiguracoesGerais((config) => {
       aplicarLogo(config.logoUrl);
-      aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
+      aplicarFundo(config.fundoUrl, config.fundoPcUrl || "", config);
     });
     // se nem do cache nem da rede vier nada em um tempo razoável, oferece tentar de novo
     clearTimeout(temporizadorErroPeriodo);

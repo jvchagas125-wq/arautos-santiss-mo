@@ -140,6 +140,8 @@ const PADRAO_CONFIG_GERAL = {
   logoUrl: "",
   fundoUrl: "",
   fundoPcUrl: "", // foto de fundo própria para o computador (vazia = usa a do celular)
+  fundoOutrasUrl: "", // fundo das demais páginas (celular); vazio = padrão vermelho adamascado
+  fundoOutrasPcUrl: "", // fundo das demais páginas (computador); vazio = usa o do celular
   // Página pública "Contatos" — editável em Configurações > Informações de contato
   contatoTelefoneTexto: "(22) 2735-6577",
   contatoTelefoneDigits: "552227356577", // só dígitos, com código do país — usado em "Ligar" e "WhatsApp"

@@ -5,7 +5,7 @@ inicializarNavegacao("contatos");
 
 ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "", config);
   aplicarInformacoesDeContato(config);
 });
 

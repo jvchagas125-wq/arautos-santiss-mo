@@ -298,7 +298,7 @@ const ALVOS_PARTES = {
   },
   configuracoes: {
     logo: painelDe("previewLogo"),
-    fundo: () => [...painelDe("previewFundo")(), ...painelDe("previewFundoPc")()],
+    fundo: () => [...painelDe("previewFundo")(), ...painelDe("previewFundoPc")(), ...painelDe("previewFundoOutras")(), ...painelDe("previewFundoOutrasPc")()],
     paginas: painelDe("cabecalhoPaginasSite"),
     banners: () => [
       document.getElementById("campoBannerDestino")?.closest(".painel"),
@@ -3855,15 +3855,71 @@ function configurarConfiguracoes() {
     try { return await enviarImagemParaCloudinary(await dataUrlParaArquivo(dataUrl, nome)); }
     catch (err) { console.warn("Cloudinary indisponível, mantendo a imagem no banco:", err); return dataUrl; }
   };
+  // Fundo das OUTRAS páginas (todas, menos a inicial): uma foto para o celular e outra para o computador.
+  // Sem foto escolhida, o site usa o fundo padrão (vermelho adamascado).
+  const fundosOutras = [];
+  const montarFundoOutras = ({ sufixo, campo, largura, qualidade, arquivo, rotulo, ao_remover }) => {
+    const el = (base) => document.getElementById(`${base}Outras${sufixo}`);
+    const preview = el("previewFundo"), vazio = el("semFundo"), upload = el("uploadFundo"), link = el("urlFundo");
+    const btnSalvar = el("btnSalvarFundo"), btnRemover = el("btnRemoverFundo");
+    if (!preview || !btnSalvar) return;
+    let novoDataUrl = null;
+    const mostrar = (url) => {
+      preview.classList.toggle("oculto", !url);
+      vazio.classList.toggle("oculto", !!url);
+      btnRemover.classList.toggle("oculto", !url);
+      if (url) preview.src = url;
+    };
+    fundosOutras.push({ campo, mostrar });
+    upload.addEventListener("change", async () => {
+      const file = upload.files[0];
+      if (!file) return;
+      novoDataUrl = await comprimirImagem(file, largura, qualidade, "image/jpeg");
+      preview.src = novoDataUrl;
+      preview.classList.remove("oculto");
+      vazio.classList.add("oculto");
+      link.value = "";
+    });
+    btnSalvar.addEventListener("click", async () => {
+      let valor = novoDataUrl || link.value.trim();
+      if (!valor) { mostrarToast(`Selecione um arquivo ou cole um link para o fundo (${rotulo}).`); return; }
+      try {
+        if (valor.startsWith("data:")) valor = await hospedar(valor, arquivo);
+        await salvarConfiguracoesGerais({ [campo]: valor });
+        novoDataUrl = null; upload.value = ""; link.value = "";
+        mostrar(valor);
+        mostrarToast(`Fundo das outras páginas (${rotulo}) atualizado!`);
+      } catch (err) {
+        console.error(err);
+        mostrarToast("Não foi possível salvar (arquivo muito grande). Tente uma imagem menor ou um link.");
+      }
+    });
+    btnRemover.addEventListener("click", async () => {
+      try {
+        await salvarConfiguracoesGerais({ [campo]: "" });
+        novoDataUrl = null; upload.value = ""; link.value = "";
+        mostrar("");
+        mostrarToast(ao_remover);
+      } catch (err) {
+        console.error(err);
+        mostrarToast("Não foi possível remover. Tente novamente.");
+      }
+    });
+  };
+  montarFundoOutras({ sufixo: "", campo: "fundoOutrasUrl", largura: 1080, qualidade: 0.72, arquivo: "fundo-outras-celular.jpg", rotulo: "celular", ao_remover: "As outras páginas voltaram ao fundo padrão no celular." });
+  montarFundoOutras({ sufixo: "Pc", campo: "fundoOutrasPcUrl", largura: 1920, qualidade: 0.75, arquivo: "fundo-outras-computador.jpg", rotulo: "computador", ao_remover: "O computador voltou a usar a mesma foto do celular (ou o padrão)." });
+
   obterConfiguracoesGerais((nova) => {
     // o banco trouxe imagens diferentes das guardadas no aparelho: só atualiza as prévias
     if (nova.logoUrl) previewLogo.src = nova.logoUrl;
     if (nova.fundoUrl) previewFundo.src = nova.fundoUrl;
     mostrarFundoPc(nova.fundoPcUrl || "");
+    fundosOutras.forEach((f) => f.mostrar(nova[f.campo] || ""));
   }).then(async (config) => {
     if (config.logoUrl) previewLogo.src = config.logoUrl;
     if (config.fundoUrl) previewFundo.src = config.fundoUrl;
     mostrarFundoPc(config.fundoPcUrl || "");
+    fundosOutras.forEach((f) => f.mostrar(config[f.campo] || ""));
     if (migracaoImagensIniciada) return;
     migracaoImagensIniciada = true;
     const ajustes = {};
@@ -3982,6 +4038,8 @@ function configurarPaginasDoSite() {
   ligarListaFechada("cabecalhoLogo", "corpoLogo");
   ligarListaFechada("cabecalhoFundo", "corpoFundo");
   ligarListaFechada("cabecalhoFundoPc", "corpoFundoPc");
+  ligarListaFechada("cabecalhoFundoOutras", "corpoFundoOutras");
+  ligarListaFechada("cabecalhoFundoOutrasPc", "corpoFundoOutrasPc");
   ligarListaFechada("cabecalhoNovoBanner", "corpoNovoBanner");
   const lista = document.getElementById("listaPaginasSite");
 

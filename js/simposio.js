@@ -8,7 +8,7 @@ inicializarNavegacao("simposio");
 
 ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "", config);
 });
 
 const elVazio = document.getElementById("simposioVazio");

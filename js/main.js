@@ -6,7 +6,7 @@ inicializarNavegacao("index");
 // logo e fundo: aparecem na hora (do último acesso) e acompanham o painel em tempo real
 ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
-  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
+  aplicarFundo(config.fundoUrl, config.fundoPcUrl || "", config);
 });
 
 const FRASE_PADRAO = {

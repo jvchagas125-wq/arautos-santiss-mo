@@ -141,7 +141,7 @@ async function iniciar() {
   ouvirAgendamentosDoUsuario(usuario.telefoneDigits, renderizarLista); // aparece na hora, sem esperar a configuração
   ouvirConfiguracoesGerais((config) => {
     aplicarLogo(config.logoUrl);
-    aplicarFundo(config.fundoUrl, config.fundoPcUrl || "");
+    aplicarFundo(config.fundoUrl, config.fundoPcUrl || "", config);
   });
 }
 
