@@ -1325,7 +1325,7 @@ img{ max-width: 100%; display:block; }
   .pagina-home .card-frase blockquote{ font-size: clamp(.9rem, 2.4dvh, 1.05rem); line-height:1.4; margin-bottom:6px; }
   .pagina-home .card-frase cite{ font-size:.78rem; }
   /* os 4 atalhos dividem o espaço que sobrar na tela (2 linhas de altura igual) */
-  .pagina-home .atalhos-grade{ flex:1 1 auto; margin-top:0; gap:10px; grid-auto-rows: minmax(0, 1fr); min-height:164px; max-height:300px; }
+  .pagina-home .atalhos-grade{ flex:1 1 auto; margin-top:0; gap:10px; grid-auto-rows: minmax(0, 1fr); min-height:150px; max-height:214px; }
   .pagina-home .atalho-card{ padding: 8px 8px; gap:6px; justify-content:center; }
   .pagina-home .atalho-card__icone{ width: clamp(34px, 6dvh, 46px); height: clamp(34px, 6dvh, 46px); }
   .pagina-home .atalho-card__icone svg{ width:20px; height:20px; }
@@ -1774,4 +1774,12 @@ html.fundo-outras-cel body.fundo-damasco::before, html.fundo-outras-cel body.fun
   .pagina-home .carrossel-banners__controles{ margin-top:5px; }
   .pagina-home .carrossel-banners__seta{ width:24px; height:24px; }
   .pagina-home .carrossel-banners{ margin-bottom:6px; }
+}
+
+/* atalhos da página inicial: quadrados um pouco menores no computador */
+@media (min-width: 720px){
+  .atalhos-grade{ gap:12px; }
+  .atalho-card{ padding:13px 10px; gap:7px; }
+  .atalho-card__icone{ width:42px; height:42px; }
+  .atalho-card__icone svg{ width:20px; height:20px; }
 }
