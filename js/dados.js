@@ -322,14 +322,27 @@ export async function cadastrarOuAtualizarUsuario(telefoneDigits, nome, telefone
   }, { merge: true });
 }
 
-// Lista (em tempo real) todas as pessoas cadastradas, para o painel admin
+// Lista (em tempo real) todas as pessoas cadastradas, para o painel admin.
+// O painel usa essa lista em 3 lugares ao mesmo tempo; em vez de abrir 3 escutas (e pagar 3x as leituras),
+// todos compartilham UMA só escuta no Firestore.
+const usuariosCompartilhado = { chamadas: new Set(), parar: null, ultimo: undefined };
 export function ouvirTodosUsuarios(callback) {
-  callback = cacheado("adm_usuarios", callback);
-  return onSnapshot(collection(db, "usuarios"), (snap) => {
-    const lista = snap.docs.map((d) => d.data());
-    lista.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
-    callback(lista);
-  });
+  const cb = cacheado("adm_usuarios", callback);
+  const S = usuariosCompartilhado;
+  S.chamadas.add(cb);
+  if (S.ultimo !== undefined) Promise.resolve().then(() => { if (S.chamadas.has(cb)) cb(S.ultimo); });
+  if (!S.parar) {
+    S.parar = onSnapshot(collection(db, "usuarios"), (snap) => {
+      const lista = snap.docs.map((d) => d.data());
+      lista.sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+      S.ultimo = lista;
+      S.chamadas.forEach((f) => { try { f(lista); } catch (e) { console.error(e); } });
+    });
+  }
+  return () => {
+    S.chamadas.delete(cb);
+    if (S.chamadas.size === 0 && S.parar) { S.parar(); S.parar = null; S.ultimo = undefined; }
+  };
 }
 
 // Remove o cadastro de uma pessoa (usado pelo painel admin em "Contatos").
@@ -483,6 +496,22 @@ export function ouvirTodosAgendamentos(status, callback) {
   );
   return onSnapshot(q, (snap) => {
     const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    lista.sort((a, b) => (b.data + String(b.hora).padStart(2,"0")).localeCompare(a.data + String(a.hora).padStart(2,"0")));
+    callback(lista);
+  });
+}
+
+// Página de agendar: só os agendamentos ATIVOS dentro do período aberto (e não o histórico inteiro).
+// Faixa em um único campo (data), então não precisa de índice; o filtro por status é feito aqui.
+export function ouvirAgendamentosAtivosNoPeriodo(inicioIso, fimIso, callback) {
+  callback = cacheado(`agendamentos_periodo_${inicioIso}_${fimIso}`, callback);
+  const q = query(
+    collection(db, "agendamentos"),
+    where("data", ">=", inicioIso),
+    where("data", "<=", fimIso)
+  );
+  return onSnapshot(q, (snap) => {
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.status === "agendado");
     lista.sort((a, b) => (b.data + String(b.hora).padStart(2,"0")).localeCompare(a.data + String(a.hora).padStart(2,"0")));
     callback(lista);
   });

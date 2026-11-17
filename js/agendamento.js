@@ -3,7 +3,7 @@ import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirMod
   isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso,
   horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana, reduzirNomeParaExibicao,
   MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
-import { ouvirConfiguracoesGerais, ouvirDiasHorarios, ouvirAgendamentosDaData, ouvirTodosAgendamentos, criarAgendamento } from "./dados.js";
+import { ouvirConfiguracoesGerais, ouvirDiasHorarios, ouvirAgendamentosDaData, ouvirAgendamentosAtivosNoPeriodo, criarAgendamento } from "./dados.js";
 
 inicializarNavegacao("agendamento");
 
@@ -19,7 +19,7 @@ let horariosOcupados = []; // [{ hora, nome, telefone, telefoneDigits }]
 // ao vivo no site público) ----
 let blocosSemana = []; // gerarBlocosDeSemana(dataInicio, dataFim): array de semanas, cada uma um array de isos
 let indiceSemanaAtual = 0;
-let todosAgendamentosAtivos = []; // todo mundo com status "agendado", de todas as datas
+let todosAgendamentosAtivos = []; // status "agendado" do período aberto
 let pararEscutaTodosAgendamentos = null;
 
 const dataInput = document.getElementById("dataInput");
@@ -174,7 +174,10 @@ function iniciarCalendarioAgendamentos() {
   indiceSemanaAtual = idx === -1 ? Math.max(0, blocosSemana.length - 1) : idx;
 
   if (pararEscutaTodosAgendamentos) pararEscutaTodosAgendamentos();
-  pararEscutaTodosAgendamentos = ouvirTodosAgendamentos("agendado", (lista) => {
+  // só do período aberto, a partir de uma semana atrás (o passado distante não interessa à grade)
+  const umaSemanaAtras = new Date(); umaSemanaAtras.setDate(umaSemanaAtras.getDate() - 7);
+  const inicioConsulta = dataParaIso(umaSemanaAtras) > diasHorarios.dataInicio ? dataParaIso(umaSemanaAtras) : diasHorarios.dataInicio;
+  pararEscutaTodosAgendamentos = ouvirAgendamentosAtivosNoPeriodo(inicioConsulta, diasHorarios.dataFim, (lista) => {
     todosAgendamentosAtivos = lista;
     reconstruirMapaAgendamentosPorDiaHora();
     renderizarGradeSemanal();
