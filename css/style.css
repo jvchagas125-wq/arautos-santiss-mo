@@ -1314,7 +1314,9 @@ img{ max-width: 100%; display:block; }
    vez. Em celulares muito baixinhos a página ainda rola, só por segurança. */
 @media (max-width: 600px){
   .pagina-home{ min-height:100vh; min-height:100dvh; }
-  .pagina-home .conteudo{ padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); justify-content:space-between; }
+  /* o espaço que sobra na tela é dividido em 3 partes iguais (banner→frase, frase→atalhos, atalhos→rodapé) */
+  .pagina-home .conteudo{ padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); justify-content:flex-start; }
+  .pagina-home .card-frase{ margin-top:auto; }
   .pagina-home .titulo-cidade{ margin-bottom: 10px; font-size:.74rem; }
   .pagina-home .carrossel-banners{ margin-bottom: 10px; }
   .pagina-home .carrossel-banners__controles{ margin-top:7px; gap:12px; }
@@ -1325,7 +1327,7 @@ img{ max-width: 100%; display:block; }
   .pagina-home .card-frase blockquote{ font-size: clamp(.9rem, 2.4dvh, 1.05rem); line-height:1.4; margin-bottom:6px; }
   .pagina-home .card-frase cite{ font-size:.78rem; }
   /* os 4 atalhos dividem o espaço que sobrar na tela (2 linhas de altura igual) */
-  .pagina-home .atalhos-grade{ flex:1 1 auto; margin-top:0; gap:10px; grid-auto-rows: minmax(0, 1fr); min-height:150px; max-height:214px; }
+  .pagina-home .atalhos-grade{ flex:1 1 auto; margin-top:auto; margin-bottom:auto; gap:10px; grid-auto-rows: minmax(0, 1fr); min-height:150px; max-height:214px; }
   .pagina-home .atalho-card{ padding: 8px 8px; gap:6px; justify-content:center; }
   .pagina-home .atalho-card__icone{ width: clamp(34px, 6dvh, 46px); height: clamp(34px, 6dvh, 46px); }
   .pagina-home .atalho-card__icone svg{ width:20px; height:20px; }
