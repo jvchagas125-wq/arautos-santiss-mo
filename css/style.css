@@ -1665,3 +1665,44 @@ body.pagina-indisponivel main.conteudo > *:not(.pagina-indisponivel__aviso){ dis
 
 .cartao-simposio__estado{ margin:0; padding:11px 14px; text-align:center; border:1px dashed var(--dourado-escuro); border-radius:12px; background: rgba(255,255,255,.7); font-size:.95rem; color: var(--texto); }
 .cartao-simposio__estado--encerrado{ border-color: rgba(122,12,30,.45); color: var(--vermelho-escuro); font-family:'Cinzel'; font-weight:700; letter-spacing:.3px; }
+
+/* ============ PÁGINAS PÚBLICAS (sem login): sem ícone de perfil, logo ao lado do menu ============ */
+body.pagina-publica .topbar__perfil,
+body.pagina-publica .dropdown-perfil{ display:none !important; }
+body.pagina-publica .topbar{ justify-content:flex-start; padding-left:68px; }
+.link-voltar-inicio{
+  display:block; margin-top:16px; text-align:center; font-size:.9rem; color: var(--texto-suave);
+  text-decoration: underline; text-underline-offset:3px;
+}
+.link-voltar-inicio:hover{ color: var(--vermelho); }
+
+/* ============ MENU LATERAL: faixa de cima em vermelho sangue, para destacar a logo ============ */
+.menu-lateral{ padding: 0 0 20px; }
+.menu-lateral__topo{
+  padding: 20px 22px 16px; margin-bottom: 10px;
+  background: linear-gradient(180deg, #b0101f 0%, #8f0a17 55%, #6e0712 100%);
+  border-bottom: 3px solid var(--dourado);
+  box-shadow: 0 4px 12px rgba(60,0,8,.35);
+}
+.menu-lateral__topo img{ height: 54px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+.menu-lateral__topo span{ color: var(--dourado-claro); }
+.menu-lateral__fechar{ color: var(--dourado-claro); font-size: 1.9rem; }
+
+/* ============ FUNDO DAMASCO VERMELHO (todas as páginas, menos a inicial e o painel) ============ */
+body.fundo-damasco{
+  background: #8a1a24 url("../assets/fundo-vermelho.jpg") top center / 100% auto repeat;
+}
+.fundo-damasco .conteudo h1.titulo-pagina{ color:#f6e2a0; text-shadow:0 2px 10px rgba(40,0,5,.65); }
+.fundo-damasco .linha-ornamento{ color:#f0d78c; }
+.fundo-damasco .linha-ornamento::before{ background: linear-gradient(90deg, transparent, #e2c26a); }
+.fundo-damasco .linha-ornamento::after{ background: linear-gradient(90deg, #e2c26a, transparent); }
+.fundo-damasco .cursos-intro, .fundo-damasco .conteudo > p{ color: rgba(255,253,248,.94); text-shadow:0 1px 6px rgba(40,0,5,.6); }
+.fundo-damasco .rodape-simples{ color:#f6e2a0; }
+.fundo-damasco .rodape-dev{ color: rgba(255,253,248,.72); opacity:1; }
+.fundo-damasco .navegacao-paginas{ border-top-color: rgba(226,194,106,.45); }
+.fundo-damasco .navegacao-paginas__nome{ color:#f6e2a0; }
+.fundo-damasco .navegacao-paginas__rotulo, .fundo-damasco .navegacao-paginas__seta{ color:#e2c26a; }
+.fundo-damasco .aviso-info{ background: rgba(255,253,248,.96); }
+.fundo-damasco .btn-ver-planilha{ color:#f6e2a0; border-color:#e2c26a; background: rgba(60,6,14,.35); }
+.fundo-damasco .btn-ver-planilha:hover{ background: rgba(226,194,106,.2); }
+.fundo-damasco .card-vazio p, .fundo-damasco #listaCancelados > .mensagem-vazia{ color: rgba(255,253,248,.96); text-shadow:0 1px 6px rgba(40,0,5,.65); }

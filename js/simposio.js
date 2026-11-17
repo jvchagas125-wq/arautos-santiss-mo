@@ -1,12 +1,10 @@
 // Página pública "Simpósio": informações dos cursos e eventos (banner, título, descrição e link opcional),
 // cadastradas no painel administrativo em Avisos > Simpósio.
-import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, linkificarTexto, definirSrcOtimizado, normalizarLinkSimposio } from "./utils.js";
 import { ouvirConfiguracoesGerais, ouvirSimposio, ouvirCursos } from "./dados.js";
 import { estadoInscricoes, rotuloDataHora } from "./cursos-comum.js";
 
 inicializarNavegacao("simposio");
-exigirCadastro();
 
 ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);

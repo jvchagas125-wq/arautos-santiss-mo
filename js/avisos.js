@@ -1,9 +1,7 @@
-import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, linkificarTexto, definirSrcOtimizado } from "./utils.js";
 import { ouvirConfiguracoesGerais, ouvirAvisos } from "./dados.js";
 
 inicializarNavegacao("avisos");
-exigirCadastro();
 
 ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);

@@ -1,12 +1,7 @@
-import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia, comLimiteDeTempo, definirSrcOtimizado } from "./utils.js";
 import { ouvirConfiguracoesGerais, obterFrases, ouvirBanners } from "./dados.js";
 
 inicializarNavegacao("index");
-
-exigirCadastro().then(() => {
-  // usuário identificado — nada mais a fazer aqui, a navegação já foi liberada
-});
 
 // logo e fundo: aparecem na hora (do último acesso) e acompanham o painel em tempo real
 ouvirConfiguracoesGerais((config) => {

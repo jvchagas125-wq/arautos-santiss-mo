@@ -31,6 +31,7 @@ const MODAL_HTML = `
       <button type="submit" class="btn btn-dourado btn-full">Continuar</button>
       <button type="button" class="btn btn-contorno btn-full oculto" id="btnTrocarNumero" style="margin-top:10px;">← Usar outro número</button>
     </form>
+    <a href="/" class="link-voltar-inicio">Voltar para a página inicial</a>
   </div>
 </div>`;
 

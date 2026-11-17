@@ -1,12 +1,7 @@
-import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, normalizarFormularioIntencoes } from "./utils.js";
 import { ouvirConfiguracoesGerais, ouvirFormularioIntencoes } from "./dados.js";
 
 inicializarNavegacao("contatos");
-
-exigirCadastro().then(() => {
-  // usuário identificado — nada mais a fazer aqui, a navegação já foi liberada
-});
 
 ouvirConfiguracoesGerais((config) => {
   aplicarLogo(config.logoUrl);
