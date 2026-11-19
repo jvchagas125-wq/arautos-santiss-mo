@@ -7,7 +7,7 @@
 // (no navegador ela vem do <script> do admin.html em window.docx; no servidor, do npm).
 // O documento é EDITÁVEL: as linhas em branco pra acrescentar nomes à mão são parágrafos comuns
 // com uma linha embaixo, e todo o texto é texto normal do Word.
-import { CATEGORIAS_PADRAO, formatarDataComDiaSemana, separarNomesDoItem } from "./utils.js";
+import { CATEGORIAS_PADRAO, formatarDataComDiaSemana, separarNomesDoItem, nomesAceitosEmGracas } from "./utils.js";
 
 // Fonte que todo computador com Word tem — o documento não embute fonte nenhuma.
 const FONTE = "Times New Roman";
@@ -106,9 +106,11 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
     : categorias;
   const itensDe = (chave) => (chave === "__outras__" ? orfas : itens.filter((it) => it.categoria === chave));
 
-  const categoriasComItens = categoriasDoDocumento.filter(
-    (c) => c.textoFixo || itensDe(c.chave).length > 0
-  );
+  // "Pedem e agradecem graças" só conta quando sobrou algum nome válido (frases são descartadas, ver nomesAceitosEmGracas)
+  const temItens = (c) => c.chave === "gracas"
+    ? itensDe(c.chave).some((it) => nomesAceitosEmGracas(it.texto).length > 0)
+    : itensDe(c.chave).length > 0;
+  const categoriasComItens = categoriasDoDocumento.filter((c) => c.textoFixo || temItens(c));
 
   // Nomes em colunas de verdade do Word (um embaixo do outro, coluna por coluna) pra não ocupar
   // várias páginas. Falecimento/nomes: até 4 nomes numa coluna, até 8 em duas, acima disso três.
@@ -116,12 +118,14 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
   // uma coluna, ou duas quando são muitos.
   const LARGURA_UTIL = 11906 - 2 * 1000 - RECUO;
   const ESPACO_COLUNAS = 360;
-  function nomesDoGrupo(doGrupo, tipo) {
+  function nomesDoGrupo(doGrupo, tipo, chave) {
     // Categoria de falecimento: se alguém colocou vários nomes numa intenção só (separados por
     // vírgula), cada nome vira uma linha própria — também nas intenções antigas.
     const textos = doGrupo.flatMap((it) => {
       const destaque = it.destaque === true;
-      const partes = tipo === "falecimento" ? separarNomesDoItem(it.texto) : [(it.texto || "").trim().replace(/[.,;:]+$/, "")];
+      // "Pedem e agradecem graças": só nome completo ou "Família + sobrenome" (o resto é descartado) e com maiúsculas corrigidas
+      const partes = chave === "gracas" ? nomesAceitosEmGracas(it.texto)
+        : tipo === "falecimento" ? separarNomesDoItem(it.texto) : [(it.texto || "").trim().replace(/[.,;:]+$/, "")];
       return partes.map((texto) => ({ texto, negrito: destaque }));
     });
     return textos.filter((n) => n.texto);
@@ -131,8 +135,8 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
     return quantidade <= 4 ? 1 : quantidade <= 8 ? 2 : 3;
   }
   // Devolve true se colocou os nomes (num bloco próprio de colunas).
-  function colocarNomes(doGrupo, tipo) {
-    const nomes = nomesDoGrupo(doGrupo, tipo);
+  function colocarNomes(doGrupo, tipo, chave) {
+    const nomes = nomesDoGrupo(doGrupo, tipo, chave);
     if (nomes.length === 0) return false;
     const colunas = colunasPara(tipo, nomes.length);
     if (colunas > 1) novoBloco(colunas);
@@ -154,7 +158,7 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
       children: [run(rotuloCategoria, { bold: true, size: 24, color: VINHO })]
     }));
 
-    colocarNomes(doGrupo, tipo);
+    colocarNomes(doGrupo, tipo, chave);
 
     if (textoFixo) {
       // 1ª linha reservada: fica em branco, pra escreverem à mão na hora da missa, se precisar.

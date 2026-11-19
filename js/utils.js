@@ -405,6 +405,85 @@ export function dividirNomes(texto) {
   return String(texto || "").split(/[,;\n]+/).map((n) => n.trim().replace(/[.]+$/, "").trim()).filter(Boolean);
 }
 
+/* ---------- "Pedem e agradecem graças": só nome de pessoa ou "Família + sobrenome" ----------
+   No documento Word dessa categoria só entram NOMES COMPLETOS ("João Pedro Freitas dos Reis Oliveira",
+   "Maria e José da Silva") ou "Família + sobrenome" ("Família Valle"). Frases como "Pedindo emprego para
+   meu pai" são descartadas, e as letras maiúsculas/minúsculas são corrigidas ("MARIA silva" → "Maria Silva").
+   O que a pessoa digitou continua guardado como está; só o documento é filtrado e corrigido. */
+const PARTICULAS_NOME = new Set(["de", "da", "do", "das", "dos", "di", "du", "del", "della", "dal", "van", "von", "der", "den", "y", "e"]);
+const TITULOS_DE_PESSOA_GRACAS = new Set(["pe", "padre", "dom", "frei", "irma", "irmao", "sr", "sra", "dr", "dra", "monsenhor", "mons", "diacono", "madre"]);
+// palavras que mostram que o texto é uma frase/pedido, e não um nome (comparadas sem acento e em minúsculas)
+const PALAVRAS_DE_FRASE = new Set(`para pra por pelo pela pelos pelas com sem sobre entre ate que qual quais quando onde como porque mas ou nem
+  nao sim ja ainda tambem hoje amanha ontem sempre nunca muito muita muitos muitas mais menos bem mal assim tudo nada todo toda todos todas
+  eu tu voce vc nos ele ela eles elas me te se lhe isso isto esse essa esses essas este esta estes estas aquele aquela um uma uns umas
+  o a os as no na nas em ao aos
+  meu minha meus minhas seu sua seus suas nosso nossa nossos nossas dele dela deles delas
+  pai mae pais avo avos tio tia marido esposa esposo namorado namorada amigo amiga amigos amigas cunhado cunhada genro sogro sogra
+  padrinho madrinha afilhado afilhada familiares familiar parentes pessoa pessoas grupo comunidade
+  pedindo pedimos pedir peco pedido pedidos agradecendo agradecemos agradeco agradecer agradecimento agradecimentos rezando rezar rezamos
+  orando orar oramos precisando preciso precisamos buscando procurando esperando desejando querendo quero queremos tentando lutando
+  sofrendo estudando trabalhando passando enfrentando gostaria favor ajuda ajudar ajude
+  saude emprego trabalho bencao bencaos protecao cura curar vida casa casamento formatura concurso prova provas exame cirurgia doenca
+  tratamento dinheiro financeira financeiro sucesso estudo estudos faculdade escola viagem momento dificil melhora recuperacao conquista
+  intencao intencoes missa alcancada alcancadas alcancado obrigado obrigada gratidao`.split(/\s+/).filter(Boolean));
+
+const semAcento = (t) => String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const PARECE_NOME = /^[\p{L}][\p{L}'’\-.]*$/u;
+
+// Primeira letra de cada pedaço (e depois de hífen/apóstrofo) em maiúscula, o resto em minúscula; "de/da/do/dos/e..."
+// ficam em minúscula. Se a pessoa já escreveu uma maiúscula no meio ("McDonald"), mantém como está.
+function capitalizarPalavraDeNome(palavra, ehPrimeira) {
+  const base = semAcento(palavra).replace(/[^a-z]/g, "");
+  if (!ehPrimeira && PARTICULAS_NOME.has(base)) return palavra.toLowerCase();
+  if (/^(ii|iii|iv|vi|vii|viii|ix)$/.test(base)) return palavra.toUpperCase();
+  const temMaiusculaNoMeio = /[\p{Ll}][\p{Lu}]/u.test(palavra);
+  if (temMaiusculaNoMeio) return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+  return palavra.toLowerCase().replace(/(^|[-'’])(\p{L})/gu, (_, sep, letra) => sep + letra.toUpperCase());
+}
+
+// Um pedaço sem "e": devolve { palavras, nomes } (nomes = quantas palavras são nome de verdade, sem partículas/títulos)
+// ou null se não parece nome.
+function analisarPalavrasDeNome(texto) {
+  const palavras = texto.split(/\s+/).filter(Boolean);
+  if (palavras.length === 0) return null;
+  let nomes = 0;
+  for (const p of palavras) {
+    if (!PARECE_NOME.test(p)) return null;
+    const base = semAcento(p).replace(/[^a-z]/g, "");
+    if (!base) return null;
+    if (PALAVRAS_DE_FRASE.has(base)) return null;
+    if (!PARTICULAS_NOME.has(base) && !TITULOS_DE_PESSOA_GRACAS.has(base)) nomes++;
+  }
+  return { palavras, nomes };
+}
+
+// Uma intenção da categoria "Pedem e agradecem graças" → lista de linhas aceitas, já com maiúsculas corrigidas
+// (vazia se nada ali é nome de pessoa nem "Família + sobrenome").
+export function nomesAceitosEmGracas(texto) {
+  const aceitos = [];
+  String(texto || "").split(/[,;\n]+/).forEach((pedaco) => {
+    const limpo = pedaco.replace(/[.]+$/, "").replace(/\s+/g, " ").trim();
+    if (!limpo || limpo.length > 90) return;
+    // "Família Valle", "Família Silva e Souza"
+    const mFamilia = limpo.match(/^fam[ií]lia\s+(.+)$/i);
+    if (mFamilia) {
+      const resto = analisarPalavrasDeNome(mFamilia[1]);
+      if (resto && resto.nomes >= 1) {
+        aceitos.push("Família " + resto.palavras.map((p, i) => capitalizarPalavraDeNome(p, i === 0)).join(" "));
+      }
+      return;
+    }
+    // nomes completos, um ou mais ligados por "e" (ou & / +): "Maria e José da Silva" (sobrenome só no último)
+    const partes = limpo.split(/\s+(?:e|&|\+)\s+/i);
+    const analises = partes.map((p) => analisarPalavrasDeNome(p));
+    if (analises.some((a) => !a)) return;
+    const valido = analises.every((a, i) => a.nomes >= 2 || (a.nomes === 1 && i < analises.length - 1 && analises[analises.length - 1].nomes >= 2));
+    if (!valido) return;
+    aceitos.push(analises.map((a) => a.palavras.map((p, i) => capitalizarPalavraDeNome(p, i === 0)).join(" ")).join(" e "));
+  });
+  return aceitos;
+}
+
 // Para intenções já enviadas (inclusive as antigas) de uma categoria "falecimento": se o texto traz
 // vários nomes separados por vírgula, devolve um texto por nome. O "(7 dias)" do final, se houver,
 // vale para todos os nomes.
