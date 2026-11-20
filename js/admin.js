@@ -31,6 +31,7 @@ import { criarCrm } from "./crm-contatos.js";
 import { iniciarCursosAdmin } from "./cursos-admin.js";
 import { iniciarSimposioAdmin } from "./simposio-admin.js";
 import { extrairTextosCategoria, construirDocxIntencoes, nomeArquivoDocx, rotuloListaIntencao } from "./docx-intencoes.js";
+import { construirExcelPessoas, construirWordPessoas } from "./pessoas-documentos.js";
 
 /* ---------------- Contas e login do painel ----------------
    Cada pessoa tem a própria conta (ver js/contas.js e js/acessos.js) e entra digitando só a
@@ -3430,6 +3431,45 @@ function configurarContatos() {
       btnSalvarContato.disabled = false;
       btnSalvarContato.textContent = "Cadastrar";
     }
+  });
+
+  /* ---------- Baixar a lista de todas as pessoas cadastradas (Excel e Word) ---------- */
+  function baixarArquivoPessoas(blob, nome) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = nome;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  function ligarBaixarPessoas(idBotao, textoOcupado, gerar) {
+    const botao = document.getElementById(idBotao);
+    const textoOriginal = botao.textContent.trim();
+    botao.addEventListener("click", async () => {
+      if (todosContatos.length === 0) { mostrarToast("Ainda não há pessoas cadastradas para baixar."); return; }
+      botao.disabled = true;
+      botao.textContent = textoOcupado;
+      try {
+        await gerar();
+      } catch (err) {
+        console.error(err);
+        mostrarToast(err?.message || "Não foi possível gerar o arquivo agora. Tente novamente.");
+      } finally {
+        botao.disabled = false;
+        botao.textContent = textoOriginal;
+      }
+    });
+  }
+  const dataArquivoPessoas = () => new Date().toISOString().slice(0, 10);
+  ligarBaixarPessoas("btnBaixarPessoasExcel", "Gerando Excel...", async () => {
+    if (typeof window.ExcelJS === "undefined") throw new Error("Não foi possível carregar o gerador de Excel. Verifique sua conexão.");
+    const wb = construirExcelPessoas(todosContatos, { ExcelJS: window.ExcelJS, hoje: new Date().toLocaleDateString("pt-BR") });
+    const buffer = await wb.xlsx.writeBuffer();
+    baixarArquivoPessoas(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `pessoas-cadastradas-${dataArquivoPessoas()}.xlsx`);
+  });
+  ligarBaixarPessoas("btnBaixarPessoasWord", "Gerando Word...", async () => {
+    if (typeof window.docx === "undefined") throw new Error("Não foi possível carregar o gerador de Word. Verifique sua conexão.");
+    const doc = construirWordPessoas(todosContatos, { docx: window.docx, hoje: new Date().toLocaleDateString("pt-BR") });
+    baixarArquivoPessoas(await window.docx.Packer.toBlob(doc), `pessoas-cadastradas-${dataArquivoPessoas()}.docx`);
   });
 
   /* ---------- Padronizar nomes de todos os cadastros (nome + 1º sobrenome) ---------- */

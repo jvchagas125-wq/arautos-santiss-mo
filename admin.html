@@ -820,9 +820,17 @@
             <span class="quadro-dia-missa__resumo" id="contagemContatos">0</span>
           </div>
           <div class="quadro-dia-missa__corpo oculto" id="corpoContatos">
-            <button type="button" class="btn btn-contorno btn-pequeno" id="btnPadronizarNomes" style="margin-bottom:14px;">
-              Padronizar nomes (nome + sobrenome)
-            </button>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+              <button type="button" class="btn btn-contorno btn-pequeno" id="btnPadronizarNomes">
+                Padronizar nomes (nome + sobrenome)
+              </button>
+              <button type="button" class="btn btn-contorno btn-pequeno" id="btnBaixarPessoasExcel">
+                Baixar lista em Excel
+              </button>
+              <button type="button" class="btn btn-contorno btn-pequeno" id="btnBaixarPessoasWord">
+                Baixar lista em Word
+              </button>
+            </div>
             <div class="campo" style="margin-bottom:6px;">
               <input type="text" id="buscaContatos" placeholder="Buscar por nome ou telefone..." autocomplete="off" />
             </div>
