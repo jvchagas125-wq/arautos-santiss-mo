@@ -54,7 +54,7 @@ export function criarCampanhas(opcoes) {
   let escutando = false;
   // o que está sendo editado agora
   let edicao = { id: null, nome: "", mensagem: "", ocultarPadres: false, excluidos: new Set() };
-  const ui = { busca: "", mostrarEnviados: false, mostrarRemovidos: false };
+  const ui = { busca: "", aba: "paraEnviar" };
 
   const abrirLink = opcoes.abrirWhatsapp || ((url) => window.open(url, "_blank", "noopener"));
   const campanhaSalva = (id) => campanhas.find((c) => c.id === id);
@@ -102,7 +102,7 @@ export function criarCampanhas(opcoes) {
   /* ---------- editor de uma campanha ---------- */
   function abrirEditor(id) {
     idAtual = id;
-    ui.busca = ""; ui.mostrarEnviados = false; ui.mostrarRemovidos = false;
+    ui.busca = ""; ui.aba = "paraEnviar";
     const c = id === "nova" ? null : campanhaSalva(id);
     edicao = {
       id: id === "nova" ? null : id,
@@ -152,10 +152,8 @@ export function criarCampanhas(opcoes) {
         <input type="search" id="campBusca" placeholder="Buscar por nome ou telefone..." autocomplete="off" />
         <label class="camp-check"><input type="checkbox" id="campPadres" /> Tirar os padres da lista (nomes que começam com “Pe.”)</label>
       </div>
-      <div class="camp-resumo" id="campResumo"></div>
-      <div id="campParaEnviar"></div>
-      <div id="campEnviados"></div>
-      <div id="campRemovidos"></div>`;
+      <div class="camp-abas" id="campAbas" role="tablist"></div>
+      <div id="campLista"></div>`;
 
     const $ = (s) => raiz.querySelector(s);
     const campoNome = $("#campNome"), campoMsg = $("#campMensagem");
@@ -249,8 +247,8 @@ export function criarCampanhas(opcoes) {
 
   /* ---------- a lista de pessoas ---------- */
   function desenharPessoas() {
-    const paraEnviar = raiz.querySelector("#campParaEnviar");
-    if (!paraEnviar) return;
+    const alvo = raiz.querySelector("#campLista");
+    if (!alvo) return;
     const salva = edicao.id ? campanhaSalva(edicao.id) : null;
     const enviados = salva?.enviados || {};
     const filtro = semAcento(ui.busca);
@@ -260,41 +258,58 @@ export function criarCampanhas(opcoes) {
     const base = contatos.filter((c) => c.telefoneDigits && !(edicao.ocultarPadres && ehPadre(c.nome)));
     const removidos = base.filter((c) => edicao.excluidos.has(c.telefoneDigits));
     const elegiveis = base.filter((c) => !edicao.excluidos.has(c.telefoneDigits));
-    const jaEnviados = elegiveis.filter((c) => enviados[c.telefoneDigits]);
+    // mais recentes primeiro na aba dos enviados
+    const jaEnviados = elegiveis.filter((c) => enviados[c.telefoneDigits])
+      .sort((a, b) => Number(enviados[b.telefoneDigits]) - Number(enviados[a.telefoneDigits]));
     const faltam = elegiveis.filter((c) => !enviados[c.telefoneDigits]);
 
-    raiz.querySelector("#campResumo").innerHTML =
-      `<span><strong>${faltam.length}</strong> para enviar</span><span><strong>${jaEnviados.length}</strong> já enviados</span><span><strong>${removidos.length}</strong> tirados da campanha</span>`;
+    const abas = [
+      { chave: "paraEnviar", rotulo: "Para enviar", total: faltam.length },
+      { chave: "enviados", rotulo: "Enviados", total: jaEnviados.length },
+      { chave: "tirados", rotulo: "Tirados", total: removidos.length }
+    ];
+    raiz.querySelector("#campAbas").innerHTML = abas.map((a) =>
+      `<button type="button" role="tab" aria-selected="${ui.aba === a.chave}" class="camp-aba${ui.aba === a.chave ? " ativa" : ""}" data-aba="${a.chave}">${a.rotulo} <span class="camp-aba__n">${a.total}</span></button>`).join("");
 
-    const linha = (c, acoes) => `
-      <div class="card-contato camp-pessoa">
-        <div><div class="card-contato__nome">${esc(c.nome)}</div><div class="card-contato__tel">${esc(c.telefone)}</div></div>
+    const linha = (c, acoes, extra = "") => `
+      <div class="card-contato camp-pessoa${extra ? " camp-pessoa--enviada" : ""}">
+        <div><div class="card-contato__nome">${esc(c.nome)}</div><div class="card-contato__tel">${esc(c.telefone)}</div>${extra}</div>
         <div class="card-contato__acoes">${acoes}</div>
       </div>`;
+    const quando = (ms) => {
+      const d = new Date(Number(ms));
+      if (isNaN(d)) return "";
+      return `${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    };
 
-    const lista1 = faltam.filter(casa);
-    paraEnviar.innerHTML = `<h4 class="camp-subtitulo">Para enviar (${lista1.length}${filtro ? ` de ${faltam.length}` : ""})</h4>` +
-      (lista1.length
-        ? lista1.map((c) => linha(c, `
+    let titulo = "", lista = [], total = 0, vazio = "", html = "";
+    if (ui.aba === "enviados") {
+      lista = jaEnviados.filter(casa); total = jaEnviados.length;
+      titulo = "Mensagem enviada para";
+      vazio = total === 0 ? "Ainda não foi enviada nenhuma mensagem desta campanha." : "Ninguém encontrado para essa busca.";
+      html = lista.map((c) => linha(c,
+        `<button type="button" class="btn btn-contorno btn-pequeno" data-desfazer="${esc(c.telefoneDigits)}" title="Colocar esta pessoa de volta na lista para enviar">Voltar para a lista</button>`,
+        `<div class="camp-feito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Mensagem enviada · ${esc(quando(enviados[c.telefoneDigits]))}</div>`)).join("");
+    } else if (ui.aba === "tirados") {
+      lista = removidos.filter(casa); total = removidos.length;
+      titulo = "Tirados desta campanha";
+      vazio = total === 0 ? "Ninguém foi tirado desta campanha." : "Ninguém encontrado para essa busca.";
+      html = lista.map((c) => linha(c,
+        `<button type="button" class="btn btn-contorno btn-pequeno" data-restaurar="${esc(c.telefoneDigits)}">Colocar de volta</button>`)).join("");
+    } else {
+      lista = faltam.filter(casa); total = faltam.length;
+      titulo = "Para enviar";
+      vazio = total === 0 ? (elegiveis.length ? "Todas as pessoas já receberam a mensagem. 🎉" : "Nenhuma pessoa na lista.") : "Ninguém encontrado para essa busca.";
+      html = lista.map((c) => linha(c, `
             <button type="button" class="camp-enviar" data-enviar="${esc(c.telefoneDigits)}" title="Abrir a conversa no WhatsApp com a mensagem pronta">${ICONE_WHATS}<span>Enviar</span></button>
             <button type="button" class="card-contato__excluir" data-tirar="${esc(c.telefoneDigits)}" title="Tirar esta pessoa da campanha">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
-            </button>`)).join("")
-        : `<p class="mensagem-vazia">${faltam.length === 0 ? (elegiveis.length ? "Todas as pessoas já receberam a mensagem. 🎉" : "Nenhuma pessoa na lista.") : "Ninguém encontrado para essa busca."}</p>`);
+            </button>`)).join("");
+    }
+    alvo.innerHTML = `<h4 class="camp-subtitulo">${titulo} (${lista.length}${filtro ? ` de ${total}` : ""})</h4>` +
+      (lista.length ? html : `<p class="mensagem-vazia">${vazio}</p>`);
 
-    const secao = (alvo, chave, titulo, lista, acoesFn) => {
-      const el = raiz.querySelector(alvo);
-      if (!lista.length) { el.innerHTML = ""; return; }
-      el.innerHTML = `<button type="button" class="camp-alternar" data-alt="${chave}">${ui[chave] ? "▾" : "▸"} ${titulo} (${lista.length})</button>` +
-        (ui[chave] ? lista.map((c) => linha(c, acoesFn(c))).join("") : "");
-    };
-    secao("#campEnviados", "mostrarEnviados", "Já enviados", jaEnviados.filter(casa), (c) =>
-      `<span class="camp-feito">${new Date(enviados[c.telefoneDigits]).toLocaleDateString("pt-BR")}</span>
-       <button type="button" class="btn btn-contorno btn-pequeno" data-desfazer="${esc(c.telefoneDigits)}">Voltar para a lista</button>`);
-    secao("#campRemovidos", "mostrarRemovidos", "Tirados desta campanha", removidos.filter(casa), (c) =>
-      `<button type="button" class="btn btn-contorno btn-pequeno" data-restaurar="${esc(c.telefoneDigits)}">Colocar de volta</button>`);
-
-    raiz.querySelectorAll("[data-alt]").forEach((b) => b.addEventListener("click", () => { ui[b.dataset.alt] = !ui[b.dataset.alt]; desenharPessoas(); }));
+    raiz.querySelectorAll("[data-aba]").forEach((b) => b.addEventListener("click", () => { ui.aba = b.dataset.aba; desenharPessoas(); }));
     raiz.querySelectorAll("[data-enviar]").forEach((b) => b.addEventListener("click", () => enviar(b.dataset.enviar)));
     raiz.querySelectorAll("[data-tirar]").forEach((b) => b.addEventListener("click", () => { edicao.excluidos.add(b.dataset.tirar); desenharPessoas(); salvarSilencioso(); }));
     raiz.querySelectorAll("[data-restaurar]").forEach((b) => b.addEventListener("click", () => { edicao.excluidos.delete(b.dataset.restaurar); desenharPessoas(); salvarSilencioso(); }));

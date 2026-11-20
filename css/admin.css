@@ -988,7 +988,15 @@
 .camp-enviar:hover{ background: rgba(61,107,69,.24); }
 .camp-enviar svg{ width:18px; height:18px; }
 .camp-alternar{ display:block; width:100%; text-align:left; margin-top:14px; padding:10px 12px; border:1px dashed rgba(157,122,31,.5); background:transparent; border-radius:10px; color: var(--vermelho-escuro); font:inherit; cursor:pointer; }
-.camp-feito{ font-size:.82rem; color: var(--texto-suave); }
+.camp-feito{ display:flex; align-items:center; gap:6px; margin-top:4px; font-size:.84rem; font-weight:600; color:#2f6b3a; }
+.camp-feito svg{ width:16px; height:16px; flex:none; }
+.camp-pessoa--enviada{ border-left-color:#3d6b45; }
+.camp-abas{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.camp-aba{ display:inline-flex; align-items:center; gap:8px; padding:9px 14px; border:1.5px solid rgba(157,122,31,.45); background: var(--branco); border-radius:999px; font:inherit; font-size:.92rem; color: var(--vermelho-escuro); cursor:pointer; }
+.camp-aba:hover{ background: rgba(205,164,52,.15); }
+.camp-aba.ativa{ background: var(--vermelho-escuro); border-color: var(--vermelho-escuro); color:#fff; }
+.camp-aba__n{ min-width:24px; padding:1px 8px; border-radius:999px; background: rgba(157,122,31,.18); font-weight:700; font-size:.82rem; text-align:center; }
+.camp-aba.ativa .camp-aba__n{ background: rgba(255,255,255,.25); }
 
 
 /* ---------- origem das visitas ---------- */
