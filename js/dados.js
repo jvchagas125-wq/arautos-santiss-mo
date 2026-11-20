@@ -2,7 +2,7 @@
 import {
   db, doc, getDoc, setDoc as setDocFirestore, updateDoc as updateDocFirestore, addDoc, deleteDoc,
   collection, query, where, getDocs, onSnapshot, orderBy,
-  serverTimestamp, Timestamp
+  serverTimestamp, Timestamp, deleteField
 } from "./firebase-init.js";
 import { normalizarCurso, idInscricao } from "./cursos-comum.js";
 import {
@@ -380,6 +380,65 @@ export async function atualizarNomeEmAgendamentosDoTelefone(telefoneDigits, novo
   await Promise.all(snap.docs.map((d) => updateDoc(doc(db, "agendamentos", d.id), { nome: novoNome })));
 }
 
+// A própria pessoa edita o seu cadastro (nome e/ou telefone) pelo menu do perfil. Como o telefone é o
+// identificador, ao trocá-lo tudo o que estava ligado ao número antigo vai junto: agendamentos, intenções
+// (inclusive rascunhos), inscrições em cursos e as anotações do painel. Lança "telefone-em-uso" se o número
+// novo já pertence a outro cadastro.
+export async function atualizarMeuCadastro({ telefoneDigitsAntigo, nome, telefone, telefoneDigits }) {
+  const mudouTelefone = telefoneDigits !== telefoneDigitsAntigo;
+  const antigo = await obterUsuario(telefoneDigitsAntigo);
+  if (mudouTelefone) {
+    const existente = await obterUsuario(telefoneDigits);
+    if (existente && existente.nome) {
+      const erro = new Error("Esse telefone já está cadastrado.");
+      erro.codigo = "telefone-em-uso";
+      throw erro;
+    }
+  }
+  await setDoc(doc(db, "usuarios", telefoneDigits), {
+    ...(antigo || {}), nome, telefone, telefoneDigits, atualizadoEm: serverTimestamp()
+  }, { merge: true });
+
+  const dadosNovos = { nome, telefone, telefoneDigits };
+  const agendamentos = await getDocs(query(collection(db, "agendamentos"), where("telefoneDigits", "==", telefoneDigitsAntigo)));
+  await Promise.all(agendamentos.docs.map((d) => updateDoc(doc(db, "agendamentos", d.id), dadosNovos)));
+
+  const intencoes = await getDocs(query(collection(db, "intencoes"), where("telefoneDigits", "==", telefoneDigitsAntigo)));
+  for (const d of intencoes.docs) {
+    const dados = d.data();
+    if (mudouTelefone && dados.tipo === "rascunho") {
+      // o código do rascunho leva o telefone: recria com o código novo e apaga o antigo
+      await setDoc(doc(db, "intencoes", idRascunho(dados.dataMissa, dados.horaMissa, telefoneDigits)), { ...dados, nome, telefoneDigits });
+      await deleteDoc(doc(db, "intencoes", d.id));
+    } else {
+      await updateDoc(doc(db, "intencoes", d.id), { nome, telefoneDigits });
+    }
+  }
+
+  const inscricoes = await inscricoesDaPessoa(telefoneDigitsAntigo);
+  for (const insc of inscricoes) {
+    const { id, ...dados } = insc;
+    if (mudouTelefone) {
+      await setDoc(doc(db, "inscricoes", idInscricao(dados.cursoId, telefoneDigits)), { ...dados, nome, telefone, telefoneDigits });
+      await deleteDoc(doc(db, "inscricoes", id));
+    } else {
+      await updateDoc(doc(db, "inscricoes", id), { nome, telefone });
+    }
+  }
+
+  if (mudouTelefone) {
+    // anotações do painel: se o banco não deixar a pessoa mexer nelas, o cadastro em si não deve falhar por isso
+    try {
+      const crm = await getDoc(doc(db, "contatosCrm", telefoneDigitsAntigo));
+      if (crm.exists()) {
+        await setDoc(doc(db, "contatosCrm", telefoneDigits), crm.data());
+        await deleteDoc(doc(db, "contatosCrm", telefoneDigitsAntigo));
+      }
+    } catch (err) { console.warn("Não foi possível mover as anotações do painel:", err && err.code); }
+    await deleteDoc(doc(db, "usuarios", telefoneDigitsAntigo));
+  }
+}
+
 /* ---------------- Agendamentos ---------------- */
 
 // Retorna o conjunto de horas (números) já ocupadas (status "agendado") numa data
@@ -750,6 +809,32 @@ export function ouvirTodasIntencoes(callback) {
   return onSnapshot(collection(db, "intencoes"), (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((it) => !ehRascunho(it)));
   });
+}
+
+/* ---------------- Campanhas de mensagem (WhatsApp) ----------------
+   Todas as campanhas ficam num único documento (configuracoes/campanhas), no campo "itens":
+   { [id]: { nome, mensagem, ocultarPadres, excluidos: [telefones], enviados: { [telefone]: instante }, criadoEmMs } }.
+   Um documento só = uma leitura por mudança (poupa a cota gratuita do Firestore). */
+const REF_CAMPANHAS = doc(db, "configuracoes", "campanhas");
+
+export function ouvirCampanhas(callback) {
+  callback = cacheado("adm_campanhas", callback);
+  return onSnapshot(REF_CAMPANHAS, (snap) => {
+    const itens = snap.exists() ? (snap.data().itens || {}) : {};
+    callback(Object.entries(itens).map(([id, c]) => ({ id, ...c })).sort((a, b) => (b.criadoEmMs || 0) - (a.criadoEmMs || 0)));
+  }, aoFalharLeitura("campanhas"));
+}
+export const novoIdCampanha = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+// Cria ou atualiza só os campos informados (o que já foi marcado como enviado fica intacto)
+export async function salvarCampanha(id, campos) {
+  await setDoc(REF_CAMPANHAS, { itens: { [id]: campos } }, { merge: true });
+}
+// Marca (ou desmarca) que a mensagem já foi enviada para essa pessoa
+export async function marcarEnvioCampanha(id, telefoneDigits, enviado = true) {
+  await updateDoc(REF_CAMPANHAS, { [`itens.${id}.enviados.${telefoneDigits}`]: enviado ? Date.now() : deleteField() });
+}
+export async function excluirCampanha(id) {
+  await updateDoc(REF_CAMPANHAS, { [`itens.${id}`]: deleteField() });
 }
 
 /* ---------------- CRM de contatos (anotações e etiquetas por pessoa) ---------------- */

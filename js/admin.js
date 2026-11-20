@@ -18,6 +18,7 @@ import {
   ouvirTodasIntencoes, excluirListaIntencoes,
   obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes,
   criarIntencao, atualizarIntencao, excluirIntencao, ouvirContatosCrm, salvarContatoCrm,
+  ouvirCampanhas, salvarCampanha, marcarEnvioCampanha, excluirCampanha, novoIdCampanha,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
@@ -32,6 +33,7 @@ import { iniciarCursosAdmin } from "./cursos-admin.js";
 import { iniciarSimposioAdmin } from "./simposio-admin.js";
 import { extrairTextosCategoria, construirDocxIntencoes, nomeArquivoDocx, rotuloListaIntencao } from "./docx-intencoes.js";
 import { construirExcelPessoas, construirWordPessoas } from "./pessoas-documentos.js";
+import { criarCampanhas } from "./campanhas-admin.js";
 
 /* ---------------- Contas e login do painel ----------------
    Cada pessoa tem a própria conta (ver js/contas.js e js/acessos.js) e entra digitando só a
@@ -3370,8 +3372,27 @@ function configurarContatos() {
 
   campoBusca.addEventListener("input", renderizar);
 
+  /* ---------- Campanhas (mensagens pelo WhatsApp) ---------- */
+  const campanhas = criarCampanhas({
+    raiz: document.getElementById("campanhasRaiz"),
+    resumo: document.getElementById("contagemCampanhas"),
+    ouvir: ouvirCampanhas,
+    salvar: salvarCampanha,
+    marcar: marcarEnvioCampanha,
+    excluir: excluirCampanha,
+    novoId: novoIdCampanha,
+    toast: mostrarToast
+  });
+  // a leitura das campanhas só começa na primeira vez que o quadro é aberto (poupa leituras do banco)
+  document.getElementById("cabecalhoCampanhas").addEventListener("click", () => {
+    document.getElementById("quadroCampanhas").classList.toggle("aberto");
+    document.getElementById("corpoCampanhas").classList.toggle("oculto");
+    campanhas.ativar();
+  });
+
   ouvirTodosUsuarios((lista_) => {
     todosContatos = lista_;
+    campanhas.definirContatos(lista_);
     renderizar();
   });
 

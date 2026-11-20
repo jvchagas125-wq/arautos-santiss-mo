@@ -942,3 +942,50 @@
 .inscritos-emails__form input.invalido{ border-color: var(--vermelho); }
 .inscritos-emails__form .btn{ flex:none; }
 .admin-preview--fundo .mensagem-vazia{ color: rgba(255,253,248,.9); padding:18px 14px; }
+
+
+/* ---------- campanhas (mensagens pelo WhatsApp) ---------- */
+.camp-lista{ margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+.camp-cartao{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  background: var(--branco); border:1px solid rgba(157,122,31,.28); border-left:5px solid var(--dourado);
+  border-radius:14px; padding:12px 14px;
+}
+.camp-cartao__nome{ font-family:'Cinzel'; font-weight:600; color: var(--vermelho-escuro); }
+.camp-cartao__meta{ font-size:.85rem; color: var(--texto-suave); margin-top:2px; }
+.camp-cartao__acoes{ display:flex; gap:8px; flex-wrap:wrap; }
+.camp-perigo{ color:#9b1c1c; border-color:rgba(155,28,28,.45); }
+.camp-barra{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.camp-barra button{
+  min-width:40px; height:38px; padding:0 12px; border-radius:10px; cursor:pointer;
+  border:1px solid rgba(157,122,31,.45); background: var(--branco); color: var(--vermelho-escuro); font-size:1rem;
+}
+.camp-barra button:hover{ background: rgba(205,164,52,.2); }
+.camp-emojis{ display:flex; flex-wrap:wrap; gap:4px; padding:8px; margin-bottom:8px; background: var(--branco); border:1px solid rgba(157,122,31,.3); border-radius:12px; }
+.camp-emojis button{ font-size:1.35rem; width:40px; height:40px; border:none; background:transparent; border-radius:8px; cursor:pointer; }
+.camp-emojis button:hover{ background: rgba(205,164,52,.25); }
+.camp-linkbox{ display:flex; flex-direction:column; gap:8px; padding:10px; margin-bottom:8px; background: var(--branco); border:1px solid rgba(157,122,31,.3); border-radius:12px; }
+.campo-ajuda{ font-size:.82rem; color: var(--texto-suave); margin:6px 0 0; }
+.camp-previa-titulo{ font-family:'Cinzel'; font-size:.78rem; color: var(--texto-suave); margin:14px 0 6px; letter-spacing:.04em; text-transform:uppercase; }
+.camp-previa{
+  background:#dcf8c6; color:#1c1c1c; border-radius:14px 14px 14px 4px; padding:10px 14px; max-width:520px;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size:.95rem; line-height:1.4; word-break:break-word; box-shadow:0 1px 2px rgba(0,0,0,.15);
+}
+.camp-previa-vazia{ color:#7a8a72; font-style:italic; }
+.camp-link{ color:#0b61c4; text-decoration:underline; }
+.camp-acoes-salvar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:16px 0 4px; }
+.camp-estado{ font-size:.85rem; color: var(--texto-suave); }
+.camp-filtros{ margin-top:22px; padding-top:14px; border-top:1px solid rgba(157,122,31,.25); display:flex; flex-direction:column; gap:10px; }
+.camp-filtros input[type="search"]{ width:100%; border:1.5px solid rgba(157,122,31,.4); border-radius:12px; padding:11px 14px; font:inherit; background: var(--branco); }
+.camp-check{ display:flex; align-items:center; gap:8px; font-size:.92rem; color: var(--texto); cursor:pointer; }
+.camp-subtitulo{ font-family:'Cinzel'; color: var(--vermelho-escuro); font-size:.92rem; margin:14px 0 8px; }
+.camp-resumo{ display:flex; flex-wrap:wrap; gap:6px 16px; font-size:.88rem; color: var(--texto-suave); margin-top:10px; }
+.camp-pessoa{ margin-bottom:8px; }
+.camp-enviar{
+  display:inline-flex; align-items:center; gap:6px; height:38px; padding:0 14px; border-radius:999px; cursor:pointer;
+  border:1px solid rgba(61,107,69,.5); background: rgba(61,107,69,.12); color:#2f5a38; font:inherit; font-weight:600; font-size:.9rem;
+}
+.camp-enviar:hover{ background: rgba(61,107,69,.24); }
+.camp-enviar svg{ width:18px; height:18px; }
+.camp-alternar{ display:block; width:100%; text-align:left; margin-top:14px; padding:10px 12px; border:1px dashed rgba(157,122,31,.5); background:transparent; border-radius:10px; color: var(--vermelho-escuro); font:inherit; cursor:pointer; }
+.camp-feito{ font-size:.82rem; color: var(--texto-suave); }

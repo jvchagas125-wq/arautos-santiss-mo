@@ -1228,7 +1228,22 @@ export function inicializarNavegacao(paginaAtual) {
   if (usuario && nomeEl) nomeEl.textContent = usuario.nome;
   if (usuario && telEl) telEl.textContent = usuario.telefone;
 
+  // "Editar meu cadastro": a própria pessoa corrige nome e telefone (carrega o código só ao clicar)
   const btnSair = document.getElementById("btnSair");
+  if (btnSair && !document.getElementById("btnEditarCadastro")) {
+    const btnEditar = document.createElement("button");
+    btnEditar.type = "button";
+    btnEditar.id = "btnEditarCadastro";
+    btnEditar.textContent = "✏️ Editar meu cadastro";
+    btnSair.parentNode.insertBefore(btnEditar, btnSair);
+    btnEditar.addEventListener("click", () => {
+      fecharDropdown();
+      import("./editar-cadastro.js").then((m) => m.abrirEdicaoCadastro()).catch((err) => {
+        console.error(err);
+        mostrarToast("Não foi possível abrir agora. Verifique sua conexão.");
+      });
+    });
+  }
   btnSair?.addEventListener("click", async () => {
     btnSair.disabled = true;
     await limparUsuarioSessao(); // apaga de todos os lugares (inclusive do servidor) antes de voltar ao início
