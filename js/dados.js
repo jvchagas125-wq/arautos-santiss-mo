@@ -2,9 +2,10 @@
 import {
   db, doc, getDoc, setDoc as setDocFirestore, updateDoc as updateDocFirestore, addDoc, deleteDoc,
   collection, query, where, getDocs, onSnapshot, orderBy,
-  serverTimestamp, Timestamp, deleteField
+  serverTimestamp, Timestamp, deleteField, increment
 } from "./firebase-init.js";
 import { normalizarCurso, idInscricao } from "./cursos-comum.js";
+import { idDocVisitas } from "./visitas-comum.js";
 import {
   normalizarConfigIntencoes, normalizarFormularioIntencoes, horariosPorDiaParaFirestore,
   normalizarHorariosEspeciais, normalizarCategoriasPorMissa, statusMissaEspecifica,
@@ -835,6 +836,21 @@ export async function marcarEnvioCampanha(id, telefoneDigits, enviado = true) {
 }
 export async function excluirCampanha(id) {
   await updateDoc(REF_CAMPANHAS, { [`itens.${id}`]: deleteField() });
+}
+
+/* ---------------- Origem das visitas (rastreamento de entradas) ----------------
+   Um documento por dia (configuracoes/visitas_AAAA-MM-DD) com contadores: { fontes: { origem: { pagina: { visitas, pessoas } } } }.
+   "visitas" = entradas no site (uma por visita); "pessoas" = aparelhos diferentes naquele dia. Ver js/visitas-comum.js. */
+export async function registrarEntradaNoSite({ dia, fonte, pagina, novaPessoa }) {
+  await setDocFirestore(doc(db, "configuracoes", idDocVisitas(dia)), {
+    dia,
+    fontes: { [fonte]: { [pagina]: { visitas: increment(1), pessoas: increment(novaPessoa ? 1 : 0) } } }
+  }, { merge: true });
+}
+// Lê os dias pedidos (um documento por dia). Dia sem visitas simplesmente não existe.
+export async function obterVisitasDosDias(dias) {
+  const snaps = await Promise.all(dias.map((d) => getDoc(doc(db, "configuracoes", idDocVisitas(d)))));
+  return snaps.filter((s) => s.exists()).map((s, i) => ({ dia: s.data().dia || null, ...s.data() })).filter((d) => d.dia);
 }
 
 /* ---------------- CRM de contatos (anotações e etiquetas por pessoa) ---------------- */

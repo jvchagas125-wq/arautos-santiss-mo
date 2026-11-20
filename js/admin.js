@@ -18,7 +18,7 @@ import {
   ouvirTodasIntencoes, excluirListaIntencoes,
   obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes,
   criarIntencao, atualizarIntencao, excluirIntencao, ouvirContatosCrm, salvarContatoCrm,
-  ouvirCampanhas, salvarCampanha, marcarEnvioCampanha, excluirCampanha, novoIdCampanha,
+  obterVisitasDosDias, ouvirCampanhas, salvarCampanha, marcarEnvioCampanha, excluirCampanha, novoIdCampanha,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
@@ -34,6 +34,7 @@ import { iniciarSimposioAdmin } from "./simposio-admin.js";
 import { extrairTextosCategoria, construirDocxIntencoes, nomeArquivoDocx, rotuloListaIntencao } from "./docx-intencoes.js";
 import { construirExcelPessoas, construirWordPessoas } from "./pessoas-documentos.js";
 import { criarCampanhas } from "./campanhas-admin.js";
+import { iniciarVisitasAdmin } from "./visitas-admin.js";
 
 /* ---------------- Contas e login do painel ----------------
    Cada pessoa tem a própria conta (ver js/contas.js e js/acessos.js) e entra digitando só a
@@ -395,6 +396,10 @@ function iniciarPainel() {
   configurarAcompanhamento();
   configurarInfoContato();
   configurarContatos();
+  // "Origem das visitas": só lê os números do banco quando a página é aberta
+  const visitas = iniciarVisitasAdmin({ obterVisitas: obterVisitasDosDias, toast: mostrarToast });
+  document.querySelector('#menuLateral nav a[data-secao="visitas"]')?.addEventListener("click", () => visitas.aoAbrir());
+  document.querySelector('.bloco-inicio[data-secao="visitas"]')?.addEventListener("click", () => visitas.aoAbrir());
   iniciarCursosAdmin({
     enviarImagem: enviarImagemParaCloudinary,
     chamarApiEnvio,

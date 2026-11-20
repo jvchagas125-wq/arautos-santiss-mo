@@ -52,6 +52,7 @@ export const CATALOGO_ACESSOS = [
       { id: "pessoas", titulo: "Pessoas cadastradas" }
     ]
   },
+  { pagina: "visitas", titulo: "Origem das visitas", emoji: "🔗", partes: [] },
   { pagina: PAGINA_ADMINISTRADORES, titulo: "Administradores", emoji: "👥", partes: [], soPrincipalConcede: true },
   {
     pagina: "configuracoes", titulo: "Configurações", emoji: "⚙️",

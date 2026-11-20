@@ -989,3 +989,27 @@
 .camp-enviar svg{ width:18px; height:18px; }
 .camp-alternar{ display:block; width:100%; text-align:left; margin-top:14px; padding:10px 12px; border:1px dashed rgba(157,122,31,.5); background:transparent; border-radius:10px; color: var(--vermelho-escuro); font:inherit; cursor:pointer; }
 .camp-feito{ font-size:.82rem; color: var(--texto-suave); }
+
+
+/* ---------- origem das visitas ---------- */
+.vis-tabela{ display:flex; flex-direction:column; border:1px solid rgba(157,122,31,.28); border-radius:14px; overflow:hidden; background: var(--branco); }
+.vis-linha{ display:grid; grid-template-columns: minmax(130px,1.6fr) repeat(auto-fit, minmax(96px,1fr)); gap:8px; align-items:center; padding:8px 12px; border-top:1px solid rgba(157,122,31,.16); }
+.vis-linha:first-child{ border-top:none; }
+.vis-linha--cab{ background: rgba(122,12,30,.07); font-family:'Cinzel'; font-size:.78rem; color: var(--vermelho-escuro); }
+.vis-pagina{ font-size:.92rem; color: var(--texto); }
+.vis-copiar{ width:100%; white-space:nowrap; }
+.vis-tabela--detalhe .vis-linha{ grid-template-columns: 1.2fr 1.6fr .7fr .7fr; font-size:.9rem; }
+.vis-num{ text-align:right; font-variant-numeric: tabular-nums; }
+.vis-estado{ margin:0 0 6px; font-size:.85rem; color: var(--texto-suave); min-height:1.1em; }
+.vis-svg{ cursor:default; }
+.vis-coluna{ fill: var(--vermelho); }
+.vis-coluna:hover{ fill: var(--dourado-escuro); }
+.vis-barra{ margin-bottom:10px; }
+.vis-barra__topo{ display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:.9rem; margin-bottom:4px; color: var(--texto); }
+.vis-barra__trilho{ height:12px; border-radius:999px; background: rgba(122,12,30,.08); overflow:hidden; }
+.vis-barra__preenchido{ height:100%; border-radius:999px; background: linear-gradient(90deg, var(--vermelho), var(--dourado-escuro)); }
+@media (max-width: 560px){
+  .vis-linha{ grid-template-columns: 1fr 1fr; }
+  .vis-linha > :first-child{ grid-column: 1 / -1; font-weight:600; }
+  .vis-tabela--detalhe .vis-linha{ grid-template-columns: 1fr 1fr .6fr .6fr; font-size:.8rem; }
+}

@@ -108,6 +108,7 @@
         <a href="#acompanhamento" data-secao="acompanhamento"><span class="emoji">📋</span> Acompanhamento</a>
         <a href="#inscricoes" data-secao="inscricoes"><span class="emoji">🎓</span> Inscrições de cursos</a>
         <a href="#contatos" data-secao="contatos"><span class="emoji">📇</span> Contatos</a>
+        <a href="#visitas" data-secao="visitas"><span class="emoji">🔗</span> Origem das visitas</a>
         <a href="#administradores" data-secao="administradores"><span class="emoji">👥</span> Administradores <span class="menu-selo oculto" id="seloPendentesMenu"></span></a>
         <a href="#configuracoes" data-secao="configuracoes"><span class="emoji">⚙️</span> Configurações</a>
       </nav>
@@ -847,6 +848,52 @@
           <div class="quadro-dia-missa__corpo oculto" id="corpoCampanhas">
             <div id="campanhasRaiz"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- ORIGEM DAS VISITAS -->
+      <section class="admin-secao oculto" id="secao-visitas">
+        <h1 class="titulo-pagina">Origem das visitas</h1>
+        <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">🔗</span> Links para divulgar</div>
+          <p class="formulario-intro">
+            Cada link leva para uma página do site e leva junto a marca de onde ele foi divulgado. Use o link do
+            <strong>Instagram</strong> na bio e nos stories, e o do <strong>WhatsApp</strong> nas mensagens e grupos —
+            assim o painel mostra quantas pessoas entraram por cada um. O link da página <em>Início</em> serve de link principal.
+          </p>
+          <div class="campo">
+            <label for="visOutraOrigem">Outra origem (opcional)</label>
+            <input type="text" id="visOutraOrigem" placeholder="Ex.: facebook, cartaz, email" autocomplete="off" maxlength="30" />
+          </div>
+          <div id="visLinks"></div>
+        </div>
+
+        <div class="painel">
+          <div class="painel__titulo"><span class="emoji">📊</span> Resultados</div>
+          <div class="grafico__abas" id="visAbas" role="group" aria-label="Período">
+            <button type="button" data-dias="7" aria-pressed="false">7 dias</button>
+            <button type="button" data-dias="30" class="ativa" aria-pressed="true">30 dias</button>
+            <button type="button" data-dias="90" aria-pressed="false">90 dias</button>
+            <button type="button" id="visAtualizar" title="Buscar os números de novo">↻ Atualizar</button>
+          </div>
+          <div class="crm-resumo" id="visKpis"></div>
+          <p class="vis-estado" id="visEstado" aria-live="polite"></p>
+          <h4 class="camp-subtitulo">Entradas por dia</h4>
+          <div class="grafico" id="visGrafico"></div>
+          <p class="grafico__dica" id="visDica" aria-live="polite"></p>
+          <h4 class="camp-subtitulo">Por origem</h4>
+          <div id="visPorOrigem"></div>
+          <h4 class="camp-subtitulo">Por página de entrada</h4>
+          <div id="visPorPagina"></div>
+          <h4 class="camp-subtitulo">Detalhes (origem × página)</h4>
+          <div id="visDetalhes"></div>
+          <p class="campo-ajuda" style="margin-top:14px;">
+            <strong>Entrada</strong> é uma visita ao site, contada na primeira página que a pessoa abre. <strong>Pessoas</strong> são
+            aparelhos diferentes por dia (quem volta em outro dia conta de novo). Quem chega sem link rastreável aparece como
+            <em>Direto</em> ou pelo site de onde veio (Instagram, Google...). Os acessos de quem está logado no painel não são contados.
+          </p>
         </div>
       </section>
 

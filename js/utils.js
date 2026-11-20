@@ -1250,6 +1250,9 @@ export function inicializarNavegacao(paginaAtual) {
     window.location.href = "/";
   });
 
+  // conta a entrada no site (origem da visita) — em segundo plano, nunca atrapalha a página
+  if (paginaAtual !== "admin") import("./rastreio.js").then((m) => m.registrarEntrada(paginaAtual)).catch(() => {});
+
   if (paginaAtual !== "admin") iniciarPaginasOcultas(paginaAtual);
   else inserirNavegacaoEntrePaginas(paginaAtual);
 }
