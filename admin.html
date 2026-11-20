@@ -856,8 +856,13 @@
         <h1 class="titulo-pagina">Origem das visitas</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-        <div class="painel">
-          <div class="painel__titulo"><span class="emoji">🔗</span> Links para divulgar</div>
+        <div class="quadro-dia-missa" id="quadroVisLinks" style="margin-top:20px;">
+          <div class="quadro-dia-missa__cabecalho" id="cabecalhoVisLinks" role="button" tabindex="0" aria-expanded="false" aria-controls="corpoVisLinks">
+            <svg class="quadro-dia-missa__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            <span class="quadro-dia-missa__titulo"><span class="emoji">🔗</span> Links para divulgar</span>
+            <span class="quadro-dia-missa__resumo">Instagram · WhatsApp</span>
+          </div>
+          <div class="quadro-dia-missa__corpo oculto" id="corpoVisLinks">
           <p class="formulario-intro">
             Cada link leva para uma página do site e leva junto a marca de onde ele foi divulgado. Use o link do
             <strong>Instagram</strong> na bio e nos stories, e o do <strong>WhatsApp</strong> nas mensagens e grupos —
@@ -868,10 +873,16 @@
             <input type="text" id="visOutraOrigem" placeholder="Ex.: facebook, cartaz, email" autocomplete="off" maxlength="30" />
           </div>
           <div id="visLinks"></div>
+          </div>
         </div>
 
-        <div class="painel">
-          <div class="painel__titulo"><span class="emoji">📊</span> Resultados</div>
+        <div class="quadro-dia-missa" id="quadroVisResultados" style="margin-top:12px;">
+          <div class="quadro-dia-missa__cabecalho" id="cabecalhoVisResultados" role="button" tabindex="0" aria-expanded="false" aria-controls="corpoVisResultados">
+            <svg class="quadro-dia-missa__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            <span class="quadro-dia-missa__titulo"><span class="emoji">📊</span> Resultados</span>
+            <span class="quadro-dia-missa__resumo" id="visResumoCab">Números e gráficos</span>
+          </div>
+          <div class="quadro-dia-missa__corpo oculto" id="corpoVisResultados">
           <div class="grafico__abas" id="visAbas" role="group" aria-label="Período">
             <button type="button" data-dias="7" aria-pressed="false">7 dias</button>
             <button type="button" data-dias="30" class="ativa" aria-pressed="true">30 dias</button>
@@ -894,6 +905,7 @@
             aparelhos diferentes por dia (quem volta em outro dia conta de novo). Quem chega sem link rastreável aparece como
             <em>Direto</em> ou pelo site de onde veio (Instagram, Google...). Os acessos de quem está logado no painel não são contados.
           </p>
+          </div>
         </div>
       </section>
 

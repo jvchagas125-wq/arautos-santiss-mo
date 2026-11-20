@@ -126,6 +126,8 @@ export function iniciarVisitasAdmin(opcoes) {
       carregou = true;
       desenharResultados(docs);
       $("visEstado").textContent = "";
+      const r = resumirVisitas(docs, ultimosDias(periodo));
+      $("visResumoCab").textContent = `${plural(r.visitas, "entrada", "entradas")} · ${periodo} dias`;
     } catch (err) {
       console.error(err);
       $("visEstado").textContent = "Não foi possível carregar os números agora.";
@@ -139,9 +141,25 @@ export function iniciarVisitasAdmin(opcoes) {
   }));
   $("visAtualizar").addEventListener("click", carregar);
 
+  // as duas listas começam fechadas; os números só são lidos do banco na primeira vez que "Resultados" é aberto
+  function ligarQuadro(idQuadro, idCabecalho, idCorpo, aoAbrir) {
+    const quadro = $(idQuadro), cab = $(idCabecalho), corpo = $(idCorpo);
+    const alternar = () => {
+      const abrir = corpo.classList.contains("oculto");
+      corpo.classList.toggle("oculto", !abrir);
+      quadro.classList.toggle("aberto", abrir);
+      cab.setAttribute("aria-expanded", String(abrir));
+      if (abrir && aoAbrir) aoAbrir();
+    };
+    cab.addEventListener("click", alternar);
+    cab.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); } });
+  }
+  ligarQuadro("quadroVisLinks", "cabecalhoVisLinks", "corpoVisLinks");
+  ligarQuadro("quadroVisResultados", "cabecalhoVisResultados", "corpoVisResultados", () => { if (!carregou) carregar(); });
+
   desenharLinks();
   return {
-    // chamado quando a página "Origem das visitas" é aberta: só então lê os números do banco (poupa leituras)
-    aoAbrir() { if (!carregou) carregar(); }
+    // mantido por compatibilidade: abrir a página não lê mais nada; a leitura acontece ao abrir "Resultados"
+    aoAbrir() {}
   };
 }
