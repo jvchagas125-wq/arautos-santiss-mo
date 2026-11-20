@@ -1021,3 +1021,9 @@
   .vis-linha > :first-child{ grid-column: 1 / -1; font-weight:600; }
   .vis-tabela--detalhe .vis-linha{ grid-template-columns: 1fr 1fr .6fr .6fr; font-size:.8rem; }
 }
+
+.vis-aovivo{ margin:2px 0 10px; font-size:.82rem; color:#2f6b3a; display:flex; align-items:center; gap:7px; min-height:1.1em; }
+.vis-aovivo--off{ color: var(--texto-suave); }
+.vis-aovivo__ponto{ width:9px; height:9px; border-radius:50%; background:#2f9e44; box-shadow:0 0 0 0 rgba(47,158,68,.55); animation: visPulso 2s infinite; flex:none; }
+@keyframes visPulso{ 0%{ box-shadow:0 0 0 0 rgba(47,158,68,.5);} 70%{ box-shadow:0 0 0 8px rgba(47,158,68,0);} 100%{ box-shadow:0 0 0 0 rgba(47,158,68,0);} }
+@media (prefers-reduced-motion: reduce){ .vis-aovivo__ponto{ animation:none; } }

@@ -853,6 +853,14 @@ export async function obterVisitasDosDias(dias) {
   return snaps.filter((s) => s.exists()).map((s, i) => ({ dia: s.data().dia || null, ...s.data() })).filter((d) => d.dia);
 }
 
+// Escuta em tempo real o documento de UM dia (o de hoje): cada nova entrada no site chega aqui na hora.
+// Custa só 1 leitura por mudança. Devolve a função que para de escutar.
+export function ouvirVisitasDoDia(dia, callback, aoErro) {
+  return onSnapshot(doc(db, "configuracoes", idDocVisitas(dia)), (snap) => {
+    callback(snap.exists() && snap.data().dia ? { ...snap.data() } : null);
+  }, (erro) => { aoFalharLeitura("visitas")(erro); if (aoErro) aoErro(erro); });
+}
+
 /* ---------------- CRM de contatos (anotações e etiquetas por pessoa) ---------------- */
 
 // Cada documento de "contatosCrm" guarda o que o painel anota sobre uma pessoa: { notas, etiquetas[] }.

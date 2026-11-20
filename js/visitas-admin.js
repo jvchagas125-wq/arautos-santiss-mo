@@ -2,7 +2,7 @@
 // em números e gráficos. As regras de contagem estão em js/visitas-comum.js; quem registra a entrada é js/rastreio.js.
 import {
   ORIGENS_PRONTAS, PAGINAS_RASTREADAS, ultimosDias, linkRastreavel, normalizarOrigem, resumirVisitas,
-  rotuloDaOrigem, rotuloDaPagina
+  rotuloDaOrigem, rotuloDaPagina, diaBrasilia
 } from "./visitas-comum.js";
 
 const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -117,17 +117,56 @@ export function iniciarVisitasAdmin(opcoes) {
       : "";
   }
 
+  // números do período, por dia. O dia de hoje é mantido em tempo real (ver iniciarAoVivo).
+  const porDia = new Map();
+  let diaAoVivo = null, pararAoVivo = null, relogio = null, aberto = false;
+
+  function redesenhar() {
+    const docs = [...porDia.values()];
+    desenharResultados(docs);
+    const r = resumirVisitas(docs, ultimosDias(periodo));
+    $("visResumoCab").textContent = `${plural(r.visitas, "entrada", "entradas")} · ${periodo} dias`;
+  }
+  function marcarAoVivo(ok, erro) {
+    const el = $("visAoVivo");
+    if (erro) { el.className = "vis-aovivo vis-aovivo--off"; el.textContent = "Tempo real indisponível agora — use ↻ Atualizar."; return; }
+    const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "America/Sao_Paulo" });
+    el.className = "vis-aovivo";
+    el.innerHTML = `<span class="vis-aovivo__ponto" aria-hidden="true"></span> Ao vivo · atualizado às ${hora}`;
+  }
+  function pararTempoReal() {
+    if (pararAoVivo) { try { pararAoVivo(); } catch { /* ignora */ } pararAoVivo = null; }
+    if (relogio) { clearInterval(relogio); relogio = null; }
+    diaAoVivo = null;
+    const el = $("visAoVivo"); if (el) { el.textContent = ""; el.className = "vis-aovivo"; }
+  }
+  function iniciarAoVivo() {
+    pararTempoReal();
+    if (!opcoes.ouvirDia) return;
+    const hoje = diaBrasilia();
+    diaAoVivo = hoje;
+    let primeira = true;
+    pararAoVivo = opcoes.ouvirDia(hoje, (dados) => {
+      if (dados) porDia.set(hoje, { dia: hoje, ...dados }); else porDia.delete(hoje);
+      if (primeira) { primeira = false; if (!carregou) return; }
+      if (carregou) { redesenhar(); marcarAoVivo(true); }
+    }, () => marcarAoVivo(false, true));
+    // quando vira o dia (meia-noite de Brasília), recarrega o período e passa a ouvir o dia novo
+    relogio = setInterval(() => { if (aberto && diaBrasilia() !== diaAoVivo) { carregar().then(iniciarAoVivo); } }, 30000);
+  }
+
   async function carregar() {
     if (carregando) return;
     carregando = true;
     $("visEstado").textContent = "Carregando...";
     try {
       const docs = await opcoes.obterVisitas(ultimosDias(periodo));
+      porDia.clear();
+      docs.forEach((d) => porDia.set(d.dia, d));
       carregou = true;
-      desenharResultados(docs);
+      redesenhar();
       $("visEstado").textContent = "";
-      const r = resumirVisitas(docs, ultimosDias(periodo));
-      $("visResumoCab").textContent = `${plural(r.visitas, "entrada", "entradas")} · ${periodo} dias`;
+      if (pararAoVivo) marcarAoVivo(true);
     } catch (err) {
       console.error(err);
       $("visEstado").textContent = "Não foi possível carregar os números agora.";
@@ -149,13 +188,19 @@ export function iniciarVisitasAdmin(opcoes) {
       corpo.classList.toggle("oculto", !abrir);
       quadro.classList.toggle("aberto", abrir);
       cab.setAttribute("aria-expanded", String(abrir));
-      if (abrir && aoAbrir) aoAbrir();
+      if (aoAbrir) aoAbrir(abrir);
     };
     cab.addEventListener("click", alternar);
     cab.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); } });
   }
   ligarQuadro("quadroVisLinks", "cabecalhoVisLinks", "corpoVisLinks");
-  ligarQuadro("quadroVisResultados", "cabecalhoVisResultados", "corpoVisResultados", () => { if (!carregou) carregar(); });
+  // "Resultados": ao abrir, lê o período e passa a acompanhar o dia de hoje em tempo real; ao fechar, para de escutar
+  ligarQuadro("quadroVisResultados", "cabecalhoVisResultados", "corpoVisResultados", async (abrir) => {
+    aberto = abrir;
+    if (!abrir) { pararTempoReal(); return; }
+    if (!carregou) await carregar(); else carregar();
+    iniciarAoVivo();
+  });
 
   desenharLinks();
   return {

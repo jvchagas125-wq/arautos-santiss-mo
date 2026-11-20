@@ -18,7 +18,7 @@ import {
   ouvirTodasIntencoes, excluirListaIntencoes,
   obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes,
   criarIntencao, atualizarIntencao, excluirIntencao, ouvirContatosCrm, salvarContatoCrm,
-  obterVisitasDosDias, ouvirCampanhas, salvarCampanha, marcarEnvioCampanha, excluirCampanha, novoIdCampanha,
+  obterVisitasDosDias, ouvirVisitasDoDia, ouvirCampanhas, salvarCampanha, marcarEnvioCampanha, excluirCampanha, novoIdCampanha,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
@@ -397,7 +397,7 @@ function iniciarPainel() {
   configurarInfoContato();
   configurarContatos();
   // "Origem das visitas": só lê os números do banco quando a página é aberta
-  const visitas = iniciarVisitasAdmin({ obterVisitas: obterVisitasDosDias, toast: mostrarToast });
+  const visitas = iniciarVisitasAdmin({ obterVisitas: obterVisitasDosDias, ouvirDia: ouvirVisitasDoDia, toast: mostrarToast });
   document.querySelector('#menuLateral nav a[data-secao="visitas"]')?.addEventListener("click", () => visitas.aoAbrir());
   document.querySelector('.bloco-inicio[data-secao="visitas"]')?.addEventListener("click", () => visitas.aoAbrir());
   iniciarCursosAdmin({
