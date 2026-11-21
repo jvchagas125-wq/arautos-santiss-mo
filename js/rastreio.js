@@ -26,6 +26,9 @@ export function registrarEntrada(pagina) {
     const fonte = normalizarOrigem(params.get("origem")) || origemDoReferrer(document.referrer, location.hostname)
       || (abertoComoAplicativo() ? "app-instalado" : "") || origemDoNavegador(navigator.userAgent) || "direto";
     sessionStorage.setItem(CHAVE_VISITA, fonte);
+    // veio por um link com "?origem=" (os links marcados do painel)? Conta à parte, também 1x por aparelho/dia
+    // (precisa ser lido antes de a marca ser apagada do endereço, logo abaixo)
+    const marcado = !!normalizarOrigem(params.get("origem"));
 
     // tira "?origem=..." do endereço: quem copiar o link da barra não leva a marca junto
     if (params.has("origem")) {
@@ -40,10 +43,12 @@ export function registrarEntrada(pagina) {
     if (!guardado || guardado.dia !== dia) guardado = { dia, fontes: [] };
     const novaPessoa = !guardado.fontes.includes(fonte);
     if (novaPessoa) guardado.fontes.push(fonte);
+    const novaPessoaMarcada = marcado && !guardado.fontes.includes(fonte + "|m");
+    if (novaPessoaMarcada) guardado.fontes.push(fonte + "|m");
     try { localStorage.setItem(CHAVE_PESSOA, JSON.stringify(guardado)); } catch { /* sem armazenamento */ }
 
     import("./dados.js")
-      .then((m) => m.registrarEntradaNoSite({ dia, fonte, pagina, novaPessoa }))
+      .then((m) => m.registrarEntradaNoSite({ dia, fonte, pagina, novaPessoa, marcado, novaPessoaMarcada }))
       .catch((err) => console.warn("Não foi possível registrar a entrada:", err && err.code));
   } catch (err) { console.warn("Rastreio indisponível:", err); }
 }

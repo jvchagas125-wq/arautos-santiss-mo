@@ -894,6 +894,12 @@
             <button type="button" id="visAtualizar" title="Buscar os números de novo">↻ Atualizar</button>
           </div>
           <p class="vis-aovivo" id="visAoVivo" aria-live="off"></p>
+          <div class="grafico__abas vis-filtro" id="visFiltro" role="group" aria-label="Quais entradas mostrar">
+            <button type="button" data-modo="todas" class="ativa" aria-pressed="true">Todas</button>
+            <button type="button" data-modo="marcadas" aria-pressed="false">🔗 Só links com ?origem=</button>
+            <button type="button" data-modo="sem-marca" aria-pressed="false">Sem marca</button>
+          </div>
+          <div class="vis-divisao" id="visDivisao"></div>
           <div class="crm-resumo" id="visKpis"></div>
           <p class="vis-estado" id="visEstado" aria-live="polite"></p>
           <h4 class="camp-subtitulo">Entradas por dia</h4>

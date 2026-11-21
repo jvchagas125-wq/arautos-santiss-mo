@@ -1027,3 +1027,13 @@
 .vis-aovivo__ponto{ width:9px; height:9px; border-radius:50%; background:#2f9e44; box-shadow:0 0 0 0 rgba(47,158,68,.55); animation: visPulso 2s infinite; flex:none; }
 @keyframes visPulso{ 0%{ box-shadow:0 0 0 0 rgba(47,158,68,.5);} 70%{ box-shadow:0 0 0 8px rgba(47,158,68,0);} 100%{ box-shadow:0 0 0 0 rgba(47,158,68,0);} }
 @media (prefers-reduced-motion: reduce){ .vis-aovivo__ponto{ animation:none; } }
+
+.vis-filtro{ margin-bottom:10px; }
+.vis-divisao{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:6px 0 12px; }
+@media (max-width:520px){ .vis-divisao{ grid-template-columns:1fr; } }
+.vis-divisao__item{ border:1.5px solid rgba(157,122,31,.3); border-radius:12px; padding:10px 12px; background:#fffefb; }
+.vis-divisao__item--marcada{ border-color: rgba(61,107,69,.5); background: rgba(61,107,69,.07); }
+.vis-divisao__titulo{ font-family:'Cinzel'; font-size:.82rem; color: var(--vermelho-escuro); margin-bottom:4px; }
+.vis-divisao__num{ font-size:.95rem; }
+.vis-divisao__dica{ font-size:.78rem; color: var(--texto-suave); margin-top:3px; }
+.vis-grupo{ margin:14px 0 6px; font-family:'Cinzel'; font-size:.82rem; color: var(--vermelho-escuro); }

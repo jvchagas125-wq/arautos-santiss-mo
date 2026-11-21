@@ -29,6 +29,7 @@ export function iniciarVisitasAdmin(opcoes) {
   const abas = document.querySelectorAll("#visAbas button");
   const base = opcoes.base || location.origin;
   let periodo = 30;
+  let modo = "todas"; // todas | marcadas | sem-marca
   let carregou = false, carregando = false;
 
   /* ---------- links para divulgar ---------- */
@@ -90,8 +91,15 @@ export function iniciarVisitasAdmin(opcoes) {
 
   function desenharResultados(docs) {
     const dias = ultimosDias(periodo);
-    const r = resumirVisitas(docs, dias);
+    const r = resumirVisitas(docs, dias, modo);
+    const rm = modo === "marcadas" ? r : resumirVisitas(docs, dias, "marcadas");
+    const rs = modo === "sem-marca" ? r : resumirVisitas(docs, dias, "sem-marca");
     const melhorOrigem = r.porOrigem[0], melhorPagina = r.porPagina[0];
+    // as duas partes lado a lado: quem veio por link com ?origem= e quem veio sem marca
+    const bloco = (titulo, dica, t, classe) => `<div class="vis-divisao__item ${classe}"><div class="vis-divisao__titulo">${titulo}</div><div class="vis-divisao__num"><strong>${num(t.visitas)}</strong> ${t.visitas === 1 ? "entrada" : "entradas"} · ${plural(t.pessoas, "pessoa", "pessoas")}</div><div class="vis-divisao__dica">${dica}</div></div>`;
+    $("visDivisao").innerHTML =
+      bloco("🔗 Por link com ?origem=", "os links do painel (Instagram, WhatsApp...)", r.totais.marcadas, "vis-divisao__item--marcada") +
+      bloco("Sem marca", "reconhecido pelo site, aplicativo instalado ou sem identificação", r.totais.semMarca, "");
     $("visKpis").innerHTML = [
       [num(r.visitas), r.visitas === 1 ? "entrada" : "entradas"],
       [num(r.pessoas), r.pessoas === 1 ? "pessoa" : "pessoas"],
@@ -107,7 +115,13 @@ export function iniciarVisitasAdmin(opcoes) {
       c.addEventListener("pointerenter", mostrar); c.addEventListener("pointerdown", mostrar);
     });
 
-    $("visPorOrigem").innerHTML = barrasHorizontais(r.porOrigem, rotuloDaOrigem);
+    // em "Todas", a lista por origem já vem separada em dois grupos
+    $("visPorOrigem").innerHTML = modo === "todas"
+      ? `<h5 class="vis-grupo">🔗 Por link com ?origem= — ${plural(rm.visitas, "entrada", "entradas")}</h5>` +
+        (rm.porOrigem.length ? barrasHorizontais(rm.porOrigem, rotuloDaOrigem) : '<p class="mensagem-vazia">Nenhuma entrada por link marcado neste período.</p>') +
+        `<h5 class="vis-grupo">Sem marca — ${plural(rs.visitas, "entrada", "entradas")}</h5>` +
+        (rs.porOrigem.length ? barrasHorizontais(rs.porOrigem, rotuloDaOrigem) : '<p class="mensagem-vazia">Nenhuma entrada sem marca neste período.</p>')
+      : barrasHorizontais(r.porOrigem, rotuloDaOrigem);
     $("visPorPagina").innerHTML = barrasHorizontais(r.porPagina, rotuloDaPagina);
     $("visDetalhes").innerHTML = r.cruzado.length
       ? `<div class="vis-tabela vis-tabela--detalhe">
@@ -179,6 +193,12 @@ export function iniciarVisitasAdmin(opcoes) {
     carregar();
   }));
   $("visAtualizar").addEventListener("click", carregar);
+  const botoesFiltro = document.querySelectorAll("#visFiltro button");
+  botoesFiltro.forEach((b) => b.addEventListener("click", () => {
+    modo = b.dataset.modo;
+    botoesFiltro.forEach((o) => { o.classList.toggle("ativa", o === b); o.setAttribute("aria-pressed", String(o === b)); });
+    if (carregou) redesenhar();
+  }));
 
   // as duas listas começam fechadas; os números só são lidos do banco na primeira vez que "Resultados" é aberto
   function ligarQuadro(idQuadro, idCabecalho, idCorpo, aoAbrir) {

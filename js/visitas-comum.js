@@ -90,12 +90,15 @@ export function linkRastreavel(base, hrefPagina, origem) {
 }
 
 // docs: [{ dia, fontes: { origem: { pagina: { visitas, pessoas } } } }] → totais para os gráficos e tabelas
-export function resumirVisitas(docs, dias) {
+// modo: "todas" (padrão) | "marcadas" (só quem entrou por link com ?origem=) | "sem-marca" (o resto, reconhecido pelo site ou direto).
+// Entradas antigas (gravadas antes de existir a contagem de "marcadas") entram como "sem marca".
+export function resumirVisitas(docs, dias, modo = "todas") {
   const porDia = new Map(dias.map((d) => [d, { dia: d, visitas: 0, pessoas: 0 }]));
   const porOrigem = new Map();
   const porPagina = new Map();
   const cruzado = new Map(); // "origem|pagina" → { visitas, pessoas }
   let visitas = 0, pessoas = 0;
+  const totais = { marcadas: { visitas: 0, pessoas: 0 }, semMarca: { visitas: 0, pessoas: 0 } };
   const somar = (mapa, chave, v, p) => {
     const x = mapa.get(chave) || { chave, visitas: 0, pessoas: 0 };
     x.visitas += v; x.pessoas += p; mapa.set(chave, x);
@@ -104,7 +107,12 @@ export function resumirVisitas(docs, dias) {
     if (!doc || !porDia.has(doc.dia)) return;
     Object.entries(doc.fontes || {}).forEach(([origem, paginas]) => {
       Object.entries(paginas || {}).forEach(([pagina, n]) => {
-        const v = Number(n?.visitas) || 0, p = Number(n?.pessoas) || 0;
+        const vTotal = Number(n?.visitas) || 0, pTotal = Number(n?.pessoas) || 0;
+        const vMarc = Math.min(vTotal, Number(n?.marcadas) || 0), pMarc = Math.min(pTotal, Number(n?.pessoasMarcadas) || 0);
+        totais.marcadas.visitas += vMarc; totais.marcadas.pessoas += pMarc;
+        totais.semMarca.visitas += vTotal - vMarc; totais.semMarca.pessoas += pTotal - pMarc;
+        const v = modo === "marcadas" ? vMarc : modo === "sem-marca" ? vTotal - vMarc : vTotal;
+        const p = modo === "marcadas" ? pMarc : modo === "sem-marca" ? pTotal - pMarc : pTotal;
         if (!v && !p) return;
         visitas += v; pessoas += p;
         const dia = porDia.get(doc.dia); dia.visitas += v; dia.pessoas += p;
@@ -115,5 +123,5 @@ export function resumirVisitas(docs, dias) {
     });
   });
   const ordenar = (m) => [...m.values()].sort((a, b) => b.visitas - a.visitas || b.pessoas - a.pessoas);
-  return { visitas, pessoas, porDia: [...porDia.values()], porOrigem: ordenar(porOrigem), porPagina: ordenar(porPagina), cruzado: ordenar(cruzado) };
+  return { visitas, pessoas, totais, porDia: [...porDia.values()], porOrigem: ordenar(porOrigem), porPagina: ordenar(porPagina), cruzado: ordenar(cruzado) };
 }
