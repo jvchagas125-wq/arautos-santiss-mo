@@ -298,7 +298,8 @@ const ALVOS_PARTES = {
   contatos: {
     info: () => [document.getElementById("quadroInfoContato")],
     cadastrar: () => [document.getElementById("painelFormContato")],
-    pessoas: () => [document.getElementById("quadroContatos")]
+    pessoas: () => [document.getElementById("quadroContatos")],
+    campanhas: () => [document.getElementById("quadroCampanhas")]
   },
   configuracoes: {
     logo: painelDe("previewLogo"),

@@ -49,7 +49,8 @@ export const CATALOGO_ACESSOS = [
     partes: [
       { id: "info", titulo: "Informações de contato do site público" },
       { id: "cadastrar", titulo: "Cadastrar pessoa" },
-      { id: "pessoas", titulo: "Pessoas cadastradas" }
+      { id: "pessoas", titulo: "Pessoas cadastradas" },
+      { id: "campanhas", titulo: "Campanhas (mensagens em massa pelo WhatsApp)" }
     ]
   },
   { pagina: "visitas", titulo: "Origem das visitas", emoji: "🔗", partes: [] },
