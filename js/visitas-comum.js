@@ -15,7 +15,7 @@ export const ORIGENS_PRONTAS = [
   { chave: "whatsapp", rotulo: "WhatsApp" }
 ];
 const ROTULOS_ORIGEM = {
-  direto: "Direto (sem origem)",
+  direto: "WhatsApp e outros links sem marca",
   "app-instalado": "Aplicativo instalado (ícone na tela)",
   instagram: "Instagram",
   whatsapp: "WhatsApp",
