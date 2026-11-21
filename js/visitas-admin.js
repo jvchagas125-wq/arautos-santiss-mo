@@ -89,16 +89,25 @@ export function iniciarVisitasAdmin(opcoes) {
     return `<svg class="grafico__svg vis-svg" viewBox="0 0 ${L} ${A}" role="img" aria-label="Entradas por dia">${grade}${barras}</svg>`;
   }
 
+  // Origens dos links marcados: Instagram e WhatsApp sempre aparecem (mesmo com 0), depois as outras que tiverem entradas
+  function origensMarcadas(lista) {
+    const achada = (chave) => lista.find((x) => x.chave === chave) || { chave, visitas: 0, pessoas: 0 };
+    const fixas = ORIGENS_PRONTAS.map((o) => achada(o.chave));
+    const outras = lista.filter((x) => !ORIGENS_PRONTAS.some((o) => o.chave === x.chave));
+    return [...fixas, ...outras];
+  }
+
   function desenharResultados(docs) {
     const dias = ultimosDias(periodo);
     const r = resumirVisitas(docs, dias, modo);
     const rm = modo === "marcadas" ? r : resumirVisitas(docs, dias, "marcadas");
     const rs = modo === "sem-marca" ? r : resumirVisitas(docs, dias, "sem-marca");
     const melhorOrigem = r.porOrigem[0], melhorPagina = r.porPagina[0];
+    const porOrigemMarcada = (chave) => rm.porOrigem.find((x) => x.chave === chave) || { visitas: 0, pessoas: 0 };
     // as duas partes lado a lado: quem veio por link com ?origem= e quem veio sem marca
     const bloco = (titulo, dica, t, classe) => `<div class="vis-divisao__item ${classe}"><div class="vis-divisao__titulo">${titulo}</div><div class="vis-divisao__num"><strong>${num(t.visitas)}</strong> ${t.visitas === 1 ? "entrada" : "entradas"} · ${plural(t.pessoas, "pessoa", "pessoas")}</div><div class="vis-divisao__dica">${dica}</div></div>`;
     $("visDivisao").innerHTML =
-      bloco("🔗 Por link com ?origem=", "os links do painel (Instagram, WhatsApp...)", r.totais.marcadas, "vis-divisao__item--marcada") +
+      bloco("🔗 Por link com ?origem=", `📸 Instagram: <strong>${num(porOrigemMarcada("instagram").visitas)}</strong> · 💬 WhatsApp: <strong>${num(porOrigemMarcada("whatsapp").visitas)}</strong>`, r.totais.marcadas, "vis-divisao__item--marcada") +
       bloco("Sem marca", "reconhecido pelo site, aplicativo instalado ou sem identificação", r.totais.semMarca, "");
     $("visKpis").innerHTML = [
       [num(r.visitas), r.visitas === 1 ? "entrada" : "entradas"],
@@ -118,10 +127,10 @@ export function iniciarVisitasAdmin(opcoes) {
     // em "Todas", a lista por origem já vem separada em dois grupos
     $("visPorOrigem").innerHTML = modo === "todas"
       ? `<h5 class="vis-grupo">🔗 Por link com ?origem= — ${plural(rm.visitas, "entrada", "entradas")}</h5>` +
-        (rm.porOrigem.length ? barrasHorizontais(rm.porOrigem, rotuloDaOrigem) : '<p class="mensagem-vazia">Nenhuma entrada por link marcado neste período.</p>') +
+        barrasHorizontais(origensMarcadas(rm.porOrigem), rotuloDaOrigem) +
         `<h5 class="vis-grupo">Sem marca — ${plural(rs.visitas, "entrada", "entradas")}</h5>` +
         (rs.porOrigem.length ? barrasHorizontais(rs.porOrigem, rotuloDaOrigem) : '<p class="mensagem-vazia">Nenhuma entrada sem marca neste período.</p>')
-      : barrasHorizontais(r.porOrigem, rotuloDaOrigem);
+      : barrasHorizontais(modo === "marcadas" ? origensMarcadas(r.porOrigem) : r.porOrigem, rotuloDaOrigem);
     $("visPorPagina").innerHTML = barrasHorizontais(r.porPagina, rotuloDaPagina);
     $("visDetalhes").innerHTML = r.cruzado.length
       ? `<div class="vis-tabela vis-tabela--detalhe">
