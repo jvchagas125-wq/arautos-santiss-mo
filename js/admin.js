@@ -2139,7 +2139,15 @@ function configurarIntencoes() {
         const btnEnviar = e.currentTarget;
         btnEnviar.disabled = true;
         try {
-          const r = await chamarApiEnvio({ acao: "enviar", dataMissa, horaMissa });
+          let r;
+          try {
+            r = await chamarApiEnvio({ acao: "enviar", dataMissa, horaMissa });
+          } catch (err) {
+            // a lista já saiu por e-mail: só manda de novo se o administrador confirmar
+            if (!err.jaEnviada) throw err;
+            if (!window.confirm(`${err.message}\n\nEnviar o e-mail de novo mesmo assim?`)) return;
+            r = await chamarApiEnvio({ acao: "enviar", dataMissa, horaMissa, reenviar: true });
+          }
           mostrarToast(`Lista enviada por e-mail para ${r.destinatarios.length} ${r.destinatarios.length === 1 ? "endereço" : "endereços"}.`);
         } catch (err) {
           console.error(err);
@@ -3274,7 +3282,9 @@ async function chamarApiEnvio(corpo) {
   try { dados = await resposta.json(); } catch { /* resposta sem JSON */ }
   if (!resposta.ok || !dados?.ok) {
     if (resposta.status === 404) throw new Error("O envio por e-mail ainda não foi ativado no site (falta publicar a atualização).");
-    throw new Error(dados?.erro || "Não foi possível enviar o e-mail.");
+    const erro = new Error(dados?.erro || "Não foi possível enviar o e-mail.");
+    if (dados?.jaEnviada) erro.jaEnviada = true;
+    throw erro;
   }
   return dados;
 }

@@ -32,7 +32,7 @@ import { temAcesso } from "../js/acessos.js";
 import { construirDocxIntencoes } from "../js/docx-intencoes.js";
 import {
   criarClienteFirestore, processarListasFechadas, montarEEnviarLista,
-  normalizarConfigEnvio, idDocEnvio
+  normalizarConfigEnvio, idDocEnvio, atualizarComRetentativas
 } from "../servidor/envio-listas.js";
 import { enviarAvisoDoCurso } from "../servidor/avisos-curso.js";
 import { processarCursosEncerrados, enviarListaDoCurso, gerarAnexosDaLista } from "../servidor/lista-curso.js";
@@ -202,18 +202,55 @@ export default async function handler(req, res) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dataMissa) || !Number.isInteger(horaMissa) || horaMissa < 0 || horaMissa > 23) {
         return res.status(400).json({ ok: false, erro: "Lista inválida." });
       }
-      const { rotulo, total } = await montarEEnviarLista(
-        { dataMissa, horaMissa, destinatarios: configEnvio.emails },
-        dependencias
-      );
-      // marca como enviada — assim o envio automático não manda a mesma lista de novo
       const id = idDocEnvio(dataMissa, horaMissa);
+      const caminho = `configuracoes/${id}`;
+      const reenviar = corpo.reenviar === true;
+      const atual = await firestore.lerDocumento(caminho);
+      const d = atual?.dados;
+      const quando = (iso) => {
+        try { return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return ""; }
+      };
+      // não deixa mandar a mesma lista duas vezes sem o administrador confirmar
+      if (d?.status === "enviado" && !d.semEnvio && !reenviar) {
+        return res.status(409).json({
+          ok: false, jaEnviada: true,
+          erro: `Esta lista já foi enviada por e-mail${d.enviadoEm ? ` em ${quando(d.enviadoEm)}` : ""} (${d.manual ? "pelo painel" : "automaticamente"}).`
+        });
+      }
+      if (d?.status === "enviando" && Date.now() - new Date(d.iniciadoEm || 0) < 15 * 60000) {
+        return res.status(409).json({ ok: false, erro: "O envio desta lista já está em andamento. Aguarde um instante e confira o e-mail." });
+      }
+      // reserva a lista (o envio automático não mexe nela enquanto isso)
+      const reserva = { status: "enviando", iniciadoEm: new Date().toISOString() };
+      if (!atual) {
+        const criou = await firestore.criarSeNaoExiste("configuracoes", id, { ...reserva, tentativas: 0, dataMissa, horaMissa });
+        if (!criou) return res.status(409).json({ ok: false, erro: "O envio desta lista já está em andamento. Aguarde um instante e confira o e-mail." });
+      } else {
+        const reservou = await firestore.atualizar(caminho, reserva, atual.updateTime);
+        if (!reservou) return res.status(409).json({ ok: false, erro: "O envio desta lista já está em andamento. Aguarde um instante e confira o e-mail." });
+      }
+      let emailSaiu = false;
+      let rotulo, total;
+      try {
+        ({ rotulo, total } = await montarEEnviarLista(
+          { dataMissa, horaMissa, destinatarios: configEnvio.emails },
+          { ...dependencias, enviarEmail: async (dados) => { await dependencias.enviarEmail(dados); emailSaiu = true; } }
+        ));
+      } catch (erro) {
+        // falhou antes de sair: devolve a lista ao estado anterior (se já tinha sido enviada, continua "enviada" para não duplicar)
+        try {
+          await firestore.atualizar(caminho, d?.status === "enviado" && !d.semEnvio
+            ? { status: "enviado" }
+            : { status: "erro", erro: String(erro?.message || erro).slice(0, 300) });
+        } catch { /* segue */ }
+        throw erro;
+      }
+      // marca como enviada — assim o envio automático não manda a mesma lista de novo
       const dadosEnvio = {
         status: "enviado", total, enviadoEm: new Date().toISOString(), destinatarios: configEnvio.emails,
         erro: "", semEnvio: false, manual: true, dataMissa, horaMissa
       };
-      const criou = await firestore.criarSeNaoExiste("configuracoes", id, { ...dadosEnvio, tentativas: 0 });
-      if (!criou) await firestore.atualizar(`configuracoes/${id}`, dadosEnvio);
+      await atualizarComRetentativas(firestore, caminho, dadosEnvio);
       return res.status(200).json({ ok: true, destinatarios: configEnvio.emails, rotulo, total });
     }
 

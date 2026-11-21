@@ -1,6 +1,6 @@
 // Registra, uma vez por visita, de onde a pessoa chegou e em qual página entrou (ver js/visitas-comum.js).
 // Carregado pelas páginas públicas em segundo plano; qualquer falha é silenciosa — nunca atrapalha o site.
-import { normalizarOrigem, origemDoReferrer, diaBrasilia } from "./visitas-comum.js";
+import { normalizarOrigem, origemDoReferrer, origemDoNavegador, diaBrasilia } from "./visitas-comum.js";
 
 const CHAVE_VISITA = "arautos_entrada";        // sessionStorage: já contamos esta visita
 const CHAVE_PESSOA = "arautos_pessoa_do_dia";   // localStorage: { dia, fontes: [...] } — para contar cada aparelho 1x por dia/origem
@@ -13,7 +13,9 @@ export function registrarEntrada(pagina) {
     if (sessionStorage.getItem(CHAVE_VISITA)) return; // só a primeira página de cada visita conta como "entrada"
 
     const params = new URLSearchParams(location.search);
-    const fonte = normalizarOrigem(params.get("origem")) || origemDoReferrer(document.referrer, location.hostname) || "direto";
+    // ordem: marca do link (?origem=) → site de onde veio → app que abriu o link (Instagram, Facebook, TikTok) → direto
+    const fonte = normalizarOrigem(params.get("origem")) || origemDoReferrer(document.referrer, location.hostname)
+      || origemDoNavegador(navigator.userAgent) || "direto";
     sessionStorage.setItem(CHAVE_VISITA, fonte);
 
     // tira "?origem=..." do endereço: quem copiar o link da barra não leva a marca junto

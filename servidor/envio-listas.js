@@ -293,13 +293,25 @@ export async function montarEEnviarLista({ dataMissa, horaMissa, destinatarios, 
   return { rotulo, total };
 }
 
+// Grava no Firestore tentando de novo se falhar (instabilidade, cota...). Usado para registrar "enviado" logo
+// depois que o e-mail SAIU: se esse registro se perdesse, a próxima rodada mandaria a mesma lista outra vez.
+export async function atualizarComRetentativas(firestore, caminho, dados, esperasMs = [0, 700, 1800, 4000]) {
+  let ultimoErro;
+  for (const espera of esperasMs) {
+    if (espera) await new Promise((r) => setTimeout(r, espera));
+    try { await firestore.atualizar(caminho, dados); return; } catch (erro) { ultimoErro = erro; }
+  }
+  throw ultimoErro;
+}
+
 /* ---------------- Rotina principal (chamada pelo agendador) ---------------- */
 
 // Percorre as listas que já fecharam e envia cada uma que ainda não foi enviada.
 // Devolve um relatório (um item por lista) — a API devolve isso como JSON, e os logs do
 // GitHub Actions mostram o que aconteceu a cada rodada.
-export async function processarListasFechadas({ agora = new Date() } = {}, dependencias) {
+export async function processarListasFechadas({ agora = new Date() } = {}, dependencias, opcoes = {}) {
   const { firestore } = dependencias;
+  const esperas = opcoes.esperasMs; // (testes) intervalos entre tentativas de gravação
 
   const docEnvio = await firestore.lerDocumento("configuracoes/envioIntencoes");
   const configEnvio = normalizarConfigEnvio(docEnvio?.dados);
@@ -314,6 +326,10 @@ export async function processarListasFechadas({ agora = new Date() } = {}, depen
     const id = idDocEnvio(dataMissa, horaMissa);
     const caminho = `configuracoes/${id}`;
     const item = { dataMissa, horaMissa };
+    // "emailSaiu": o e-mail já foi aceito pelo servidor de e-mail. Daí em diante nada pode marcar a lista como
+    // "erro" (isso faria a próxima rodada mandar tudo de novo) — só registrar que foi enviada.
+    let emailSaiu = false, totalEnviado = 0;
+    const deps = { ...dependencias, enviarEmail: async (dados) => { await dependencias.enviarEmail(dados); emailSaiu = true; } };
     try {
       const existente = await firestore.lerDocumento(caminho);
 
@@ -348,17 +364,29 @@ export async function processarListasFechadas({ agora = new Date() } = {}, depen
       // 3) gera o documento e envia
       const { total } = await montarEEnviarLista(
         { dataMissa, horaMissa, destinatarios: configEnvio.emails, itens },
-        dependencias
+        deps
       );
-      await firestore.atualizar(caminho, {
+      totalEnviado = total;
+      await atualizarComRetentativas(firestore, caminho, {
         status: "enviado", total, enviadoEm: new Date().toISOString(),
         destinatarios: configEnvio.emails, erro: "", semEnvio: false, manual: false
-      });
+      }, esperas);
       relatorio.push({ ...item, resultado: "enviada", total });
     } catch (erro) {
       const mensagem = String(erro?.message || erro).slice(0, 300);
-      try { await firestore.atualizar(caminho, { status: "erro", erro: mensagem }); } catch { /* não derruba a rodada */ }
-      relatorio.push({ ...item, resultado: "erro", erro: mensagem });
+      if (emailSaiu) {
+        // o e-mail JÁ foi enviado; só o registro falhou. Nunca marca "erro" (evita e-mail duplicado).
+        try {
+          await atualizarComRetentativas(firestore, caminho, {
+            status: "enviado", total: totalEnviado, enviadoEm: new Date().toISOString(),
+            destinatarios: configEnvio.emails, erro: `E-mail enviado; falha ao registrar: ${mensagem}`.slice(0, 300), semEnvio: false, manual: false
+          }, esperas);
+        } catch { /* sem como gravar agora */ }
+        relatorio.push({ ...item, resultado: "enviada (registro com falha)", total: totalEnviado, erro: mensagem });
+      } else {
+        try { await firestore.atualizar(caminho, { status: "erro", erro: mensagem }); } catch { /* não derruba a rodada */ }
+        relatorio.push({ ...item, resultado: "erro", erro: mensagem });
+      }
     }
   }
   return { ativo: true, relatorio };

@@ -19,6 +19,7 @@ const ROTULOS_ORIGEM = {
   instagram: "Instagram",
   whatsapp: "WhatsApp",
   facebook: "Facebook",
+  tiktok: "TikTok",
   google: "Google",
   youtube: "YouTube",
   x: "X (Twitter)",
@@ -55,6 +56,17 @@ export function origemDoReferrer(referrer, hostDoSite = "") {
   if (/(^|\.)(youtube\.com|youtu\.be)$/.test(host)) return "youtube";
   if (/(^|\.)(t\.co|x\.com|twitter\.com)$/.test(host)) return "x";
   return "outro-site";
+}
+
+// Sem "?origem" e sem site de origem: o próprio navegador do aplicativo se identifica. Quando alguém abre um link
+// dentro do Instagram, do Facebook/Messenger ou do TikTok, o "user agent" traz o nome do app. O WhatsApp NÃO se
+// identifica (abre no Chrome/Safari normal), então para ele só vale o link com "?origem=whatsapp".
+export function origemDoNavegador(userAgent) {
+  const ua = String(userAgent || "");
+  if (/Instagram/i.test(ua)) return "instagram";
+  if (/FBAN|FBAV|FB_IAB|FBIOS|FBSV|Messenger/i.test(ua)) return "facebook";
+  if (/musical_ly|TikTok|BytedanceWebview|Bytedance/i.test(ua)) return "tiktok";
+  return "";
 }
 
 // "AAAA-MM-DD" no horário de Brasília (o servidor e o painel usam o mesmo dia)
