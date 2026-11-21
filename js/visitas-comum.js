@@ -16,6 +16,7 @@ export const ORIGENS_PRONTAS = [
 ];
 const ROTULOS_ORIGEM = {
   direto: "Direto (sem origem)",
+  "app-instalado": "Aplicativo instalado (ícone na tela)",
   instagram: "Instagram",
   whatsapp: "WhatsApp",
   facebook: "Facebook",

@@ -5,6 +5,14 @@ import { normalizarOrigem, origemDoReferrer, origemDoNavegador, diaBrasilia } fr
 const CHAVE_VISITA = "arautos_entrada";        // sessionStorage: já contamos esta visita
 const CHAVE_PESSOA = "arautos_pessoa_do_dia";   // localStorage: { dia, fontes: [...] } — para contar cada aparelho 1x por dia/origem
 
+// O site foi aberto pelo ícone na tela inicial (aplicativo instalado / PWA) e não pelo navegador?
+function abertoComoAplicativo() {
+  try {
+    if (navigator.standalone === true) return true; // iPhone/iPad
+    return ["standalone", "fullscreen", "minimal-ui"].some((m) => window.matchMedia(`(display-mode: ${m})`).matches);
+  } catch { return false; }
+}
+
 export function registrarEntrada(pagina) {
   try {
     if (!pagina || pagina === "admin") return;
@@ -13,9 +21,10 @@ export function registrarEntrada(pagina) {
     if (sessionStorage.getItem(CHAVE_VISITA)) return; // só a primeira página de cada visita conta como "entrada"
 
     const params = new URLSearchParams(location.search);
-    // ordem: marca do link (?origem=) → site de onde veio → app que abriu o link (Instagram, Facebook, TikTok) → direto
+    // ordem: marca do link (?origem=) → site de onde veio → ícone do aplicativo instalado → app que abriu o link
+    // (Instagram, Facebook, TikTok) → direto
     const fonte = normalizarOrigem(params.get("origem")) || origemDoReferrer(document.referrer, location.hostname)
-      || origemDoNavegador(navigator.userAgent) || "direto";
+      || (abertoComoAplicativo() ? "app-instalado" : "") || origemDoNavegador(navigator.userAgent) || "direto";
     sessionStorage.setItem(CHAVE_VISITA, fonte);
 
     // tira "?origem=..." do endereço: quem copiar o link da barra não leva a marca junto
