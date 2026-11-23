@@ -33,7 +33,10 @@ export function rotuloDaOrigem(chave) {
 }
 
 // Páginas que podem receber a entrada (as mesmas do menu do site)
-export const PAGINAS_RASTREADAS = ORDEM_PAGINAS.map((p) => ({ chave: p.chave, rotulo: p.label, href: p.href }));
+// Nos links para divulgar o endereço vai SEM acento (/simposio, /intencoes, /adoracao): funciona em qualquer celular,
+// aplicativo e navegador, e o WhatsApp/Instagram não quebram o link no "ç" ou no "ó". O site abre igual.
+const semAcento = (t) => String(t).normalize("NFD").replace(/[̀-ͯ]/g, "");
+export const PAGINAS_RASTREADAS = ORDEM_PAGINAS.map((p) => ({ chave: p.chave, rotulo: p.label, href: semAcento(p.href) }));
 export const rotuloDaPagina = (chave) => PAGINAS_RASTREADAS.find((p) => p.chave === chave)?.rotulo || chave;
 
 // "Instagram Bio!" → "instagram-bio"  (só letras minúsculas, números, hífen e sublinhado; até 30 caracteres)

@@ -4,35 +4,35 @@
   "rewrites": [
     {
       "source": "/adoração",
-      "destination": "/agendamento.html"
+      "destination": "/agendamento"
     },
     {
       "source": "/adora%C3%A7%C3%A3o",
-      "destination": "/agendamento.html"
+      "destination": "/agendamento"
     },
     {
       "source": "/adoracao",
-      "destination": "/agendamento.html"
+      "destination": "/agendamento"
     },
     {
       "source": "/intenções",
-      "destination": "/intencoes.html"
+      "destination": "/intencoes"
     },
     {
       "source": "/inten%C3%A7%C3%B5es",
-      "destination": "/intencoes.html"
+      "destination": "/intencoes"
     },
     {
       "source": "/simpósio",
-      "destination": "/simposio.html"
+      "destination": "/simposio"
     },
     {
       "source": "/simp%C3%B3sio",
-      "destination": "/simposio.html"
+      "destination": "/simposio"
     },
     {
       "source": "/agenda",
-      "destination": "/avisos.html"
+      "destination": "/avisos"
     }
   ],
   "functions": {
