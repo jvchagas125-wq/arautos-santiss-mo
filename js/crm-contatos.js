@@ -1,4 +1,4 @@
-// CRM de contatos do painel administrativo (dentro do "Histórico de listas (arquivo)").
+// CRM de contatos do painel administrativo (painel "Contatos (CRM)" da página Intenções).
 // Junta, numa base só, todas as pessoas que já enviaram intenções: quantas vezes participaram,
 // o que enviaram, anotações e etiquetas próprias, botão do WhatsApp e exportação para planilha.
 // Toda a leitura vem das intenções já salvas — este módulo só acrescenta a camada de anotações
@@ -47,7 +47,7 @@ function celulaCsv(valor) {
  * opcoes:
  *  raiz            elemento onde a tela do CRM é montada
  *  obterEntradas() intenções já enviadas (todas as listas)
- *  ehArquivada(dataMissa, hora)  true se a lista está no Histórico (arquivo)
+ *  ehArquivada(dataMissa, hora)  true se a lista é antiga (enviada por e-mail há mais de 2 dias)
  *  obterUsuarios() pessoas cadastradas no site ({nome, telefoneDigits})
  *  obterCategorias() categorias do formulário ([{chave, rotulo}])
  *  rotuloLista(dataMissa, hora)  texto da lista ("Missa de ... às 08:00")
@@ -76,7 +76,7 @@ export function criarCrm(opcoes) {
       <div class="crm-filtros">
         <select id="crmEscopo" aria-label="Quais listas considerar">
           <option value="todas">Todas as listas</option>
-          <option value="arquivadas">Só listas do arquivo</option>
+          <option value="arquivadas">Só listas antigas (já enviadas)</option>
         </select>
         <select id="crmEtiqueta" aria-label="Filtrar por etiqueta"><option value="">Todas as etiquetas</option></select>
         <select id="crmOrdem" aria-label="Ordenar">
@@ -476,7 +476,7 @@ export function criarCrm(opcoes) {
       const v = document.createElement("p");
       v.className = "mensagem-vazia";
       v.textContent = filtro.escopo === "arquivadas"
-        ? "Ainda não há pessoas nas listas do arquivo."
+        ? "Ainda não há pessoas nas listas antigas."
         : "Ainda não há pessoas com intenções enviadas.";
       lista.appendChild(v);
       return;

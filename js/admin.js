@@ -16,7 +16,7 @@ import {
   obterConfigIntencoes, salvarConfigIntencoes, ouvirConfigIntencoes, salvarHorariosEspeciais,
   obterFormularioIntencoes, ouvirFormularioIntencoes, salvarFormularioIntencoes, limparRascunhosVencidos,
   ouvirTodasIntencoes, excluirListaIntencoes,
-  obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes,
+  obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes, ouvirIntencoesRecentes, ouvirEnviosRecentes,
   criarIntencao, atualizarIntencao, excluirIntencao, ouvirContatosCrm, salvarContatoCrm,
   obterVisitasDosDias, ouvirVisitasDoDia, ouvirCampanhas, salvarCampanha, marcarEnvioCampanha, excluirCampanha, novoIdCampanha,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
@@ -963,7 +963,8 @@ function configurarIntencoes() {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternarListasPreenchidas(); }
   });
 
-  // "Histórico de listas (arquivo)" também começa fechado
+  // "Contatos (CRM)" também começa fechado. Só ao abrir é que o painel lê do banco o histórico completo (intenções de
+  // todas as missas, cadastros e anotações), que é o que o CRM precisa — ver "ligarLeituraCompleta" mais abaixo.
   const cabecalhoArquivoListas = document.getElementById("cabecalhoArquivoListas");
   const corpoArquivoListas = document.getElementById("corpoArquivoListas");
   function alternarArquivoListas() {
@@ -971,6 +972,8 @@ function configurarIntencoes() {
     corpoArquivoListas.classList.toggle("oculto", !abrir);
     cabecalhoArquivoListas.classList.toggle("recolhido", !abrir);
     cabecalhoArquivoListas.setAttribute("aria-expanded", String(abrir));
+    if (abrir) ligarLeituraCompleta();
+    crm.definirAtivo(abrir);
   }
   cabecalhoArquivoListas.addEventListener("click", alternarArquivoListas);
   cabecalhoArquivoListas.addEventListener("keydown", (e) => {
@@ -994,8 +997,6 @@ function configurarIntencoes() {
   let categoriasAtuais = CATEGORIAS_PADRAO;
   const listaQuadros = document.getElementById("listaQuadrosIntencoes");
   const avisoSemIntencoes = document.getElementById("avisoSemIntencoes");
-  const listaQuadrosArquivo = document.getElementById("listaQuadrosArquivo");
-  const avisoSemArquivo = document.getElementById("avisoSemArquivo");
 
   const modalExcluirLista = document.getElementById("modalExcluirLista");
   const nomeExcluirLista = document.getElementById("nomeExcluirLista");
@@ -2056,7 +2057,7 @@ function configurarIntencoes() {
     });
 
     const chavesOrdenadas = [...grupos.keys()].sort((a, b) => b.localeCompare(a));
-    // listas já enviadas por e-mail há 2+ dias vão para o "Histórico (arquivo)" (continuam no banco)
+    // listas já enviadas por e-mail há 2+ dias saem da lista principal (continuam no banco e alimentam o CRM)
     const agora = new Date();
     const ativas = [];
     const arquivadas = [];
@@ -2065,12 +2066,8 @@ function configurarIntencoes() {
       (listaArquivada(enviosPorLista[chave], dataMissa, Number(horaMissaStr), agora) ? arquivadas : ativas).push(chave);
     });
     listaQuadros.innerHTML = "";
-    listaQuadrosArquivo.innerHTML = "";
-    avisoSemIntencoes.textContent = arquivadas.length
-      ? "Nenhuma lista em andamento. As anteriores estão no Histórico de listas (arquivo)."
-      : "Nenhuma intenção foi enviada ainda.";
+    avisoSemIntencoes.textContent = "Nenhuma lista em andamento.";
     avisoSemIntencoes.classList.toggle("oculto", ativas.length > 0);
-    avisoSemArquivo.classList.toggle("oculto", arquivadas.length > 0);
 
     const montarQuadro = (chave) => {
       const [dataMissa, horaMissaStr] = chave.split("|");
@@ -2169,10 +2166,9 @@ function configurarIntencoes() {
       return quadro;
     };
     ativas.forEach((chave) => listaQuadros.appendChild(montarQuadro(chave)));
-    arquivadas.forEach((chave) => listaQuadrosArquivo.appendChild(montarQuadro(chave)));
   }
 
-  /* ---------- CRM de contatos (aba dentro do Histórico de listas) ---------- */
+  /* ---------- CRM de contatos (painel "Contatos (CRM)" na página Intenções) ---------- */
   let usuariosCrm = [];
   const crm = criarCrm({
     raiz: document.getElementById("crmRaiz"),
@@ -2184,35 +2180,34 @@ function configurarIntencoes() {
     rotuloLista: tituloLista,
     salvarContato: salvarContatoCrm
   });
-  document.querySelectorAll(".aba-arquivo").forEach((botao) => {
-    botao.addEventListener("click", () => {
-      const crmAtiva = botao.dataset.aba === "crm";
-      document.querySelectorAll(".aba-arquivo").forEach((b) => {
-        const on = b === botao;
-        b.classList.toggle("ativa", on);
-        b.setAttribute("aria-selected", String(on));
-      });
-      document.getElementById("abaArquivoListas").classList.toggle("oculto", crmAtiva);
-      document.getElementById("abaArquivoCrm").classList.toggle("oculto", !crmAtiva);
-      crm.definirAtivo(crmAtiva);
-    });
-  });
-  // listas, cadastros e CRM só são lidos do banco na primeira vez que a página Intenções é aberta
+  // Leitura do banco, em dois níveis (cada leitura de documento conta na cota gratuita do Firestore):
+  //  1) ao abrir a página Intenções: só as listas recentes (últimos 10 dias e as futuras) e os envios delas;
+  //  2) ao abrir "Contatos (CRM)": o histórico completo, os cadastros e as anotações. Daí em diante a lista principal
+  //     também passa a vir do histórico completo (as recentes já estão incluídas, então o recente é desligado).
+  const receberIntencoes = (entradas) => { renderizarQuadros(entradas); crm.atualizar(); };
+  const receberEnvios = (envios) => {
+    enviosPorLista = envios;
+    renderizarQuadros(ultimasEntradas);
+    renderizarHistoricoEnvios(envios);
+    crm.atualizar();
+  };
+  const DIAS_DA_LISTA_PRINCIPAL = 10;
+  let pararIntencoesRecentes = null, pararEnviosRecentes = null, leituraCompletaLigada = false;
   aoAbrirPaginaUmaVez("intencoes", () => {
+    const desde = new Date(Date.now() - DIAS_DA_LISTA_PRINCIPAL * 24 * 3600000 - 3 * 3600000).toISOString().slice(0, 10);
+    pararIntencoesRecentes = ouvirIntencoesRecentes(desde, receberIntencoes);
+    pararEnviosRecentes = ouvirEnviosRecentes(desde, receberEnvios);
+  });
+  function ligarLeituraCompleta() {
+    if (leituraCompletaLigada) return;
+    leituraCompletaLigada = true;
+    if (pararIntencoesRecentes) { pararIntencoesRecentes(); pararIntencoesRecentes = null; }
+    if (pararEnviosRecentes) { pararEnviosRecentes(); pararEnviosRecentes = null; }
     ouvirContatosCrm((mapa) => crm.definirAnotacoes(mapa));
     ouvirTodosUsuarios((lista_) => { usuariosCrm = lista_; crm.atualizar(); });
-
-    ouvirTodasIntencoes((entradas) => {
-      renderizarQuadros(entradas);
-      crm.atualizar();
-    });
-    ouvirEnviosIntencoes((envios) => {
-      enviosPorLista = envios;
-      renderizarQuadros(ultimasEntradas);
-      renderizarHistoricoEnvios(envios);
-      crm.atualizar();
-    });
-  });
+    ouvirTodasIntencoes(receberIntencoes);
+    ouvirEnviosIntencoes(receberEnvios);
+  }
 
   /* ---------- Envio automático por e-mail ---------- */
   const formEnvioEmail = document.getElementById("formEnvioEmail");

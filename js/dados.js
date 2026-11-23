@@ -704,6 +704,21 @@ export function ouvirEnviosIntencoes(callback) {
   });
 }
 
+// Igual a ouvirEnviosIntencoes, mas só das missas de "desdeIso" (aaaa-mm-dd) em diante — poupa leituras: o histórico de
+// envios cresce a cada missa, e para a lista principal do painel só interessam as recentes.
+export function ouvirEnviosRecentes(desdeIso, callback) {
+  callback = cacheado("adm_envios_recentes", callback);
+  const q = query(collection(db, "configuracoes"), where("dataMissa", ">=", desdeIso));
+  return onSnapshot(q, (snap) => {
+    const envios = {};
+    snap.docs.forEach((d) => {
+      const dados = d.data();
+      if (["enviando", "enviado", "erro"].includes(dados.status) && dados.dataMissa && dados.horaMissa !== undefined) envios[`${dados.dataMissa}|${dados.horaMissa}`] = dados;
+    });
+    callback(envios);
+  });
+}
+
 // Envia uma intenção para a lista da missa indicada. Guarda nome e telefoneDigits de quem
 // enviou (identificação padrão do site, já feita em toda página). "destaque" = sai em negrito no
 // documento Word (usado nas intenções por alma com tempo de falecimento). O texto é sempre livre,
@@ -808,6 +823,16 @@ export function ouvirIntencoesDaLista(dataMissa, horaMissa, callback) {
 export function ouvirTodasIntencoes(callback) {
   callback = cacheado("adm_intencoes_todas", callback);
   return onSnapshot(collection(db, "intencoes"), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((it) => !ehRascunho(it)));
+  });
+}
+
+// Só as intenções das missas de "desdeIso" (aaaa-mm-dd) em diante (inclui as futuras). É o que a lista principal do
+// painel precisa; ler a coleção inteira (ouvirTodasIntencoes) só é preciso para o CRM de contatos.
+export function ouvirIntencoesRecentes(desdeIso, callback) {
+  callback = cacheado("adm_intencoes_recentes", callback);
+  const q = query(collection(db, "intencoes"), where("dataMissa", ">=", desdeIso));
+  return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((it) => !ehRascunho(it)));
   });
 }
