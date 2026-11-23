@@ -425,7 +425,10 @@ const PALAVRAS_DE_FRASE = new Set(`para pra por pelo pela pelos pelas com sem so
   sofrendo estudando trabalhando passando enfrentando gostaria favor ajuda ajudar ajude
   saude emprego trabalho bencao bencaos protecao cura curar vida casa casamento formatura concurso prova provas exame cirurgia doenca
   tratamento dinheiro financeira financeiro sucesso estudo estudos faculdade escola viagem momento dificil melhora recuperacao conquista
-  intencao intencoes missa alcancada alcancadas alcancado obrigado obrigada gratidao`.split(/\s+/).filter(Boolean));
+  intencao intencoes missa alcancada alcancadas alcancado obrigado obrigada gratidao
+  passada passadas passado passados presente presentes futura futuras futuro futuros negada negadas negado negados esquecida esquecidas
+  esquecido esquecidos necessaria necessarias necessario necessarios necessitada necessitadas necessitado necessitados espiritual espirituais
+  fisica fisicas fisico fisicos mental falecido falecidas falecidos defunto defuntos gracas almas purgatorio felicidades parabens`.split(/\s+/).filter(Boolean));
 
 const semAcento = (t) => String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const PARECE_NOME = /^[\p{L}][\p{L}'’\-.]*$/u;
@@ -457,31 +460,56 @@ function analisarPalavrasDeNome(texto) {
   return { palavras, nomes };
 }
 
+// Um pedaço de texto (sem vírgulas) → o nome já com maiúsculas corrigidas, ou "" se não for nome de pessoa nem
+// "Família + sobrenome". Com `umNomeBasta`, um nome só ("Maria", "Freitas e Yuri") também vale; sem ele é preciso
+// nome completo (nome + sobrenome), como em "Pedem e agradecem graças".
+function nomeAceitoNoPedaco(pedaco, umNomeBasta) {
+  const limpo = pedaco.replace(/[.]+$/, "").replace(/\s+/g, " ").trim();
+  if (!limpo || limpo.length > 90) return "";
+  // "Família Valle", "Família Silva e Souza"
+  const mFamilia = limpo.match(/^fam[ií]lia\s+(.+)$/i);
+  if (mFamilia) {
+    const resto = analisarPalavrasDeNome(mFamilia[1]);
+    return resto && resto.nomes >= 1 ? "Família " + resto.palavras.map((p, i) => capitalizarPalavraDeNome(p, i === 0)).join(" ") : "";
+  }
+  // nomes, um ou mais ligados por "e" (ou & / +): "Maria e José da Silva" (sobrenome só no último)
+  const partes = limpo.split(/\s+(?:e|&|\+)\s+/i);
+  const analises = partes.map((p) => analisarPalavrasDeNome(p));
+  if (analises.some((a) => !a)) return "";
+  const ultimo = analises[analises.length - 1];
+  const valido = analises.every((a, i) =>
+    umNomeBasta ? a.nomes >= 1 : a.nomes >= 2 || (a.nomes === 1 && i < analises.length - 1 && ultimo.nomes >= 2));
+  if (!valido) return "";
+  return analises.map((a) => a.palavras.map((p, i) => capitalizarPalavraDeNome(p, i === 0)).join(" ")).join(" e ");
+}
+
 // Uma intenção da categoria "Pedem e agradecem graças" → lista de linhas aceitas, já com maiúsculas corrigidas
 // (vazia se nada ali é nome de pessoa nem "Família + sobrenome").
 export function nomesAceitosEmGracas(texto) {
-  const aceitos = [];
-  String(texto || "").split(/[,;\n]+/).forEach((pedaco) => {
-    const limpo = pedaco.replace(/[.]+$/, "").replace(/\s+/g, " ").trim();
-    if (!limpo || limpo.length > 90) return;
-    // "Família Valle", "Família Silva e Souza"
-    const mFamilia = limpo.match(/^fam[ií]lia\s+(.+)$/i);
-    if (mFamilia) {
-      const resto = analisarPalavrasDeNome(mFamilia[1]);
-      if (resto && resto.nomes >= 1) {
-        aceitos.push("Família " + resto.palavras.map((p, i) => capitalizarPalavraDeNome(p, i === 0)).join(" "));
-      }
-      return;
-    }
-    // nomes completos, um ou mais ligados por "e" (ou & / +): "Maria e José da Silva" (sobrenome só no último)
-    const partes = limpo.split(/\s+(?:e|&|\+)\s+/i);
-    const analises = partes.map((p) => analisarPalavrasDeNome(p));
-    if (analises.some((a) => !a)) return;
-    const valido = analises.every((a, i) => a.nomes >= 2 || (a.nomes === 1 && i < analises.length - 1 && analises[analises.length - 1].nomes >= 2));
-    if (!valido) return;
-    aceitos.push(analises.map((a) => a.palavras.map((p, i) => capitalizarPalavraDeNome(p, i === 0)).join(" ")).join(" e "));
-  });
-  return aceitos;
+  return String(texto || "").split(/[,;\n]+/).map((pedaco) => nomeAceitoNoPedaco(pedaco, false)).filter(Boolean);
+}
+
+/* ---------- Demais categorias (Saúde, Por alma, Aniversários e outras): só nomes de pessoas ----------
+   Aqui basta um nome ("Maria", "Taciana e Luiz"), mas frases e pedidos ("Física e espiritual minha e dos meus filhos",
+   "Todos os falecidos de hoje") são descartados do documento. O que vem entre parênteses no fim ("(7 dias)",
+   "(50 anos)", "(25 anos de casados – Bodas de Prata)") é mantido. Uma intenção com vários nomes separados por
+   vírgula continua numa linha só (menos os pedaços que não são nome), exceto em "falecimento", onde cada nome é uma linha. */
+function separarSufixo(texto) {
+  const t = String(texto || "").trim();
+  const m = t.match(/^(.*?)\s*\(([^()]*)\)\s*$/s);
+  return m ? { corpo: m[1], sufixo: ` (${m[2].trim()})` } : { corpo: t, sufixo: "" };
+}
+export function linhasAceitasEmCategoria(texto, tipo) {
+  if (tipo === "falecimento") {
+    return separarNomesDoItem(texto).map((n) => {
+      const { corpo, sufixo } = separarSufixo(n);
+      const nome = nomeAceitoNoPedaco(corpo, true);
+      return nome ? nome + sufixo : "";
+    }).filter(Boolean);
+  }
+  const { corpo, sufixo } = separarSufixo(texto);
+  const nomes = corpo.split(/[,;\n]+/).map((p) => nomeAceitoNoPedaco(p, true)).filter(Boolean);
+  return nomes.length ? [nomes.join(", ") + sufixo] : [];
 }
 
 // Para intenções já enviadas (inclusive as antigas) de uma categoria "falecimento": se o texto traz
@@ -1789,4 +1817,23 @@ export function normalizarLinkSimposio(texto) {
   if (/^\/?[a-z0-9À-ſ][a-z0-9À-ſ-]*(\/[a-z0-9À-ſ-]+)*$/i.test(t) && !t.includes(".")) return "/" + t.replace(/^\//, "");
   if (/^www\.[^\s]+\.[a-z]{2,}[^\s]*$/i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i.test(t)) return "https://" + t;
   return null;
+}
+
+/* ---------------- Leituras do banco sob demanda ----------------
+   Cada "ouvinte" que lê uma coleção inteira (intenções, cadastros, CRM, agendamentos, inscrições...) custa uma leitura
+   por documento toda vez que é ligado. Em vez de ligar tudo assim que o painel abre, cada página só começa a ler
+   quando é aberta pela primeira vez (e depois segue em tempo real). Páginas que a conta não pode ver nunca leem nada. */
+export function aoAbrirPaginaUmaVez(idPagina, iniciar) {
+  const secao = document.getElementById(`secao-${idPagina}`);
+  if (!secao) { iniciar(); return; }
+  let feito = false;
+  const observador = new MutationObserver(() => tentar());
+  function tentar() {
+    if (feito || secao.classList.contains("oculto")) return;
+    feito = true;
+    observador.disconnect();
+    iniciar();
+  }
+  observador.observe(secao, { attributes: true, attributeFilter: ["class"] });
+  tentar();
 }

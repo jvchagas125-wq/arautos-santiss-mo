@@ -1,7 +1,6 @@
 // Painel administrativo: página inicial — blocos que levam a cada página do painel e um gráfico
 // pequeno com o total de pessoas cadastradas no site ao longo do tempo.
 import { firebaseConfig } from "./firebase-config.js";
-import { ouvirTodosUsuarios } from "./dados.js";
 
 /* ---------------- Gráfico: pessoas cadastradas ao longo do tempo ---------------- */
 
@@ -115,14 +114,6 @@ async function buscarDatasDeCadastro() {
   return datas;
 }
 
-function dataAproximada(usuario) {
-  const t = usuario && (usuario.criadoEm || usuario.atualizadoEm);
-  if (!t) return NaN;
-  if (typeof t.toMillis === "function") return t.toMillis();
-  if (typeof t.seconds === "number") return t.seconds * 1000;
-  return Date.parse(t);
-}
-
 function iniciarGrafico() {
   const caixa = document.getElementById("graficoCadastros");
   const kpis = document.getElementById("kpisCadastros");
@@ -130,16 +121,34 @@ function iniciarGrafico() {
   const dica = document.getElementById("dicaGrafico");
   let periodo = "30d";
   let datas = [];
-  let listaAtual = [];
-  let datasReais = null;      // de createTime (precisas)
-  let totalBuscado = -1;
+  let datasReais = null;      // de createTime (precisas); null = ainda não carregou
+  let buscadoEm = 0;
   let buscando = false;
+  let falhou = false;
 
-  const dadosDeDatas = () => (datasReais && datasReais.length ? datasReais : listaAtual.map(dataAproximada).filter(Number.isFinite));
+  // As datas ficam guardadas no aparelho por 30 minutos: abrir o painel várias vezes não relê a coleção de
+  // cadastros inteira a cada vez (cada leitura conta na cota gratuita do Firestore). A chave começa com
+  // "adm_" para ser apagada junto com o resto do cache do painel quando a pessoa sai (limparCacheDoPainel).
+  const CHAVE_CACHE = "arautos_dados_v1_adm_cadastros_datas";
+  const VALIDADE_MS = 30 * 60 * 1000;
+  function lerCache() {
+    try {
+      const c = JSON.parse(localStorage.getItem(CHAVE_CACHE));
+      return c && Array.isArray(c.datas) && Number.isFinite(c.em) ? c : null;
+    } catch { return null; }
+  }
+  function guardarCache() {
+    try { localStorage.setItem(CHAVE_CACHE, JSON.stringify({ em: buscadoEm, datas: datasReais })); } catch { /* sem cache */ }
+  }
 
   function desenhar() {
-    datas = dadosDeDatas();
-    const total = listaAtual.length;
+    datas = datasReais || [];
+    const total = datas.length;
+    if (!datasReais) {
+      caixa.innerHTML = `<p class="mensagem-vazia">${falhou ? "Não foi possível carregar os cadastros agora." : "Carregando..."}</p>`;
+      kpis.innerHTML = ""; dica.textContent = "";
+      return;
+    }
     const agora = Date.now();
     const novos = (dias) => datas.filter((d) => d >= agora - dias * DIA_MS).length;
     kpis.innerHTML = "";
@@ -177,15 +186,21 @@ function iniciarGrafico() {
     });
   }
 
-  async function atualizarDatasReais() {
-    if (buscando || totalBuscado === listaAtual.length) return;
+  // Busca as datas só quando a Página inicial está à vista e o que está guardado já passou de 30 minutos.
+  async function atualizarDatas() {
+    if (buscando || (datasReais && Date.now() - buscadoEm < VALIDADE_MS)) return;
     buscando = true;
-    const alvo = listaAtual.length;
-    try { datasReais = await buscarDatasDeCadastro(); totalBuscado = alvo; }
-    catch (err) { console.warn("Datas de cadastro: usando a data da última atualização.", err); datasReais = null; totalBuscado = alvo; }
+    try {
+      datasReais = await buscarDatasDeCadastro();
+      buscadoEm = Date.now();
+      falhou = false;
+      guardarCache();
+    } catch (err) {
+      console.warn("Datas de cadastro:", err);
+      if (!datasReais) falhou = true;
+    }
     buscando = false;
     desenhar();
-    if (totalBuscado !== listaAtual.length) atualizarDatasReais(); // chegou gente nova enquanto buscava
   }
 
   abas.forEach((b) => b.addEventListener("click", () => {
@@ -194,11 +209,13 @@ function iniciarGrafico() {
     desenhar();
   }));
 
-  ouvirTodosUsuarios((lista) => {
-    listaAtual = lista;
-    desenhar();                 // na hora, com o que já se sabe
-    atualizarDatasReais();      // e refina com as datas reais
-  });
+  const guardado = lerCache();
+  if (guardado) { datasReais = guardado.datas; buscadoEm = guardado.em; }
+  desenhar();
+  const secaoInicio = document.getElementById("secao-inicio");
+  const aoVerInicio = () => { if (!secaoInicio || !secaoInicio.classList.contains("oculto")) atualizarDatas(); };
+  if (secaoInicio) new MutationObserver(aoVerInicio).observe(secaoInicio, { attributes: true, attributeFilter: ["class"] });
+  aoVerInicio();
 }
 
 /* ---------------- Blocos das páginas do painel ---------------- */

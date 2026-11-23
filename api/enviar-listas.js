@@ -1,7 +1,7 @@
 // API do envio automático de listas de intenção por e-mail (função serverless da Vercel).
 //
 // Três formas de chamar:
-//  1) Agendador (GitHub Actions, a cada ~10 min):  GET/POST com o cabeçalho
+//  1) Agendador (cron-job.org, a cada 5 min):  GET/POST com o cabeçalho
 //       Authorization: Bearer <CRON_SECRET>
 //     → envia todas as listas que já fecharam e ainda não foram enviadas.
 //  2) Painel admin, botão "Enviar e-mail de teste":  POST { "acao": "teste", "usuarioId": "...", "chave": "..." }
@@ -128,9 +128,15 @@ export default async function handler(req, res) {
       const dependencias = { firestore, gerarDocumento, enviarEmail };
       const resultado = await processarListasFechadas({ agora: new Date() }, dependencias);
       // inscrições de cursos que acabaram de encerrar: envia a lista de inscritos (um erro aqui não atrapalha as listas de intenção)
+      // Só confere os cursos a cada 3ª rodada (uma vez a cada ~15 min, quando o agendador roda de 5 em 5 minutos): isso lê
+      // todos os cursos do banco, e fazer isso em toda rodada gastaria leituras da cota gratuita à toa. O e-mail de um curso
+      // que encerrou sai com no máximo uns 15 minutos de atraso. As listas de intenção são conferidas em TODA rodada.
+      const minuto = new Date().getUTCMinutes();
       let cursos;
       try {
-        cursos = await processarCursosEncerrados({ agora: new Date() }, { firestore, gerarAnexos: gerarAnexosCurso, enviarEmail });
+        cursos = minuto % 15 < 5
+          ? await processarCursosEncerrados({ agora: new Date() }, { firestore, gerarAnexos: gerarAnexosCurso, enviarEmail })
+          : { relatorio: [], mensagem: "Cursos conferidos só a cada 15 minutos." };
       } catch (erro) {
         console.error("[enviar-listas] cursos:", erro?.message || erro);
         cursos = { relatorio: [], erro: String(erro?.message || erro).slice(0, 300) };

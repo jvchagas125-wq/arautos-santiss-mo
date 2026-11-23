@@ -3,7 +3,7 @@
 // internet: tudo que fala com o mundo de fora (Firestore, geração do documento, e-mail) entra por
 // parâmetro (veja "dependencias" em processarListasFechadas).
 //
-// Como funciona, resumindo: a cada ~10 minutos o GitHub Actions chama a API; a API olha os
+// Como funciona, resumindo: a cada 5 minutos o agendador (cron-job.org) chama a API; a API olha os
 // horários de missa configurados no painel, descobre quais listas JÁ fecharam (horário da missa
 // menos "horas antes") e ainda não foram enviadas, gera o documento Word de cada uma e manda por e-mail
 // pros endereços cadastrados no painel administrativo. Cada lista é enviada uma única vez —
@@ -307,8 +307,8 @@ export async function atualizarComRetentativas(firestore, caminho, dados, espera
 /* ---------------- Rotina principal (chamada pelo agendador) ---------------- */
 
 // Percorre as listas que já fecharam e envia cada uma que ainda não foi enviada.
-// Devolve um relatório (um item por lista) — a API devolve isso como JSON, e os logs do
-// GitHub Actions mostram o que aconteceu a cada rodada.
+// Devolve um relatório (um item por lista) — a API devolve isso como JSON, e o histórico do
+// cron-job.org mostra o que aconteceu a cada rodada.
 export async function processarListasFechadas({ agora = new Date() } = {}, dependencias, opcoes = {}) {
   const { firestore } = dependencias;
   const esperas = opcoes.esperasMs; // (testes) intervalos entre tentativas de gravação

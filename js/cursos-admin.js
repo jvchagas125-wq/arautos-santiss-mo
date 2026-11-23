@@ -1,7 +1,7 @@
 // Painel administrativo: "Inscrições de cursos" — cadastro dos cursos/eventos (com formulário próprio),
 // CRM dos inscritos (lista por curso, WhatsApp, e-mail, exportação) e quadro de avisos por curso.
 import {
-  mostrarToast, abrirModal, fecharModal, formatarDataBR, linkificarTexto
+  mostrarToast, abrirModal, fecharModal, formatarDataBR, linkificarTexto, aoAbrirPaginaUmaVez
 } from "./utils.js";
 import {
   ouvirCursos, salvarCurso, alterarAberturaDoCurso, excluirCurso,
@@ -849,9 +849,12 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
 
   /* ---------- dados em tempo real ---------- */
   const redesenharTudo = () => { desenharCursos(); desenharCrm(); desenharAvisos(); };
-  ouvirCursos((lista) => { cursos = lista; redesenharTudo(); });
-  ouvirTodasInscricoes((lista) => { inscricoes = lista; redesenharTudo(); });
-  ouvirTodosAvisosDosCursos((lista) => { avisos = lista; desenharAvisos(); desenharCursos(); });
+  // cursos, inscrições e avisos só são lidos do banco na primeira vez que a página Inscrições de cursos é aberta
+  aoAbrirPaginaUmaVez("inscricoes", () => {
+    ouvirCursos((lista) => { cursos = lista; redesenharTudo(); });
+    ouvirTodasInscricoes((lista) => { inscricoes = lista; redesenharTudo(); });
+    ouvirTodosAvisosDosCursos((lista) => { avisos = lista; desenharAvisos(); desenharCursos(); });
+  });
 
   void normalizarCurso; void tabelaDeInscritos;
 }

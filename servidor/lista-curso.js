@@ -1,6 +1,6 @@
 // Envio por e-mail da LISTA DE INSCRITOS de um curso (Excel, Word e PDF) — roda no SERVIDOR (Vercel).
 // Dois jeitos de disparar (quem chama é api/enviar-listas.js):
-//  1) Automático: o agendador (GitHub Actions, a cada ~10 min) chama processarCursosEncerrados, que procura
+//  1) Automático: o agendador (cron-job.org, a cada 5 min; os cursos são conferidos a cada ~15 min) chama processarCursosEncerrados, que procura
 //     cursos cujas inscrições encerraram (na data programada ou "na mão" pelo painel) e ainda não tiveram a lista
 //     enviada, e manda para os e-mails cadastrados em Inscritos (CRM) > E-mails que recebem a lista de inscritos.
 //     Cada encerramento é enviado uma única vez (o "carimbo" fica em configuracoes/envioCurso_<id>).

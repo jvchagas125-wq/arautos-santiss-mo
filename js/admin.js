@@ -4,7 +4,7 @@ import { listaArquivada, inicializarNavegacao, aplicarLogo, mostrarToast, abrirM
   isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
   MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS, destinoAtual, categoriasPermitidasDaMissa,
   normalizarRegraFechamento, regraDeFechamentoDaMissa, descreverRegraDeFechamento, textoHoraMinuto,
-  capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits } from "./utils.js";
+  capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits, aoAbrirPaginaUmaVez } from "./utils.js";
 import {
   obterConfiguracoesGerais, salvarConfiguracoesGerais, ouvirPaginasOcultas, salvarPaginaOculta,
   obterFrases, salvarFrases,
@@ -2197,18 +2197,21 @@ function configurarIntencoes() {
       crm.definirAtivo(crmAtiva);
     });
   });
-  ouvirContatosCrm((mapa) => crm.definirAnotacoes(mapa));
-  ouvirTodosUsuarios((lista_) => { usuariosCrm = lista_; crm.atualizar(); });
+  // listas, cadastros e CRM só são lidos do banco na primeira vez que a página Intenções é aberta
+  aoAbrirPaginaUmaVez("intencoes", () => {
+    ouvirContatosCrm((mapa) => crm.definirAnotacoes(mapa));
+    ouvirTodosUsuarios((lista_) => { usuariosCrm = lista_; crm.atualizar(); });
 
-  ouvirTodasIntencoes((entradas) => {
-    renderizarQuadros(entradas);
-    crm.atualizar();
-  });
-  ouvirEnviosIntencoes((envios) => {
-    enviosPorLista = envios;
-    renderizarQuadros(ultimasEntradas);
-    renderizarHistoricoEnvios(envios);
-    crm.atualizar();
+    ouvirTodasIntencoes((entradas) => {
+      renderizarQuadros(entradas);
+      crm.atualizar();
+    });
+    ouvirEnviosIntencoes((envios) => {
+      enviosPorLista = envios;
+      renderizarQuadros(ultimasEntradas);
+      renderizarHistoricoEnvios(envios);
+      crm.atualizar();
+    });
   });
 
   /* ---------- Envio automático por e-mail ---------- */
@@ -3131,6 +3134,8 @@ function configurarAcompanhamento() {
       </div>`;
   }
 
+  // os agendamentos só são lidos do banco na primeira vez que a página Acompanhamento é aberta
+  aoAbrirPaginaUmaVez("acompanhamento", () => {
   ouvirTodosAgendamentos("agendado", (lista) => {
     agendamentosAtivos = lista;
     atualizarContagemAgendados();
@@ -3148,6 +3153,7 @@ function configurarAcompanhamento() {
         abrirModal(modalMotivo);
       });
     });
+  });
   });
 
   function fecharCancelamentoAgend() {
@@ -3406,11 +3412,12 @@ function configurarContatos() {
     campanhas.ativar();
   });
 
-  ouvirTodosUsuarios((lista_) => {
+  // os cadastros só são lidos do banco na primeira vez que a página Contatos é aberta
+  aoAbrirPaginaUmaVez("contatos", () => ouvirTodosUsuarios((lista_) => {
     todosContatos = lista_;
     campanhas.definirContatos(lista_);
     renderizar();
-  });
+  }));
 
   /* ---------- Acordeão: abrir/fechar a lista de pessoas cadastradas ---------- */
   const quadroContatos = document.getElementById("quadroContatos");
