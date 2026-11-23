@@ -7,7 +7,7 @@
 // (no navegador ela vem do <script> do admin.html em window.docx; no servidor, do npm).
 // O documento é EDITÁVEL: as linhas em branco pra acrescentar nomes à mão são parágrafos comuns
 // com uma linha embaixo, e todo o texto é texto normal do Word.
-import { CATEGORIAS_PADRAO, formatarDataComDiaSemana, separarNomesDoItem, nomesAceitosEmGracas } from "./utils.js";
+import { CATEGORIAS_PADRAO, formatarDataComDiaSemana, nomesAceitosEmGracas, linhasAceitasEmCategoria } from "./utils.js";
 
 // Fonte que todo computador com Word tem — o documento não embute fonte nenhuma.
 const FONTE = "Times New Roman";
@@ -106,10 +106,11 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
     : categorias;
   const itensDe = (chave) => (chave === "__outras__" ? orfas : itens.filter((it) => it.categoria === chave));
 
-  // "Pedem e agradecem graças" só conta quando sobrou algum nome válido (frases são descartadas, ver nomesAceitosEmGracas)
-  const temItens = (c) => c.chave === "gracas"
-    ? itensDe(c.chave).some((it) => nomesAceitosEmGracas(it.texto).length > 0)
-    : itensDe(c.chave).length > 0;
+  // Só entram no documento NOMES de pessoas (frases e pedidos são descartados; ver utils.js). "Pedem e agradecem graças"
+  // pede nome completo; nas demais basta um nome. Uma categoria sem nenhum nome válido some do documento.
+  const linhasDoItem = (chave, tipo, texto) =>
+    chave === "gracas" ? nomesAceitosEmGracas(texto) : linhasAceitasEmCategoria(texto, tipo);
+  const temItens = (c) => itensDe(c.chave).some((it) => linhasDoItem(c.chave, c.tipo, it.texto).length > 0);
   const categoriasComItens = categoriasDoDocumento.filter((c) => c.textoFixo || temItens(c));
 
   // Nomes em colunas de verdade do Word (um embaixo do outro, coluna por coluna) pra não ocupar
@@ -123,9 +124,7 @@ export function construirDocxIntencoes(rotulo, itens, opcoes = {}) {
     // vírgula), cada nome vira uma linha própria — também nas intenções antigas.
     const textos = doGrupo.flatMap((it) => {
       const destaque = it.destaque === true;
-      // "Pedem e agradecem graças": só nome completo ou "Família + sobrenome" (o resto é descartado) e com maiúsculas corrigidas
-      const partes = chave === "gracas" ? nomesAceitosEmGracas(it.texto)
-        : tipo === "falecimento" ? separarNomesDoItem(it.texto) : [(it.texto || "").trim().replace(/[.,;:]+$/, "")];
+      const partes = linhasDoItem(chave, tipo, it.texto);
       return partes.map((texto) => ({ texto, negrito: destaque }));
     });
     return textos.filter((n) => n.texto);
