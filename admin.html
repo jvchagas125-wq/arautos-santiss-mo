@@ -856,31 +856,7 @@
         <h1 class="titulo-pagina">Origem das visitas</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
-        <div class="quadro-dia-missa" id="quadroVisLinks" style="margin-top:20px;">
-          <div class="quadro-dia-missa__cabecalho" id="cabecalhoVisLinks" role="button" tabindex="0" aria-expanded="false" aria-controls="corpoVisLinks">
-            <svg class="quadro-dia-missa__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-            <span class="quadro-dia-missa__titulo"><span class="emoji">🔗</span> Links para divulgar</span>
-            <span class="quadro-dia-missa__resumo">Instagram · WhatsApp</span>
-          </div>
-          <div class="quadro-dia-missa__corpo oculto" id="corpoVisLinks">
-          <p class="formulario-intro">
-            Cada link leva para uma página do site e leva junto a marca de onde ele foi divulgado. Use o link do
-            <strong>Instagram</strong> na bio e nos stories, e o do <strong>WhatsApp</strong> nas mensagens e grupos —
-            assim o painel mostra quantas pessoas entraram por cada um. O link da página <em>Início</em> serve de link principal.
-          </p>
-          <p class="campo-ajuda" style="margin-top:-4px;">
-            <strong>Reconhecimento automático:</strong> mesmo sem a marca, quem abre o link <em>de dentro do Instagram, do Facebook ou do TikTok</em>
-            já é contado nessa origem. O <strong>WhatsApp</strong> não avisa de onde a pessoa veio, por isso só o link marcado do WhatsApp conta direito.
-          </p>
-          <div class="campo">
-            <label for="visOutraOrigem">Outra origem (opcional)</label>
-            <input type="text" id="visOutraOrigem" placeholder="Ex.: facebook, cartaz, email" autocomplete="off" maxlength="30" />
-          </div>
-          <div id="visLinks"></div>
-          </div>
-        </div>
-
-        <div class="quadro-dia-missa" id="quadroVisResultados" style="margin-top:12px;">
+        <div class="quadro-dia-missa" id="quadroVisResultados" style="margin-top:20px;">
           <div class="quadro-dia-missa__cabecalho" id="cabecalhoVisResultados" role="button" tabindex="0" aria-expanded="false" aria-controls="corpoVisResultados">
             <svg class="quadro-dia-missa__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
             <span class="quadro-dia-missa__titulo"><span class="emoji">📊</span> Resultados</span>
@@ -894,12 +870,6 @@
             <button type="button" id="visAtualizar" title="Buscar os números de novo">↻ Atualizar</button>
           </div>
           <p class="vis-aovivo" id="visAoVivo" aria-live="off"></p>
-          <div class="grafico__abas vis-filtro" id="visFiltro" role="group" aria-label="Quais entradas mostrar">
-            <button type="button" data-modo="todas" class="ativa" aria-pressed="true">Todas</button>
-            <button type="button" data-modo="marcadas" aria-pressed="false">🔗 Só links com ?origem=</button>
-            <button type="button" data-modo="sem-marca" aria-pressed="false">Sem marca</button>
-          </div>
-          <div class="vis-divisao" id="visDivisao"></div>
           <div class="crm-resumo" id="visKpis"></div>
           <p class="vis-estado" id="visEstado" aria-live="polite"></p>
           <h4 class="camp-subtitulo">Entradas por dia</h4>
@@ -913,10 +883,10 @@
           <div id="visDetalhes"></div>
           <p class="campo-ajuda" style="margin-top:14px;">
             <strong>Entrada</strong> é uma visita ao site, contada na primeira página que a pessoa abre. <strong>Pessoas</strong> são
-            aparelhos diferentes por dia (quem volta em outro dia conta de novo). Quem chega sem link rastreável aparece pelo site ou
-            aplicativo de onde veio (Instagram, Facebook, Google...) ou pelo <em>ícone do aplicativo instalado</em>. O que sobra em
-            <em>WhatsApp e outros links sem marca</em> é quem clicou num link do site no WhatsApp (que não informa a origem), digitou o
-            endereço ou veio de um aplicativo que não se identifica — para separar o WhatsApp, divulgue o link marcado. Os acessos de quem está logado no painel não são contados.
+            aparelhos diferentes por dia (quem volta em outro dia conta de novo). A origem é reconhecida sozinha pelo site de onde a pessoa
+            veio (Instagram, Facebook, Google...), pelo aplicativo que abriu o link (Instagram, Facebook, TikTok) ou pelo
+            <em>ícone do aplicativo instalado</em>. Em <em>Direto ou WhatsApp</em> ficam quem digitou o endereço e quem clicou num link
+            no WhatsApp, que não informa a origem. Os acessos de quem está logado no painel não são contados.
           </p>
           </div>
         </div>

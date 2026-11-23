@@ -1,21 +1,16 @@
 // Rastreamento de entradas no site: regras compartilhadas entre as páginas públicas (que registram a entrada)
-// e o painel administrativo (que monta os links e os gráficos). Só funções puras, sem depender do navegador.
+// e o painel administrativo (que monta os gráficos). Só funções puras, sem depender do navegador.
 //
-// Como funciona: o link divulgado leva "?origem=instagram" (ou whatsapp, ou o que você escolher). Na primeira página
-// que a pessoa abre em cada visita, o site soma 1 "entrada" em: dia → origem → página. Quando a pessoa chega sem
-// "?origem", a origem é deduzida de onde ela veio (Instagram, Google...) ou fica como "Direto".
+// Como funciona: na primeira página que a pessoa abre em cada visita, o site soma 1 "entrada" em: dia → origem →
+// página. A origem é deduzida de onde a pessoa veio (site de origem, ícone do aplicativo instalado ou aplicativo que
+// abriu o link — Instagram, Facebook, TikTok) ou fica como "Direto".
 import { ORDEM_PAGINAS } from "./utils.js";
 
 export const PREFIXO_DOC_VISITAS = "visitas_";
 export const idDocVisitas = (dia) => `${PREFIXO_DOC_VISITAS}${dia}`;
 
-// Origens que o painel já oferece prontas
-export const ORIGENS_PRONTAS = [
-  { chave: "instagram", rotulo: "Instagram" },
-  { chave: "whatsapp", rotulo: "WhatsApp" }
-];
 const ROTULOS_ORIGEM = {
-  direto: "WhatsApp e outros links sem marca",
+  direto: "Direto ou WhatsApp (sem identificação)",
   "app-instalado": "Aplicativo instalado (ícone na tela)",
   instagram: "Instagram",
   whatsapp: "WhatsApp",
@@ -33,20 +28,10 @@ export function rotuloDaOrigem(chave) {
 }
 
 // Páginas que podem receber a entrada (as mesmas do menu do site)
-// Nos links para divulgar o endereço vai SEM acento (/simposio, /intencoes, /adoracao): funciona em qualquer celular,
-// aplicativo e navegador, e o WhatsApp/Instagram não quebram o link no "ç" ou no "ó". O site abre igual.
-const semAcento = (t) => String(t).normalize("NFD").replace(/[̀-ͯ]/g, "");
-export const PAGINAS_RASTREADAS = ORDEM_PAGINAS.map((p) => ({ chave: p.chave, rotulo: p.label, href: semAcento(p.href) }));
+export const PAGINAS_RASTREADAS = ORDEM_PAGINAS.map((p) => ({ chave: p.chave, rotulo: p.label }));
 export const rotuloDaPagina = (chave) => PAGINAS_RASTREADAS.find((p) => p.chave === chave)?.rotulo || chave;
 
-// "Instagram Bio!" → "instagram-bio"  (só letras minúsculas, números, hífen e sublinhado; até 30 caracteres)
-export function normalizarOrigem(valor) {
-  return String(valor || "").trim().toLowerCase()
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
-}
-
-// Quando não há "?origem": de qual site a pessoa veio? Devolve "" se veio direto ou de uma página do próprio site.
+// De qual site a pessoa veio (endereço de origem informado pelo navegador)? Devolve "" se veio direto ou de uma página do próprio site.
 export function origemDoReferrer(referrer, hostDoSite = "") {
   let host = "";
   try { host = new URL(referrer).hostname.toLowerCase().replace(/^www\./, ""); } catch { return ""; }
@@ -85,23 +70,13 @@ export function ultimosDias(n, hoje = diaBrasilia()) {
   return Array.from({ length: n }, (_, i) => new Date(base - (n - 1 - i) * 86400000).toISOString().slice(0, 10));
 }
 
-// Link para divulgar: https://site/pagina?origem=instagram
-export function linkRastreavel(base, hrefPagina, origem) {
-  const raiz = String(base || "").replace(/\/+$/, "");
-  const caminho = hrefPagina === "/" ? "/" : "/" + encodeURI(String(hrefPagina).replace(/^\//, ""));
-  return `${raiz}${caminho}?origem=${encodeURIComponent(normalizarOrigem(origem))}`;
-}
-
-// docs: [{ dia, fontes: { origem: { pagina: { visitas, pessoas } } } }] → totais para os gráficos e tabelas
-// modo: "todas" (padrão) | "marcadas" (só quem entrou por link com ?origem=) | "sem-marca" (o resto, reconhecido pelo site ou direto).
-// Entradas antigas (gravadas antes de existir a contagem de "marcadas") entram como "sem marca".
-export function resumirVisitas(docs, dias, modo = "todas") {
+// Soma as entradas gravadas (um documento por dia) no período: totais, por dia, por origem, por página e origem × página.
+export function resumirVisitas(docs, dias) {
   const porDia = new Map(dias.map((d) => [d, { dia: d, visitas: 0, pessoas: 0 }]));
   const porOrigem = new Map();
   const porPagina = new Map();
   const cruzado = new Map(); // "origem|pagina" → { visitas, pessoas }
   let visitas = 0, pessoas = 0;
-  const totais = { marcadas: { visitas: 0, pessoas: 0 }, semMarca: { visitas: 0, pessoas: 0 } };
   const somar = (mapa, chave, v, p) => {
     const x = mapa.get(chave) || { chave, visitas: 0, pessoas: 0 };
     x.visitas += v; x.pessoas += p; mapa.set(chave, x);
@@ -110,12 +85,7 @@ export function resumirVisitas(docs, dias, modo = "todas") {
     if (!doc || !porDia.has(doc.dia)) return;
     Object.entries(doc.fontes || {}).forEach(([origem, paginas]) => {
       Object.entries(paginas || {}).forEach(([pagina, n]) => {
-        const vTotal = Number(n?.visitas) || 0, pTotal = Number(n?.pessoas) || 0;
-        const vMarc = Math.min(vTotal, Number(n?.marcadas) || 0), pMarc = Math.min(pTotal, Number(n?.pessoasMarcadas) || 0);
-        totais.marcadas.visitas += vMarc; totais.marcadas.pessoas += pMarc;
-        totais.semMarca.visitas += vTotal - vMarc; totais.semMarca.pessoas += pTotal - pMarc;
-        const v = modo === "marcadas" ? vMarc : modo === "sem-marca" ? vTotal - vMarc : vTotal;
-        const p = modo === "marcadas" ? pMarc : modo === "sem-marca" ? pTotal - pMarc : pTotal;
+        const v = Number(n?.visitas) || 0, p = Number(n?.pessoas) || 0;
         if (!v && !p) return;
         visitas += v; pessoas += p;
         const dia = porDia.get(doc.dia); dia.visitas += v; dia.pessoas += p;
@@ -126,5 +96,5 @@ export function resumirVisitas(docs, dias, modo = "todas") {
     });
   });
   const ordenar = (m) => [...m.values()].sort((a, b) => b.visitas - a.visitas || b.pessoas - a.pessoas);
-  return { visitas, pessoas, totais, porDia: [...porDia.values()], porOrigem: ordenar(porOrigem), porPagina: ordenar(porPagina), cruzado: ordenar(cruzado) };
+  return { visitas, pessoas, porDia: [...porDia.values()], porOrigem: ordenar(porOrigem), porPagina: ordenar(porPagina), cruzado: ordenar(cruzado) };
 }

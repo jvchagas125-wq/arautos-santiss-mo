@@ -839,15 +839,12 @@ export async function excluirCampanha(id) {
 }
 
 /* ---------------- Origem das visitas (rastreamento de entradas) ----------------
-   Um documento por dia (configuracoes/visitas_AAAA-MM-DD) com contadores: { fontes: { origem: { pagina: { visitas, pessoas, marcadas, pessoasMarcadas } } } } ("marcadas" = só as entradas por link com ?origem=).
+   Um documento por dia (configuracoes/visitas_AAAA-MM-DD) com contadores: { fontes: { origem: { pagina: { visitas, pessoas } } } }.
    "visitas" = entradas no site (uma por visita); "pessoas" = aparelhos diferentes naquele dia. Ver js/visitas-comum.js. */
-// "marcado" = a pessoa chegou por um link com "?origem=..." (os links do painel); conta à parte em "marcadas".
-export async function registrarEntradaNoSite({ dia, fonte, pagina, novaPessoa, marcado = false, novaPessoaMarcada = false }) {
-  const contadores = { visitas: increment(1), pessoas: increment(novaPessoa ? 1 : 0) };
-  if (marcado) { contadores.marcadas = increment(1); contadores.pessoasMarcadas = increment(novaPessoaMarcada ? 1 : 0); }
+export async function registrarEntradaNoSite({ dia, fonte, pagina, novaPessoa }) {
   await setDocFirestore(doc(db, "configuracoes", idDocVisitas(dia)), {
     dia,
-    fontes: { [fonte]: { [pagina]: contadores } }
+    fontes: { [fonte]: { [pagina]: { visitas: increment(1), pessoas: increment(novaPessoa ? 1 : 0) } } }
   }, { merge: true });
 }
 // Lê os dias pedidos (um documento por dia). Dia sem visitas simplesmente não existe.

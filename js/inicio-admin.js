@@ -211,7 +211,7 @@ const DESCRICOES = {
   acompanhamento: "Agendamentos e cancelamentos",
   inscricoes: "Cursos, inscritos e avisos",
   contatos: "Pessoas cadastradas no site",
-  visitas: "Links rastreáveis e de onde vêm as visitas",
+  visitas: "De onde vêm as visitas do site, em números e gráficos",
   administradores: "Contas e acessos do painel",
   configuracoes: "Páginas, logo, fundo e banners"
 };
