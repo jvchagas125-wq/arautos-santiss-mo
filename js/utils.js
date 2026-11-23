@@ -1347,8 +1347,11 @@ function definirFundoOutrasCss(celular, computador) {
   aplicar(computador, "--fundo-outras-img-pc", "fundo-outras-pc", 1920);
 }
 
+const imagensPrecarregadas = new Set();
 function precarregarImagem(url) {
   if (!url || String(url).startsWith("data:")) return; // imagem embutida já está na página — nada a pré-carregar
+  if (imagensPrecarregadas.has(url)) return; // nunca o mesmo endereço duas vezes
+  imagensPrecarregadas.add(url);
   try {
     const link = document.createElement("link");
     link.rel = "preload";
@@ -1371,8 +1374,12 @@ export function aplicarConfigVisualEmCache() {
   if (ehPaginaOutras()) {
     // as demais páginas usam o fundo próprio delas (celular/computador) — ou o padrão vermelho adamascado
     definirFundoOutrasCss(cache.fundoOutrasUrl || "", cache.fundoOutrasPcUrl || "");
-    const daVez = ehComputador() && cache.fundoOutrasPcUrl ? cache.fundoOutrasPcUrl : cache.fundoOutrasUrl;
-    if (daVez) precarregarImagem(otimizarImagemUrl(daVez, ehComputador() ? 1920 : 1000));
+    // pré-carrega EXATAMENTE o endereço que o CSS vai usar (mesma largura): no computador, a foto própria dele (1920);
+    // sem ela (ou no celular), a foto do celular (1000). Endereço diferente = o navegador avisa "pré-carregada e não usada".
+    const urlPc = cache.fundoOutrasPcUrl ? otimizarImagemUrl(cache.fundoOutrasPcUrl, 1920) : "";
+    const urlCel = cache.fundoOutrasUrl ? otimizarImagemUrl(cache.fundoOutrasUrl, 1000) : "";
+    const daVez = ehComputador() ? (urlPc || urlCel) : urlCel;
+    if (daVez) precarregarImagem(daVez);
     return;
   }
   const fundoPc = cache.fundoPcUrl ? definirFundoPcCss(cache.fundoPcUrl) : "";
