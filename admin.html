@@ -944,38 +944,20 @@
           </div>
         </div>
 
-        <div class="painel">
-          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFundoPc" role="button" tabindex="0" aria-expanded="false">
-            <span class="emoji">🖥️</span> Fundo da página inicial — Computador
+        <div class="painel" id="painelFundoSite">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFundoSite" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">🎨</span> Fundo de tela do site
             <span class="painel__dica">Clique aqui para poder abrir</span>
             <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </div>
-          <div id="corpoFundoPc" class="oculto">
-          <p class="formulario-intro">Aparece na página inicial, só quando o site é aberto no computador (tela larga). Uma foto horizontal fica bem melhor nesses aparelhos.</p>
-          <div class="admin-preview admin-preview--fundo"><img id="previewFundoPc" alt="Fundo atual do computador" class="oculto" /><p class="mensagem-vazia" id="semFundoPc">Nenhuma foto própria para o computador — está usando a do celular.</p></div>
-          <div class="campo">
-            <label for="uploadFundoPc">Enviar novo arquivo (JPG recomendado)</label>
-            <input type="file" id="uploadFundoPc" accept="image/*" />
-            <span class="campo-ajuda">📐 Tamanho ideal: <strong>1920 × 1080 px</strong> (foto horizontal, formato de tela de computador).</span>
+          <div id="corpoFundoSite" class="oculto">
+          <div class="abas-arquivo" role="tablist" aria-label="Fundo para celular ou computador">
+            <button type="button" class="aba-arquivo aba-fundo ativa" role="tab" aria-selected="true" data-aba-fundo="celular">📱 Celular</button>
+            <button type="button" class="aba-arquivo aba-fundo" role="tab" aria-selected="false" data-aba-fundo="computador">🖥️ Computador</button>
           </div>
-          <div class="campo">
-            <label for="urlFundoPc">— ou cole o link de uma imagem já hospedada</label>
-            <input type="text" id="urlFundoPc" placeholder="https://..." />
-          </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-dourado" id="btnSalvarFundoPc">Salvar fundo da página inicial (computador)</button>
-            <button type="button" class="btn btn-contorno oculto" id="btnRemoverFundoPc">Usar a mesma do celular</button>
-          </div>
-          </div>
-        </div>
-
-        <div class="painel">
-          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFundo" role="button" tabindex="0" aria-expanded="false">
-            <span class="emoji">📱</span> Fundo da página inicial — Celular
-            <span class="painel__dica">Clique aqui para poder abrir</span>
-            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </div>
-          <div id="corpoFundo" class="oculto">
+          <div id="abaFundoCelular" role="tabpanel">
+          <div class="fundo-bloco">
+            <h3 class="fundo-bloco__titulo">Página inicial</h3>
           <p class="formulario-intro">Aparece na página inicial, no celular e no tablet. Se você não escolher uma foto específica para o computador, ela também será usada lá.</p>
           <div class="admin-preview admin-preview--fundo"><img id="previewFundo" src="assets/fundo-altar.jpg" alt="Fundo atual do celular" /></div>
           <div class="campo">
@@ -989,40 +971,8 @@
           </div>
           <button type="button" class="btn btn-dourado" id="btnSalvarFundo">Salvar fundo da página inicial (celular)</button>
           </div>
-        </div>
-
-        <div class="painel">
-          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFundoOutrasPc" role="button" tabindex="0" aria-expanded="false">
-            <span class="emoji">🖥️</span> Fundo das outras páginas — Computador
-            <span class="painel__dica">Clique aqui para poder abrir</span>
-            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </div>
-          <div id="corpoFundoOutrasPc" class="oculto">
-          <p class="formulario-intro">Vale para Agendar Adoração, Intenções, Meus agendamentos, Cursos, Agenda, Simpósio, Contatos e Sobre, só quando o site é aberto no computador (tela larga).</p>
-          <div class="admin-preview admin-preview--fundo"><img id="previewFundoOutrasPc" alt="Fundo atual das outras páginas" class="oculto" /><p class="mensagem-vazia" id="semFundoOutrasPc">Nenhuma foto própria para o computador — está usando a do celular (ou o padrão vermelho adamascado, se o celular também não tiver foto).</p></div>
-          <div class="campo">
-            <label for="uploadFundoOutrasPc">Enviar novo arquivo (JPG recomendado)</label>
-            <input type="file" id="uploadFundoOutrasPc" accept="image/*" />
-            <span class="campo-ajuda">📐 Tamanho ideal: <strong>1920 × 1080 px</strong> (foto horizontal, formato de tela de computador).</span>
-          </div>
-          <div class="campo">
-            <label for="urlFundoOutrasPc">— ou cole o link de uma imagem já hospedada</label>
-            <input type="text" id="urlFundoOutrasPc" placeholder="https://..." />
-          </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-dourado" id="btnSalvarFundoOutrasPc">Salvar fundo das outras páginas (computador)</button>
-            <button type="button" class="btn btn-contorno oculto" id="btnRemoverFundoOutrasPc">Voltar ao fundo padrão</button>
-          </div>
-          </div>
-        </div>
-
-        <div class="painel">
-          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoFundoOutras" role="button" tabindex="0" aria-expanded="false">
-            <span class="emoji">📱</span> Fundo das outras páginas — Celular
-            <span class="painel__dica">Clique aqui para poder abrir</span>
-            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </div>
-          <div id="corpoFundoOutras" class="oculto">
+          <div class="fundo-bloco">
+            <h3 class="fundo-bloco__titulo">Outras páginas</h3>
           <p class="formulario-intro">Vale para Agendar Adoração, Intenções, Meus agendamentos, Cursos, Agenda, Simpósio, Contatos e Sobre, no celular e no tablet. Se você não escolher uma foto específica para o computador, ela também será usada lá.</p>
           <div class="admin-preview admin-preview--fundo"><img id="previewFundoOutras" alt="Fundo atual das outras páginas" class="oculto" /><p class="mensagem-vazia" id="semFundoOutras">Nenhuma foto escolhida — está usando o fundo padrão (vermelho adamascado).</p></div>
           <div class="campo">
@@ -1039,7 +989,51 @@
             <button type="button" class="btn btn-contorno oculto" id="btnRemoverFundoOutras">Voltar ao fundo padrão</button>
           </div>
           </div>
+          </div>
+          <div id="abaFundoComputador" role="tabpanel" class="oculto">
+          <div class="fundo-bloco">
+            <h3 class="fundo-bloco__titulo">Página inicial</h3>
+          <p class="formulario-intro">Aparece na página inicial, só quando o site é aberto no computador (tela larga). Uma foto horizontal fica bem melhor nesses aparelhos.</p>
+          <div class="admin-preview admin-preview--fundo"><img id="previewFundoPc" alt="Fundo atual do computador" class="oculto" /><p class="mensagem-vazia" id="semFundoPc">Nenhuma foto própria para o computador — está usando a do celular.</p></div>
+          <div class="campo">
+            <label for="uploadFundoPc">Enviar novo arquivo (JPG recomendado)</label>
+            <input type="file" id="uploadFundoPc" accept="image/*" />
+            <span class="campo-ajuda">📐 Tamanho ideal: <strong>1920 × 1080 px</strong> (foto horizontal, formato de tela de computador).</span>
+          </div>
+          <div class="campo">
+            <label for="urlFundoPc">— ou cole o link de uma imagem já hospedada</label>
+            <input type="text" id="urlFundoPc" placeholder="https://..." />
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-dourado" id="btnSalvarFundoPc">Salvar fundo da página inicial (computador)</button>
+            <button type="button" class="btn btn-contorno oculto" id="btnRemoverFundoPc">Usar a mesma do celular</button>
+          </div>
+          </div>
+          <div class="fundo-bloco">
+            <h3 class="fundo-bloco__titulo">Outras páginas</h3>
+          <p class="formulario-intro">Vale para Agendar Adoração, Intenções, Meus agendamentos, Cursos, Agenda, Simpósio, Contatos e Sobre, só quando o site é aberto no computador (tela larga).</p>
+          <div class="admin-preview admin-preview--fundo"><img id="previewFundoOutrasPc" alt="Fundo atual das outras páginas" class="oculto" /><p class="mensagem-vazia" id="semFundoOutrasPc">Nenhuma foto própria para o computador — está usando a do celular (ou o padrão vermelho adamascado, se o celular também não tiver foto).</p></div>
+          <div class="campo">
+            <label for="uploadFundoOutrasPc">Enviar novo arquivo (JPG recomendado)</label>
+            <input type="file" id="uploadFundoOutrasPc" accept="image/*" />
+            <span class="campo-ajuda">📐 Tamanho ideal: <strong>1920 × 1080 px</strong> (foto horizontal, formato de tela de computador).</span>
+          </div>
+          <div class="campo">
+            <label for="urlFundoOutrasPc">— ou cole o link de uma imagem já hospedada</label>
+            <input type="text" id="urlFundoOutrasPc" placeholder="https://..." />
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-dourado" id="btnSalvarFundoOutrasPc">Salvar fundo das outras páginas (computador)</button>
+            <button type="button" class="btn btn-contorno oculto" id="btnRemoverFundoOutrasPc">Voltar ao fundo padrão</button>
+          </div>
+          </div>
+          </div>
+          </div>
         </div>
+
+
+
+
 
         <div class="painel">
           <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoNovoBanner" role="button" tabindex="0" aria-expanded="false">

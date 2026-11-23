@@ -4115,10 +4115,20 @@ function configurarPaginasDoSite() {
   ligarListaFechada("cabecalhoPaginasSite", "corpoPaginasSite");
   // as outras partes de Configurações também ficam em listas fechadas
   ligarListaFechada("cabecalhoLogo", "corpoLogo");
-  ligarListaFechada("cabecalhoFundo", "corpoFundo");
-  ligarListaFechada("cabecalhoFundoPc", "corpoFundoPc");
-  ligarListaFechada("cabecalhoFundoOutras", "corpoFundoOutras");
-  ligarListaFechada("cabecalhoFundoOutrasPc", "corpoFundoOutrasPc");
+  ligarListaFechada("cabecalhoFundoSite", "corpoFundoSite");
+  // "Fundo de tela do site": abas Celular / Computador (cada uma com a página inicial e as outras páginas)
+  document.querySelectorAll(".aba-fundo").forEach((botao) => {
+    botao.addEventListener("click", () => {
+      const alvo = botao.dataset.abaFundo;
+      document.querySelectorAll(".aba-fundo").forEach((b) => {
+        const on = b === botao;
+        b.classList.toggle("ativa", on);
+        b.setAttribute("aria-selected", String(on));
+      });
+      document.getElementById("abaFundoCelular").classList.toggle("oculto", alvo !== "celular");
+      document.getElementById("abaFundoComputador").classList.toggle("oculto", alvo !== "computador");
+    });
+  });
   ligarListaFechada("cabecalhoNovoBanner", "corpoNovoBanner");
   const lista = document.getElementById("listaPaginasSite");
 
