@@ -1,7 +1,7 @@
 // Camada de acesso aos dados no Firestore — usada por todas as páginas do site
 import {
   db, doc, getDoc, setDoc as setDocFirestore, updateDoc as updateDocFirestore, addDoc, deleteDoc,
-  collection, query, where, getDocs, onSnapshot, orderBy,
+  collection, query, where, getDocs, onSnapshot as onSnapshotFirestore, orderBy,
   serverTimestamp, Timestamp, deleteField, increment
 } from "./firebase-init.js";
 import { normalizarCurso, idInscricao } from "./cursos-comum.js";
@@ -122,6 +122,25 @@ function renovarCachePorCaminho(caminho) {
   if (!item) return;
   try { localStorage.removeItem(PREFIXO_CACHE + item[0]); } catch { /* ok */ }
   Promise.resolve().then(item[1]).catch(() => {});
+}
+// Toda escuta em tempo real passa por aqui: se o banco recusar a leitura (por exemplo, limite diário de leituras
+// atingido), o painel avisa que o que está na tela pode estar desatualizado (evento "arautos-leitura-falhou", tratado
+// em js/admin.js) — antes, a tela seguia mostrando os dados guardados no aparelho como se estivessem certos.
+let avisouLeituraFalhou = false;
+function onSnapshot(alvo, ...argumentos) {
+  const i = argumentos.findIndex((a) => typeof a === "function");
+  if (i >= 0) {
+    const aoErroOriginal = typeof argumentos[i + 1] === "function" ? argumentos[i + 1] : null;
+    argumentos[i + 1] = (erro) => {
+      if (!(erro && erro.code === "permission-denied") && !avisouLeituraFalhou) {
+        avisouLeituraFalhou = true;
+        console.warn("[Firestore] a escuta em tempo real foi interrompida:", erro && erro.code);
+        window.dispatchEvent(new CustomEvent("arautos-leitura-falhou", { detail: erro && erro.code }));
+      }
+      if (aoErroOriginal) aoErroOriginal(erro);
+    };
+  }
+  return onSnapshotFirestore(alvo, ...argumentos);
 }
 async function setDoc(ref, ...resto) {
   const resultado = await setDocFirestore(ref, ...resto);
@@ -498,6 +517,35 @@ export async function criarAgendamento({ nome, telefoneDigits, telefone, data, h
     criadoEm: serverTimestamp()
   });
   return refAgendamento.id;
+}
+
+// Agendamento feito PELO PAINEL em nome de outra pessoa (página "Dias e horários" > "Agendar Adoração para
+// outras pessoas"). Só tem o nome — sem telefone — e aparece normalmente no site público em Acompanhamento.
+// Mesma regra do site: a mesma pessoa (mesmo nome) não entra duas vezes no mesmo dia e horário.
+const semAcento = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+export async function criarAgendamentoParaOutraPessoa({ nome, data, hora }) {
+  const nomeLimpo = String(nome || "").replace(/\s+/g, " ").trim();
+  const q = query(
+    collection(db, "agendamentos"),
+    where("data", "==", data),
+    where("hora", "==", hora),
+    where("status", "==", "agendado")
+  );
+  const snap = await getDocs(q);
+  if (snap.docs.some((d) => semAcento(d.data().nome) === semAcento(nomeLimpo))) {
+    const erro = new Error("Essa pessoa já está agendada neste dia e horário.");
+    erro.codigo = "AGENDAMENTO_DUPLICADO";
+    throw erro;
+  }
+  const ref = doc(collection(db, "agendamentos"));
+  await setDoc(ref, {
+    nome: nomeLimpo, telefoneDigits: "", telefone: "", data, hora,
+    status: "agendado",
+    origem: "painel",
+    motivoCancelamento: "",
+    criadoEm: serverTimestamp()
+  });
+  return ref.id;
 }
 
 export async function cancelarAgendamento(agendamentoId, data, hora, motivo) {
@@ -1179,11 +1227,23 @@ export async function inscricoesDaPessoa(telefoneDigits) {
 export async function salvarInscricao(dados) {
   const id = idInscricao(dados.cursoId, dados.telefoneDigits);
   const ref = doc(db, "inscricoes", id);
-  const existente = await getDoc(ref);
+  // A leitura prévia só serve para manter a data da primeira inscrição. Se o banco recusar a leitura (limite
+  // diário de leituras atingido) ou demorar demais, grava assim mesmo: gravar continua funcionando e ninguém
+  // deve ficar sem se inscrever por causa disso.
+  let existente = null;
+  try {
+    existente = await Promise.race([
+      getDoc(ref),
+      new Promise((_, rejeitar) => setTimeout(() => rejeitar(new Error("Tempo esgotado ao ler a inscrição.")), 6000))
+    ]);
+  } catch (erro) {
+    console.warn("[Firestore] leitura prévia da inscrição falhou; gravando mesmo assim:", erro && (erro.code || erro.message));
+  }
+  const jaExiste = !!existente && existente.exists();
   await setDoc(ref, {
     ...dados,
-    criadoEm: existente.exists() ? (existente.data().criadoEm || serverTimestamp()) : serverTimestamp(),
-    criadoEmMs: existente.exists() ? (existente.data().criadoEmMs || Date.now()) : Date.now(),
+    criadoEm: jaExiste ? (existente.data().criadoEm || serverTimestamp()) : serverTimestamp(),
+    criadoEmMs: jaExiste ? (existente.data().criadoEmMs || Date.now()) : Date.now(),
     atualizadoEm: serverTimestamp()
   });
   return id;

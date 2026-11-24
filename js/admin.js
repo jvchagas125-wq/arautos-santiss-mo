@@ -30,6 +30,7 @@ import { criarCredenciais, conferirSenha, chaveConfere, TAMANHO_MINIMO_SENHA } f
 import { CATALOGO_ACESSOS, PAGINA_ADMINISTRADORES, temAcesso, normalizarAcessos, resumoDeAcessos } from "./acessos.js";
 import { criarCrm } from "./crm-contatos.js";
 import { iniciarCursosAdmin } from "./cursos-admin.js";
+import { criarAgendarParaOutros } from "./agendar-para-outros.js";
 import { iniciarSimposioAdmin } from "./simposio-admin.js";
 import { extrairTextosCategoria, construirDocxIntencoes, nomeArquivoDocx, rotuloListaIntencao } from "./docx-intencoes.js";
 import { construirExcelPessoas, construirWordPessoas } from "./pessoas-documentos.js";
@@ -411,6 +412,11 @@ function iniciarPainel() {
   configurarConfiguracoes();
   configurarPaginasDoSite();
   // avisa (uma vez por coleção) quando as regras do Firebase ainda não liberam uma coleção nova
+  // avisa (fixo no topo) quando o banco recusou a leitura e a tela está mostrando só o que ficou guardado
+  window.addEventListener("arautos-leitura-falhou", () => {
+    document.getElementById("avisoLeituraFalhou")?.classList.remove("oculto");
+  });
+  document.getElementById("btnAtualizarLeitura")?.addEventListener("click", () => window.location.reload());
   window.addEventListener("arautos-sem-permissao", (e) => {
     mostrarToast(`O Firebase não liberou a leitura de "${e.detail}". Atualize as Regras do Firestore (veja as instruções que o Claude enviou).`);
   });
@@ -608,6 +614,8 @@ function configurarHorarios() {
   }
   tornarRecolhivel("cabecalhoPeriodo", "corpoPeriodo");
   tornarRecolhivel("cabecalhoAlteracoes", "corpoAlteracoes");
+  tornarRecolhivel("cabecalhoAgendarOutros", "corpoAgendarOutros");
+  const agendarParaOutros = criarAgendarParaOutros();
 
   /* ---------- Fechamento e alterações de agenda ---------- */
   const calendarioAlteracoesEl = document.getElementById("calendarioAlteracoes");
@@ -842,6 +850,7 @@ function configurarHorarios() {
   ouvirDiasHorarios((dh) => {
     const alteracoes = dh.alteracoes && typeof dh.alteracoes === "object" ? dh.alteracoes : {};
     periodoAgenda = { dataInicio: dh.dataInicio || "", dataFim: dh.dataFim || "", alteracoes };
+    agendarParaOutros.definirPeriodo(dh);
     if (primeiraLeituraPeriodo) {
       primeiraLeituraPeriodo = false;
       // abre o calendário no primeiro mês do período (ou no mês atual, se o período já começou)
@@ -2986,7 +2995,7 @@ function configurarAcompanhamento() {
           nome.textContent = a.nome || "—";
           const tel = document.createElement("div");
           tel.className = "pessoa-ocupado-item__tel";
-          tel.textContent = a.telefone || "—";
+          tel.textContent = a.telefone || (a.origem === "painel" ? "Agendado pelo painel" : "—");
           info.appendChild(nome);
           info.appendChild(tel);
 
@@ -3029,7 +3038,7 @@ function configurarAcompanhamento() {
             abrirModal(modalCancelarAgend);
           });
 
-          acoes.appendChild(linkWhats);
+          if (a.telefoneDigits) acoes.appendChild(linkWhats); // agendado pelo painel: não há telefone
           acoes.appendChild(btnExtra);
           acoes.appendChild(btnCancelar);
           item.appendChild(info);

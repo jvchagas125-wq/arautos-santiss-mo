@@ -15,7 +15,7 @@
 <script>try{if(localStorage.getItem("arautos_admin_sessao"))document.documentElement.classList.add("com-sessao");}catch(e){}</script>
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/admin.css?v=83" />
+<link rel="stylesheet" href="css/admin.css?v=85" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -128,6 +128,10 @@
     </header>
 
     <main class="admin-conteudo">
+      <div class="aviso-leitura oculto" id="avisoLeituraFalhou" role="alert">
+        <span><strong>Não foi possível atualizar os dados agora.</strong> Provavelmente o limite diário de leituras do banco foi atingido. Estão sendo mostrados os dados guardados neste aparelho, então números e listas (inscritos, agendamentos, intenções...) podem estar desatualizados.</span>
+        <button type="button" class="btn btn-contorno" id="btnAtualizarLeitura">Tentar de novo</button>
+      </div>
 
       <!-- PÁGINA INICIAL -->
       <section class="admin-secao" id="secao-inicio">
@@ -280,6 +284,37 @@
             </div>
             <p class="especiais__subtitulo">Dias com fechamento ou alteração</p>
             <div id="listaAlteracoes" class="lista-especiais"></div>
+          </div>
+        </div>
+
+        <div class="painel" id="painelAgendarOutros">
+          <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoAgendarOutros" role="button" tabindex="0" aria-expanded="false">
+            <span class="emoji">👥</span> Agendar Adoração para outras pessoas
+            <span class="painel__dica">Clique aqui para abrir a lista</span>
+            <svg class="painel__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <div id="corpoAgendarOutros" class="oculto">
+            <p class="especiais__texto">
+              Toque em um dia do calendário, escolha o horário e informe o nome da pessoa. O nome aparece no site
+              público, em <strong>Acompanhamento</strong>, como qualquer outro agendamento (e também no Acompanhamento do painel,
+              onde dá para cancelar).
+            </p>
+            <p class="aviso-sem-periodo oculto" id="avisoAgendarSemPeriodo">Defina primeiro o <strong>período da adoração</strong> (De / Até) e salve — depois os dias dele aparecem aqui.</p>
+            <div class="calendario-grande especiais__calendario" id="calendarioAgendarOutros">
+              <div class="calendario__cabecalho">
+                <button type="button" class="calendario__nav" data-nav-anterior aria-label="Mês anterior">‹</button>
+                <strong data-mes-ano>—</strong>
+                <button type="button" class="calendario__nav" data-nav-proximo aria-label="Próximo mês">›</button>
+              </div>
+              <div class="calendario__semana">
+                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+              </div>
+              <div class="calendario__dias" data-dias></div>
+              <div class="calendario__legenda-dupla">
+                <span><i class="legenda-dot legenda-dot--disponivel"></i> Dia da adoração</span>
+                <span><i class="legenda-dot legenda-dot--agendado"></i> Dia que já tem agendamento</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1250,6 +1285,38 @@
       <button class="modal--fechar" id="fecharModalDiaAgendados" aria-label="Fechar">&times;</button>
       <h3 id="diaAgendadosTitulo">—</h3>
       <div id="diaAgendadosConteudo" class="modal__conteudo-scroll" style="text-align:left;"></div>
+    </div>
+  </div>
+
+  <!-- Modal: agendar para outra pessoa — escolher o horário do dia -->
+  <div class="modal-overlay" id="modalAgendarHorarios">
+    <div class="modal modal--largo">
+      <button class="modal--fechar" id="fecharModalAgendarHorarios" aria-label="Fechar">&times;</button>
+      <h3>Escolha o horário</h3>
+      <p class="modal__data" id="agendarHorariosData">—</p>
+      <p class="horario-vazio-msg oculto" id="agendarSemHorarios">Não há horários de adoração neste dia.</p>
+      <div class="grade-horarios" id="agendarGradeHorarios"></div>
+      <p class="campo-ajuda" style="margin-top:12px;">Mais de uma pessoa pode agendar o mesmo horário.</p>
+    </div>
+  </div>
+
+  <!-- Modal: agendar para outra pessoa — nome -->
+  <div class="modal-overlay" id="modalAgendarNome">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalAgendarNome" aria-label="Fechar">&times;</button>
+      <h3>Nome da pessoa</h3>
+      <p class="modal__data" id="agendarNomeResumo">—</p>
+      <form id="formAgendarNome" autocomplete="off">
+        <div class="campo">
+          <label for="agendarNomeCampo">Nome completo</label>
+          <input type="text" id="agendarNomeCampo" maxlength="80" placeholder="Ex.: Maria da Silva" required />
+          <small class="campo-ajuda">Esse nome vai aparecer no site público, em Acompanhamento.</small>
+        </div>
+        <div class="modal__acoes">
+          <button type="button" class="btn btn-contorno" id="btnCancelarAgendarNome">Voltar</button>
+          <button type="submit" class="btn btn-dourado" id="btnConfirmarAgendarNome">Agendar</button>
+        </div>
+      </form>
     </div>
   </div>
 
