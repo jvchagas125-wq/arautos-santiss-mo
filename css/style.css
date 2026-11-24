@@ -1843,14 +1843,14 @@ html.nav-interna .contato-quadro{ animation:none; }
   body.pagina-home.home-c2 .carrossel-banners__caixa-texto{ --fs:.8rem; line-height:1.32; }
   body.pagina-home.home-c2 .carrossel-banners__caixa-rodape{ margin-top:2px; }
   body.pagina-home.home-c2 .carrossel-banners__caixa .carrossel-banners__caixa-botao{ padding:5px 14px; font-size:.62rem; }
-  body.pagina-home.home-c2 .carrossel-banners{ margin-bottom:6px; }
+  body.pagina-home.home-c2 .carrossel-banners{ margin-bottom:12px; }
   body.pagina-home.home-c2 .carrossel-banners__controles{ margin-top:4px; }
   body.pagina-home.home-c2 .carrossel-banners__seta{ width:22px; height:22px; }
   body.pagina-home.home-c2 .carrossel-banners__seta svg{ width:12px; height:12px; }
-  body.pagina-home.home-c2 .card-frase{ padding:7px 12px; margin-top:0; margin-bottom:6px; }
-  body.pagina-home.home-c2 .card-frase__eyebrow{ margin-bottom:2px; font-size:.58rem; }
-  body.pagina-home.home-c2 .card-frase blockquote{ font-size:.78rem; line-height:1.28; margin-bottom:2px; }
-  body.pagina-home.home-c2 .card-frase cite{ font-size:.68rem; }
+  body.pagina-home.home-c2 .card-frase{ padding:11px 14px; margin-bottom:8px; }
+  body.pagina-home.home-c2 .card-frase__eyebrow{ margin-bottom:3px; font-size:.62rem; }
+  body.pagina-home.home-c2 .card-frase blockquote{ font-size:.9rem; line-height:1.33; margin-bottom:3px; }
+  body.pagina-home.home-c2 .card-frase cite{ font-size:.74rem; }
   body.pagina-home.home-c2 .atalhos-grade{ gap:8px; min-height:112px; margin-bottom:6px; }
   body.pagina-home.home-c2 .atalho-card{ padding:6px 6px; gap:4px; }
   body.pagina-home.home-c2 .atalho-card__icone{ width:30px; height:30px; }
@@ -1863,4 +1863,15 @@ html.nav-interna .contato-quadro{ animation:none; }
   body.pagina-home.home-c3 .atalho-card__icone svg{ width:15px; height:15px; }
   body.pagina-home.home-c3 .atalho-card__texto{ font-size:.58rem; }
   body.pagina-home.home-c4 .card-frase{ display:none; }
+}
+
+/* HOME NO CELULAR: a "Frase do dia" fica maior, descolada do banner e encostada nos atalhos (a folga da tela fica entre o banner e a frase) */
+@media (max-width: 600px){
+  .pagina-home .carrossel-banners{ margin-bottom:14px; }
+  .pagina-home .card-frase{ margin-top:auto; margin-bottom:10px; padding:18px 18px; }
+  .pagina-home .card-frase__eyebrow{ font-size:.7rem; margin-bottom:8px; }
+  .pagina-home .card-frase blockquote{ font-size: clamp(.98rem, 2.7dvh, 1.18rem); line-height:1.42; margin-bottom:8px; }
+  .pagina-home .card-frase cite{ font-size:.84rem; }
+  .pagina-home .atalhos-grade{ margin-top:0; margin-bottom:0; }
+  .pagina-home .rodape-vermelho{ margin-top:0; }
 }
