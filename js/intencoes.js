@@ -194,11 +194,13 @@ function abrirEscolhaDeLista() {
   });
   abrir(modalEscolherLista);
 }
-// ao voltar, as listas do dia ficam no meio da tela
-function centralizarListasDoDia() {
-  setTimeout(() => listaMissasDoDia.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
-}
-el("btnVoltarEscolherLista").addEventListener("click", () => { fechar(modalEscolherLista); centralizarListasDoDia(); });
+// "Voltar": o campo da data volta ao texto inicial ("Clique aqui e selecione o dia") e a pessoa escolhe de novo
+el("btnVoltarEscolherLista").addEventListener("click", () => {
+  fechar(modalEscolherLista);
+  diaSelecionado = null;
+  calendario.definirValor(null);
+  renderizarDia();
+});
 
 /* =========================================================
    A lista (modal principal)

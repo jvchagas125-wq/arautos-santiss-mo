@@ -431,11 +431,15 @@ function selecionarData(iso) {
 
 const DIAS_SEMANA_COMPLETO = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
-// fecha a janela de horários (sem apagar a data escolhida) e para de escutar o banco enquanto ela está fechada
+// fecha a janela de horários, limpa a data escolhida e para de escutar o banco enquanto ela está fechada
 function fecharJanelaDeHorarios() {
   fecharModal(modalHorarios);
   horaSelecionada = null;
   btnConfirmarAgendamento.disabled = true;
+  // o campo volta ao texto inicial ("Toque para escolher uma data"): a pessoa escolhe a data de novo
+  dataSelecionada = null;
+  dataInput.value = "";
+  renderizarCalendario();
   if (pararEscutaHorarios) { pararEscutaHorarios(); pararEscutaHorarios = null; }
 }
 document.getElementById("fecharModalHorarios").addEventListener("click", fecharJanelaDeHorarios);
