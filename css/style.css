@@ -1875,3 +1875,6 @@ html.nav-interna .contato-quadro{ animation:none; }
   .pagina-home .atalhos-grade{ margin-top:0; margin-bottom:0; }
   .pagina-home .rodape-vermelho{ margin-top:0; }
 }
+
+/* "(Opcional)" ao lado do nome de um dado não obrigatório na inscrição de cursos */
+.curso-form .campo-opcional{ font-family:"EB Garamond", serif; text-transform:none; letter-spacing:0; font-weight:400; font-style:italic; opacity:.75; font-size:.9em; }

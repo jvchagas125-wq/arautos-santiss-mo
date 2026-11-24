@@ -53,6 +53,11 @@ function montarFormulario(curso, existente, aoConcluir) {
   function campo(chave, rotulo, obrigatorio, criarEntrada) {
     const caixa = criar("div", "campo");
     const label = criar("label", "", obrigatorio ? `${rotulo} *` : rotulo);
+    if (!obrigatorio) { // dado não obrigatório: avisa que é opcional, logo depois do nome do campo
+      const opcional = criar("span", "campo-opcional", "(Opcional)");
+      label.appendChild(document.createTextNode(" "));
+      label.appendChild(opcional);
+    }
     caixa.appendChild(label);
     caixa.appendChild(criarEntrada(label));
     const erro = criar("span", "campo-erro");
