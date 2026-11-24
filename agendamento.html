@@ -124,24 +124,7 @@
           <p id="erroCarregarPeriodo" class="mensagem-vazia oculto" style="cursor:pointer; text-decoration:underline;">Não foi possível carregar as datas. Toque aqui para tentar novamente.</p>
         </div>
 
-        <div class="painel" id="painelHorarios" style="display:none;">
-          <div class="painel__titulo"><span class="emoji">🕐</span> Horários disponíveis</div>
-          <div class="grade-horarios" id="gradeHorarios"></div>
-          <p class="mensagem-vazia oculto" id="semHorarios">Não há horários livres para esta data.</p>
-
-          <div class="legenda-grupos">
-            <div class="legenda-grupos__titulo">Grupos responsáveis por horário</div>
-            <ul class="legenda-grupos__lista">
-              <li><strong>00:00 às 06:00</strong> — Grupo São Nicodemos (Homens)</li>
-              <li><strong>07:00 às 11:00</strong> — Arautos (01)</li>
-              <li><strong>12:00 às 20:00</strong> — Grupo Santa Maria Madalena (Para todos)</li>
-              <li><strong>21:00 às 23:00</strong> — Grupo São Nicodemos (Homens)</li>
-            </ul>
-            <p class="legenda-grupos__obs">Observação: as esposas dos integrantes do Grupo São Nicodemos podem acompanhá-los.</p>
-          </div>
-        </div>
-
-        <button type="button" class="btn btn-contorno btn-full btn-ver-planilha" id="btnVerCalendarioAgendamentos" style="margin-top:8px;">
+        <button type="button" class="btn btn-contorno btn-full btn-ver-planilha" id="btnVerCalendarioAgendamentos" style="margin-top:14px;">
           <svg class="icone-planilha" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <rect x="2" y="2" width="20" height="20" rx="4" fill="#1D6F42" />
             <rect x="5.2" y="5.2" width="13.6" height="13.6" rx="1.5" fill="#fff" fill-opacity=".95" />
@@ -150,9 +133,6 @@
           Ver planilha de agendamento
         </button>
 
-        <button class="btn btn-vermelho btn-full" id="btnConfirmarAgendamento" style="margin-top:8px;" disabled>
-          Confirmar agendamento
-        </button>
 
         <div class="aviso-info">
           <span class="aviso-info__icone">ℹ️</span>
@@ -207,21 +187,32 @@
     </a>
   </footer>
 
-  <!-- Modal de confirmação -->
-  <div class="modal-overlay" id="modalConfirmacao">
-    <div class="modal">
-      <div class="modal__icone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+  <!-- Janela de horários: abre sozinha ao escolher uma data. Escolhe o horário e toca em "Confirmar agendamento":
+       a janela fecha, aparece o aviso de agendamento realizado e a pessoa vai para "Meus agendamentos". -->
+  <div class="modal-overlay" id="modalHorarios">
+    <div class="modal modal--largo modal--horarios" role="dialog" aria-modal="true" aria-labelledby="modalHorariosTitulo">
+      <button class="modal--fechar" id="fecharModalHorarios" aria-label="Fechar">&times;</button>
+      <h3 id="modalHorariosTitulo"><span class="emoji">🕐</span> Horários disponíveis</h3>
+      <p class="modal-horarios__data" id="modalHorariosData">—</p>
+      <div class="modal__conteudo-scroll">
+        <div class="grade-horarios" id="gradeHorarios"></div>
+        <p class="mensagem-vazia oculto" id="semHorarios">Não há horários livres para esta data.</p>
+        <div class="legenda-grupos">
+        <div class="legenda-grupos__titulo">Grupos responsáveis por horário</div>
+          <ul class="legenda-grupos__lista">
+            <li><strong>00:00 às 06:00</strong> — Grupo São Nicodemos (Homens)</li>
+            <li><strong>07:00 às 11:00</strong> — Arautos (01)</li>
+            <li><strong>12:00 às 20:00</strong> — Grupo Santa Maria Madalena (Para todos)</li>
+            <li><strong>21:00 às 23:00</strong> — Grupo São Nicodemos (Homens)</li>
+          </ul>
+          <p class="legenda-grupos__obs">Observação: as esposas dos integrantes do Grupo São Nicodemos podem acompanhá-los.</p>
+        </div>
       </div>
-      <h3>Confirmar agendamento</h3>
-      <p>Você agendou sua adoração para o dia <strong id="modalData">—</strong>, das <strong id="modalHora">—</strong>. Deseja confirmar?</p>
-      <div class="modal__acoes">
-        <button class="btn btn-contorno" id="btnCancelarModal">Cancelar</button>
-        <button class="btn btn-dourado" id="btnConfirmarModal">Confirmar</button>
-      </div>
+      <button class="btn btn-vermelho btn-full" id="btnConfirmarAgendamento" style="margin-top:14px;" disabled>
+        Confirmar agendamento
+      </button>
     </div>
   </div>
-
   <!-- Modal de detalhes de horário já reservado -->
   <div class="modal-overlay" id="modalDetalhesOcupado">
     <div class="modal">

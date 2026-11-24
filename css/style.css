@@ -1879,3 +1879,11 @@ html.nav-interna .contato-quadro{ animation:none; }
 
 /* "(Opcional)" ao lado do nome de um dado não obrigatório na inscrição de cursos */
 .curso-form .campo-opcional{ font-family:"EB Garamond", serif; text-transform:none; letter-spacing:0; font-weight:400; font-style:italic; opacity:.75; font-size:.9em; }
+
+/* Agendar Adoração: janela de horários que abre ao escolher a data */
+.modal--horarios{ max-width:520px; }
+.modal--horarios h3{ text-align:center; margin-bottom:4px; }
+.modal-horarios__data{ margin:0 0 14px; text-align:center; font-family:'Cinzel'; font-size:.9rem; color: var(--vermelho-escuro); }
+.modal--horarios .modal__conteudo-scroll{ text-align:left; }
+.modal--horarios .grade-horarios{ margin-top:0; }
+.modal--horarios .legenda-grupos{ margin-top:16px; }

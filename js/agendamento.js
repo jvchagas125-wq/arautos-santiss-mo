@@ -29,13 +29,13 @@ const calendarioDias = document.getElementById("calendarioDias");
 const mesAnoEl = document.getElementById("mesAno");
 const btnMesAnterior = document.getElementById("mesAnterior");
 const btnMesProximo = document.getElementById("mesProximo");
-const painelHorarios = document.getElementById("painelHorarios");
+const modalHorarios = document.getElementById("modalHorarios");
+const modalHorariosData = document.getElementById("modalHorariosData");
 const gradeHorarios = document.getElementById("gradeHorarios");
 const semHorarios = document.getElementById("semHorarios");
 const btnConfirmarAgendamento = document.getElementById("btnConfirmarAgendamento");
 const avisoSemPeriodo = document.getElementById("avisoSemPeriodo");
 const erroCarregarPeriodo = document.getElementById("erroCarregarPeriodo");
-const modalConfirmacao = document.getElementById("modalConfirmacao");
 
 const modalCalendarioAgendamentos = document.getElementById("modalCalendarioAgendamentos");
 const gradeSemanalAgendamentos = document.getElementById("gradeSemanalAgendamentos");
@@ -89,9 +89,7 @@ function aplicarDiasHorarios(dh) {
     if (!dataDentroDoPeriodo(dataSelecionada)) {
       dataSelecionada = null; horaSelecionada = null;
       dataInput.value = "";
-      painelHorarios.style.display = "none";
-      btnConfirmarAgendamento.disabled = true;
-      if (pararEscutaHorarios) { pararEscutaHorarios(); pararEscutaHorarios = null; }
+      fecharJanelaDeHorarios();
     } else {
       renderizarHorarios();
     }
@@ -404,6 +402,7 @@ document.addEventListener("click", (e) => {
   }
 });
 
+// Ao escolher uma data, abre sozinha a janela com os horários daquele dia (e o botão "Confirmar agendamento").
 function selecionarData(iso) {
   dataSelecionada = iso;
   horaSelecionada = null;
@@ -412,14 +411,16 @@ function selecionarData(iso) {
   calendario.classList.remove("aberto");
   renderizarCalendario();
 
-  painelHorarios.style.display = "";
   semHorarios.classList.add("oculto");
+  modalHorariosData.textContent = `${DIAS_SEMANA_COMPLETO[isoParaData(iso).getDay()]}, ${formatarDataBR(iso)}`;
   // os horários aparecem NA HORA: já sabemos quem agendou (a grade da semana escuta todos os agendamentos)
   // e a escuta desta data só confirma/atualiza em seguida
   horariosOcupados = todosAgendamentosAtivos
     .filter((a) => a.data === iso)
     .map((a) => ({ hora: a.hora, nome: a.nome, telefone: a.telefone, telefoneDigits: a.telefoneDigits }));
   renderizarHorarios();
+  abrirModal(modalHorarios);
+  modalHorarios.querySelector(".modal__conteudo-scroll").scrollTop = 0;
 
   if (pararEscutaHorarios) pararEscutaHorarios();
   pararEscutaHorarios = ouvirAgendamentosDaData(iso, (ocupados) => {
@@ -427,6 +428,21 @@ function selecionarData(iso) {
     renderizarHorarios();
   });
 }
+
+const DIAS_SEMANA_COMPLETO = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
+// fecha a janela de horários (sem apagar a data escolhida) e para de escutar o banco enquanto ela está fechada
+function fecharJanelaDeHorarios() {
+  fecharModal(modalHorarios);
+  horaSelecionada = null;
+  btnConfirmarAgendamento.disabled = true;
+  if (pararEscutaHorarios) { pararEscutaHorarios(); pararEscutaHorarios = null; }
+}
+document.getElementById("fecharModalHorarios").addEventListener("click", fecharJanelaDeHorarios);
+modalHorarios.addEventListener("click", (e) => { if (e.target === modalHorarios) fecharJanelaDeHorarios(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && modalHorarios.classList.contains("aberto") && !modalDetalhesOcupado.classList.contains("aberto")) fecharJanelaDeHorarios();
+});
 
 function textoHora(hora) {
   return `${String(hora).padStart(2,"0")}:00 - ${String((hora+1)%24).padStart(2,"0")}:00`;
@@ -491,9 +507,14 @@ function abrirModalDetalhesOcupado(hora, ocupacoes, iso) {
   abrirModal(modalDetalhesOcupado);
 }
 
-document.getElementById("fecharModalDetalhesOcupado").addEventListener("click", () => fecharModal(modalDetalhesOcupado));
+document.getElementById("fecharModalDetalhesOcupado").addEventListener("click", () => {
+  fecharModal(modalDetalhesOcupado);
+  if (modalHorarios.classList.contains("aberto")) document.body.style.overflow = "hidden"; // a janela de horários continua aberta
+});
 
-btnConfirmarAgendamento.addEventListener("click", () => {
+// "Confirmar agendamento" (dentro da janela de horários): agenda direto, fecha a janela, avisa que deu certo e leva
+// a pessoa para "Meus agendamentos".
+btnConfirmarAgendamento.addEventListener("click", async () => {
   if (!dataSelecionada || horaSelecionada === null) return;
 
   // a mesma pessoa não pode agendar duas vezes o mesmo dia e horário
@@ -505,17 +526,9 @@ btnConfirmarAgendamento.addEventListener("click", () => {
     return;
   }
 
-  document.getElementById("modalData").textContent = formatarDataBR(dataSelecionada);
-  document.getElementById("modalHora").textContent = formatarHora(horaSelecionada);
-  abrirModal(modalConfirmacao);
-});
-
-document.getElementById("btnCancelarModal").addEventListener("click", () => fecharModal(modalConfirmacao));
-
-document.getElementById("btnConfirmarModal").addEventListener("click", async (e) => {
-  const btn = e.currentTarget;
-  btn.disabled = true;
-  btn.textContent = "Agendando...";
+  const rotuloBotao = btnConfirmarAgendamento.textContent;
+  btnConfirmarAgendamento.disabled = true;
+  btnConfirmarAgendamento.textContent = "Agendando...";
   try {
     await criarAgendamento({
       nome: usuario.nome,
@@ -524,19 +537,21 @@ document.getElementById("btnConfirmarModal").addEventListener("click", async (e)
       data: dataSelecionada,
       hora: horaSelecionada
     });
-    window.location.href = "meus-agendamentos";
   } catch (err) {
     console.error(err);
-    fecharModal(modalConfirmacao);
+    btnConfirmarAgendamento.textContent = rotuloBotao;
+    btnConfirmarAgendamento.disabled = false;
     mostrarToast(
       err && err.codigo === "AGENDAMENTO_DUPLICADO"
         ? "Você já reservou esse dia e horário."
         : "Não foi possível agendar. Verifique sua conexão e tente novamente."
     );
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Confirmar";
+    return;
   }
+  fecharJanelaDeHorarios();
+  btnConfirmarAgendamento.textContent = rotuloBotao;
+  mostrarToast("Agendamento realizado com sucesso! Levando você para \"Meus agendamentos\"...");
+  setTimeout(() => { window.location.href = "meus-agendamentos"; }, 2300);
 });
 
 iniciar();
