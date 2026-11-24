@@ -1831,3 +1831,35 @@ html.nav-interna .contato-quadro{ animation:none; }
 @media (prefers-reduced-motion: reduce){
   .titulo-cidade, .selo-decorativo, .conteudo h1.titulo-pagina, .card-frase, .carrossel-banners, .atalho-card, .pergunta-dia, .painel, .contato-quadro{ animation:none; }
 }
+
+/* ============ HOME NO CELULAR: ajuste automático à altura da tela (js/main.js > ajustarHomeNaTela) ============
+   Níveis, só aplicados quando a tela inicial não cabe (por exemplo, com a caixa de texto abaixo do banner):
+   1) a imagem do banner fica mais "baixa" (--altura-img-banner);  2) home-c2: modo compacto; 3) home-c3: atalhos numa fileira; 4) home-c4: sem "Frase do dia". */
+@media (max-width: 600px){
+  .carrossel-banners.home-img-ajustada .carrossel-banners__imagem-link{ aspect-ratio:auto; height:var(--altura-img-banner); }
+  body.pagina-home.home-c2 .carrossel-banners__caixa{ padding:8px 12px 9px; gap:3px; }
+  body.pagina-home.home-c2 .carrossel-banners__caixa-titulo{ font-size:.84rem; }
+  body.pagina-home.home-c2 .carrossel-banners__caixa-texto{ --fs:.8rem; line-height:1.32; }
+  body.pagina-home.home-c2 .carrossel-banners__caixa-rodape{ margin-top:2px; }
+  body.pagina-home.home-c2 .carrossel-banners__caixa .carrossel-banners__caixa-botao{ padding:5px 14px; font-size:.62rem; }
+  body.pagina-home.home-c2 .carrossel-banners{ margin-bottom:6px; }
+  body.pagina-home.home-c2 .carrossel-banners__controles{ margin-top:4px; }
+  body.pagina-home.home-c2 .carrossel-banners__seta{ width:22px; height:22px; }
+  body.pagina-home.home-c2 .carrossel-banners__seta svg{ width:12px; height:12px; }
+  body.pagina-home.home-c2 .card-frase{ padding:7px 12px; margin-top:0; margin-bottom:6px; }
+  body.pagina-home.home-c2 .card-frase__eyebrow{ margin-bottom:2px; font-size:.58rem; }
+  body.pagina-home.home-c2 .card-frase blockquote{ font-size:.78rem; line-height:1.28; margin-bottom:2px; }
+  body.pagina-home.home-c2 .card-frase cite{ font-size:.68rem; }
+  body.pagina-home.home-c2 .atalhos-grade{ gap:8px; min-height:112px; margin-bottom:6px; }
+  body.pagina-home.home-c2 .atalho-card{ padding:6px 6px; gap:4px; }
+  body.pagina-home.home-c2 .atalho-card__icone{ width:30px; height:30px; }
+  body.pagina-home.home-c2 .atalho-card__icone svg{ width:16px; height:16px; }
+  body.pagina-home.home-c2 .atalho-card__texto{ font-size:.66rem; line-height:1.2; }
+  /* c3: os 4 atalhos numa fileira só */
+  body.pagina-home.home-c3 .atalhos-grade{ flex:0 0 auto; grid-template-columns:repeat(4, 1fr); gap:6px; min-height:0; max-height:none; }
+  body.pagina-home.home-c3 .atalho-card{ padding:7px 3px; }
+  body.pagina-home.home-c3 .atalho-card__icone{ width:28px; height:28px; }
+  body.pagina-home.home-c3 .atalho-card__icone svg{ width:15px; height:15px; }
+  body.pagina-home.home-c3 .atalho-card__texto{ font-size:.58rem; }
+  body.pagina-home.home-c4 .card-frase{ display:none; }
+}

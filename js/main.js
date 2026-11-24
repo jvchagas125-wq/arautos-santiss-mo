@@ -27,6 +27,7 @@ function mostrarFrase(frase, autor) {
   elFraseSkeleton.classList.add("oculto");
   elFraseTexto.classList.remove("oculto");
   elFraseAutor.classList.remove("oculto");
+  try { ajustarHomeNaTela(); } catch { /* ainda não inicializado: o ajuste roda depois */ } // a frase mudou de tamanho: confere se a tela inicial ainda cabe
 }
 
 // A lista de frases fica guardada neste aparelho: a partir da segunda visita a frase do dia aparece
@@ -187,10 +188,81 @@ const carrosselJanela = carrosselPista.parentElement;
 function ajustarAlturaCarrossel() {
   const comCaixas = bannersAtuais.some(bannerTemCaixa);
   carrosselBanners.classList.toggle("carrossel-banners--com-caixas", comCaixas);
-  if (!comCaixas) { carrosselJanela.style.height = ""; return; }
-  const slide = carrosselPista.children[indiceAtual];
-  if (slide) carrosselJanela.style.height = slide.offsetHeight + "px";
+  if (!comCaixas) carrosselJanela.style.height = "";
+  else {
+    const slide = carrosselPista.children[indiceAtual];
+    if (slide) carrosselJanela.style.height = slide.offsetHeight + "px";
+  }
+  ajustarHomeNaTela();
 }
+
+// ---- Tela inicial no celular: cabe inteira na tela (sem cortar o rodapé) ----
+// Com a caixa de texto abaixo do banner a página fica mais alta que a tela. Em vez de cortar o rodapé, a tela se
+// ajusta sozinha, só o necessário e nesta ordem: 1) a imagem do banner fica um pouco mais "baixa";
+// 2) modo compacto em etapas (home-c2: caixa, frase e atalhos menores; home-c3: atalhos em uma fileira); 4) por último,
+// a "Frase do dia" some (home-c4). Se a tela já cabe com folga, nada muda.
+const ehHome = document.body.classList.contains("pagina-home");
+const mqCelular = window.matchMedia("(max-width: 600px)");
+const rodapeHome = document.querySelector(".rodape-vermelho");
+let ajustandoHome = false;
+function ajustarHomeNaTela() {
+  if (!ehHome || ajustandoHome || !rodapeHome) return;
+  ajustandoHome = true;
+  const corpo = document.body;
+  const slide = carrosselPista.children[indiceAtual];
+  const comCaixas = bannersAtuais.some(bannerTemCaixa);
+  const alturaAntes = carrosselJanela.offsetHeight;
+  try {
+    corpo.classList.remove("home-c2", "home-c3", "home-c4");
+    carrosselBanners.classList.remove("home-img-ajustada");
+    carrosselBanners.style.removeProperty("--altura-img-banner");
+    if (!mqCelular.matches || carrosselBanners.classList.contains("oculto")) return;
+
+    carrosselJanela.style.transition = "none"; // mede já com a altura final do banner, sem esperar a animação
+    const aplicarAltura = () => { if (comCaixas && slide) carrosselJanela.style.height = slide.offsetHeight + "px"; };
+    aplicarAltura();
+    // medida pelo layout (offsetTop), que não é afetado pelas animações de entrada
+    const sobra = () => rodapeHome.offsetTop + rodapeHome.offsetHeight - window.innerHeight;
+    const link = comCaixas && slide ? slide.querySelector(".carrossel-banners__imagem-link") : null;
+    const encolherImagem = (proporcaoMinima) => {
+      if (!link) return;
+      const s = sobra();
+      if (s <= 0) return;
+      const atual = link.offsetHeight;
+      const minimo = Math.round(link.offsetWidth * proporcaoMinima);
+      if (atual <= minimo) return;
+      carrosselBanners.classList.add("home-img-ajustada");
+      carrosselBanners.style.setProperty("--altura-img-banner", Math.max(minimo, atual - s) + "px");
+      aplicarAltura();
+    };
+    encolherImagem(0.38);
+    // níveis cumulativos: c2 (caixa, frase e atalhos menores) → c3 (atalhos em uma fileira) → c4 (sem "Frase do dia")
+    const niveis = [["home-c2", 0.34], ["home-c3", 0.32], ["home-c4", 0.3]];
+    for (const [classe, proporcao] of niveis) {
+      if (sobra() <= 0) break;
+      corpo.classList.add(classe);
+      // com o modo mais compacto a imagem volta ao tamanho normal e só encolhe se ainda precisar
+      carrosselBanners.classList.remove("home-img-ajustada");
+      carrosselBanners.style.removeProperty("--altura-img-banner");
+      aplicarAltura();
+      encolherImagem(proporcao);
+    }
+  } finally {
+    // devolve a animação de altura do carrossel (parte da altura anterior até a nova)
+    if (comCaixas && carrosselJanela.style.height) {
+      const final = carrosselJanela.style.height;
+      carrosselJanela.style.height = alturaAntes + "px";
+      void carrosselJanela.offsetHeight;
+      carrosselJanela.style.transition = "";
+      carrosselJanela.style.height = final;
+    } else {
+      carrosselJanela.style.transition = "";
+    }
+    ajustandoHome = false;
+  }
+}
+window.addEventListener("load", ajustarHomeNaTela);
+
 window.addEventListener("resize", ajustarAlturaCarrossel);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarAlturaCarrossel);
 

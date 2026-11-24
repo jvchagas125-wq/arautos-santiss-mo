@@ -1160,14 +1160,13 @@ export async function excluirAviso(id) {
 // Lista (em tempo real) os banners do carrossel da Home, na ordem manual definida no
 // painel admin (botões "subir"/"descer") — usada tanto pelo carrossel público quanto
 // pela lista de gerenciamento em Configurações.
+// Sempre ao vivo (são poucos documentos): o que se salva no painel (texto, negrito, imagem) aparece na hora no site público.
 export function ouvirBanners(callback) {
-  return escutaComValidade("banners", callback, VALIDADE_PUBLICA_MS, (cb) => {
-    cb = cacheado("banners", cb);
-    return onSnapshot(collection(db, "banners"), (snap) => {
-      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      lista.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
-      cb(lista);
-    });
+  const cb = cacheado("banners", callback);
+  return onSnapshot(collection(db, "banners"), (snap) => {
+    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    lista.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+    cb(lista);
   });
 }
 
