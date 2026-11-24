@@ -108,7 +108,7 @@ img{ max-width: 100%; display:block; }
 .topbar__logo{
   height: 42px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,.4));
-  animation: aparecer .8s ease both;
+  /* sem fade-in: o logo já vem pronto no primeiro quadro (js/visual-cache.js) — um fade a cada página parecia "piscar" */
 }
 .topbar__btn{
   position: absolute;
@@ -1815,4 +1815,19 @@ html.fundo-outras-cel body.fundo-damasco::before, html.fundo-outras-cel body.fun
   .atalho-card{ padding:13px 10px; gap:7px; }
   .atalho-card__icone{ width:42px; height:42px; }
   .atalho-card__icone svg{ width:20px; height:20px; }
+}
+
+/* Navegação dentro do site (js/visual-cache.js põe "nav-interna" quando a pessoa já entrou nesta sessão):
+   as animações de entrada não repetem a cada página — o conteúdo aparece já no lugar, sem piscar. */
+html.nav-interna .titulo-cidade,
+html.nav-interna .selo-decorativo,
+html.nav-interna .conteudo h1.titulo-pagina,
+html.nav-interna .card-frase,
+html.nav-interna .carrossel-banners,
+html.nav-interna .atalho-card,
+html.nav-interna .pergunta-dia,
+html.nav-interna .painel,
+html.nav-interna .contato-quadro{ animation:none; }
+@media (prefers-reduced-motion: reduce){
+  .titulo-cidade, .selo-decorativo, .conteudo h1.titulo-pagina, .card-frase, .carrossel-banners, .atalho-card, .pergunta-dia, .painel, .contato-quadro{ animation:none; }
 }
