@@ -1777,7 +1777,7 @@ html.fundo-outras-cel body.fundo-damasco::before, html.fundo-outras-cel body.fun
   .rodape-vermelho__bolinha, .rodape-vermelho__bolinha-texto{ transition:none; }
 }
 @media (min-width: 720px){
-  .rodape-vermelho{ justify-content:center; gap:16px; padding-top:12px; padding-bottom:12px; }
+  .rodape-vermelho{ justify-content:center; gap:64px; padding-top:12px; padding-bottom:12px; }
   .rodape-vermelho__texto{ flex:0 0 auto; font-size:.7rem; }
   /* no computador o botão cresce para a direita sem mexer no texto nem no centro do rodapé */
   .rodape-vermelho__bolinha{ margin-left:0; width:36px; }

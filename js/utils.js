@@ -1118,10 +1118,13 @@ const CHAVE_BOLINHA_VISTA = "arautos_bolinha_contato_vista";
 function animarBolinhaContato() {
   const bolinha = document.querySelector(".rodape-vermelho__bolinha");
   if (!bolinha) return;
-  try { if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch { /* segue */ }
+  // (com "reduzir movimento" ligado no aparelho ela também abre e fecha, só que sem o deslizar — ver CSS)
   try { if (sessionStorage.getItem(CHAVE_BOLINHA_VISTA) === "1") return; } catch { /* mostra mesmo assim */ }
-  try { sessionStorage.setItem(CHAVE_BOLINHA_VISTA, "1"); } catch { /* ignora */ }
-  setTimeout(() => bolinha.classList.add("aberto"), 2200);
+  setTimeout(() => {
+    bolinha.classList.add("aberto");
+    // só conta como "já vista" quando realmente abriu (se a pessoa saiu da página antes, abre na próxima)
+    try { sessionStorage.setItem(CHAVE_BOLINHA_VISTA, "1"); } catch { /* ignora */ }
+  }, 2200);
   setTimeout(() => bolinha.classList.remove("aberto"), 8200);
 }
 
