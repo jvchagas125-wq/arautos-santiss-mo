@@ -21,6 +21,7 @@ let blocosSemana = []; // gerarBlocosDeSemana(dataInicio, dataFim): array de sem
 let indiceSemanaAtual = 0;
 let todosAgendamentosAtivos = []; // status "agendado" do período aberto
 let pararEscutaTodosAgendamentos = null;
+let faixaEscutada = ""; // "inicio_fim" da semana cujos agendamentos estão sendo escutados
 
 const dataInput = document.getElementById("dataInput");
 const calendario = document.getElementById("calendario");
@@ -105,6 +106,7 @@ async function iniciar() {
   dataInput.disabled = true;
 
   if (pararEscutaTodosAgendamentos) { pararEscutaTodosAgendamentos(); pararEscutaTodosAgendamentos = null; }
+  faixaEscutada = "";
   if (pararEscutaDiasHorarios) { pararEscutaDiasHorarios(); pararEscutaDiasHorarios = null; }
   if (pararEscutaConfig) { pararEscutaConfig(); pararEscutaConfig = null; }
   assinaturaDiasHorarios = "";
@@ -173,17 +175,26 @@ function iniciarCalendarioAgendamentos() {
   const idx = blocosSemana.findIndex((dias) => dias[dias.length - 1] >= hoje);
   indiceSemanaAtual = idx === -1 ? Math.max(0, blocosSemana.length - 1) : idx;
 
+  // a grade mostra uma semana por vez: o banco só é lido para a semana que está na tela (e de novo, só dessa
+  // semana, quando a pessoa passa para outra). Ler o período inteiro a cada visita gastava a cota diária de leituras.
+  if (pararEscutaTodosAgendamentos) { pararEscutaTodosAgendamentos(); pararEscutaTodosAgendamentos = null; }
+  faixaEscutada = "";
+  renderizarGradeSemanal();
+}
+
+function escutarSemanaVisivel() {
+  const dias = blocosSemana[indiceSemanaAtual];
+  if (!dias || !dias.length) return;
+  const inicio = dias[0], fim = dias[dias.length - 1];
+  const faixa = `${inicio}_${fim}`;
+  if (faixa === faixaEscutada) return;
+  faixaEscutada = faixa;
   if (pararEscutaTodosAgendamentos) pararEscutaTodosAgendamentos();
-  // só do período aberto, a partir de uma semana atrás (o passado distante não interessa à grade)
-  const umaSemanaAtras = new Date(); umaSemanaAtras.setDate(umaSemanaAtras.getDate() - 7);
-  const inicioConsulta = dataParaIso(umaSemanaAtras) > diasHorarios.dataInicio ? dataParaIso(umaSemanaAtras) : diasHorarios.dataInicio;
-  pararEscutaTodosAgendamentos = ouvirAgendamentosAtivosNoPeriodo(inicioConsulta, diasHorarios.dataFim, (lista) => {
+  pararEscutaTodosAgendamentos = ouvirAgendamentosAtivosNoPeriodo(inicio, fim, (lista) => {
     todosAgendamentosAtivos = lista;
     reconstruirMapaAgendamentosPorDiaHora();
     renderizarGradeSemanal();
   });
-
-  renderizarGradeSemanal();
 }
 
 function renderizarGradeSemanal() {
@@ -192,6 +203,7 @@ function renderizarGradeSemanal() {
   gradeSemanalAgendamentos.classList.toggle("oculto", semPeriodo);
   if (semPeriodo) return;
 
+  escutarSemanaVisivel();
   const dias = blocosSemana[indiceSemanaAtual];
   semanaTitulo.textContent = `${formatarDataBR(dias[0]).slice(0, 5)} a ${formatarDataBR(dias[dias.length - 1]).slice(0, 5)}`;
 

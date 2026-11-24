@@ -1,7 +1,7 @@
 // Camada de acesso aos dados no Firestore — usada por todas as páginas do site
 import {
-  db, doc, getDoc, setDoc as setDocFirestore, updateDoc as updateDocFirestore, addDoc, deleteDoc,
-  collection, query, where, getDocs, onSnapshot as onSnapshotFirestore, orderBy,
+  db, doc, getDoc as getDocFirestore, setDoc as setDocFirestore, updateDoc as updateDocFirestore, addDoc, deleteDoc,
+  collection, query, where, getDocs as getDocsFirestore, onSnapshot as onSnapshotFirestore, orderBy,
   serverTimestamp, Timestamp, deleteField, increment
 } from "./firebase-init.js";
 import { normalizarCurso, idInscricao } from "./cursos-comum.js";
@@ -67,7 +67,25 @@ function gravarCacheDados(chave, valor) {
     const texto = JSON.stringify(valor === undefined ? null : valor, substituirTimestamp);
     if (texto.length > LIMITE_CACHE_BYTES) { localStorage.removeItem(PREFIXO_CACHE + chave); return; }
     localStorage.setItem(PREFIXO_CACHE + chave, texto);
+    localStorage.setItem(PREFIXO_CACHE + chave + "__t", String(Date.now())); // quando foi guardado (ver escutaComValidade)
   } catch { /* sem espaço ou sem localStorage: só perde a otimização */ }
+}
+// Para o que muda raramente e é lido em TODA página (configurações gerais, páginas ocultas, banners): se o que está
+// guardado neste aparelho tem menos de "validadeMs", usa só ele e NÃO abre a escuta no banco (cada escuta custa ao
+// menos 1 leitura por página aberta). Passado o prazo, a escuta em tempo real volta ao normal e renova o guardado.
+// Uma mudança feita no painel chega aos visitantes em até alguns minutos.
+const VALIDADE_PUBLICA_MS = 3 * 60000;
+function escutaComValidade(chave, callback, validadeMs, abrirEscuta) {
+  // quem está logado no painel sempre escuta em tempo real (vê na hora o que acabou de salvar)
+  try { if (localStorage.getItem("arautos_admin_sessao")) return abrirEscuta(callback); } catch { /* sem armazenamento */ }
+  const guardado = lerCacheDados(chave);
+  let idade = Infinity;
+  try { idade = Date.now() - Number(localStorage.getItem(PREFIXO_CACHE + chave + "__t")); } catch { /* sem armazenamento */ }
+  if (guardado !== undefined && idade >= 0 && idade < validadeMs) {
+    Promise.resolve().then(() => callback(guardado));
+    return () => {};
+  }
+  return abrirEscuta(callback);
 }
 // Chamada ao sair do painel: apaga do aparelho o que era só do painel (contatos, intenções, inscrições...).
 export function limparCacheDoPainel() {
@@ -127,9 +145,46 @@ function renovarCachePorCaminho(caminho) {
 // atingido), o painel avisa que o que está na tela pode estar desatualizado (evento "arautos-leitura-falhou", tratado
 // em js/admin.js) — antes, a tela seguia mostrando os dados guardados no aparelho como se estivessem certos.
 let avisouLeituraFalhou = false;
+
+// Contador de leituras (diagnóstico): o Firestore cobra 1 leitura por documento recebido (a lista inteira ao abrir uma
+// escuta e depois só os que mudarem). Mostra, por coleção, quantas leituras ESTE navegador fez desde que a página abriu.
+// No painel aparece em Configurações; em qualquer página, digite  __leituras()  no console.
+const leiturasPorColecao = {};
+let leiturasTotal = 0;
+function contarLeituras(alvo, qtd) {
+  if (!qtd) return;
+  let nome = "?";
+  try { nome = String(alvo.path || (alvo._query && alvo._query.path && alvo._query.path.canonicalString()) || "?").split("/")[0]; } catch { /* mantém "?" */ }
+  leiturasPorColecao[nome] = (leiturasPorColecao[nome] || 0) + qtd;
+  leiturasTotal += qtd;
+  window.dispatchEvent(new CustomEvent("arautos-leituras", { detail: { total: leiturasTotal } }));
+}
+export function leiturasDaSessao() { return { total: leiturasTotal, porColecao: { ...leiturasPorColecao } }; }
+if (typeof window !== "undefined") window.__leituras = () => { const r = leiturasDaSessao(); console.table(r.porColecao); return r.total; };
+async function getDoc(ref) {
+  const snap = await getDocFirestore(ref);
+  contarLeituras(ref, 1);
+  return snap;
+}
+async function getDocs(consulta) {
+  const snap = await getDocsFirestore(consulta);
+  contarLeituras(consulta, snap.size);
+  return snap;
+}
+
 function onSnapshot(alvo, ...argumentos) {
   const i = argumentos.findIndex((a) => typeof a === "function");
   if (i >= 0) {
+    const aoReceber = argumentos[i];
+    let primeira = true;
+    argumentos[i] = (snap) => {
+      try {
+        const qtd = snap && typeof snap.docChanges === "function" ? (primeira ? snap.size : snap.docChanges().length) : 1;
+        if (!(snap && snap.metadata && snap.metadata.fromCache)) contarLeituras(alvo, qtd);
+      } catch { /* o contador nunca atrapalha a tela */ }
+      primeira = false;
+      aoReceber(snap);
+    };
     const aoErroOriginal = typeof argumentos[i + 1] === "function" ? argumentos[i + 1] : null;
     argumentos[i + 1] = (erro) => {
       if (!(erro && erro.code === "permission-denied") && !avisouLeituraFalhou) {
@@ -181,9 +236,11 @@ export async function obterConfiguracoesGerais(aoAtualizar) {
 }
 
 export function ouvirConfiguracoesGerais(callback) {
-  callback = cacheado("config_geral", callback);
-  return onSnapshot(REF_CONFIG_GERAL, (snap) => {
-    callback(snap.exists() ? { ...PADRAO_CONFIG_GERAL, ...snap.data() } : { ...PADRAO_CONFIG_GERAL });
+  return escutaComValidade("config_geral", callback, VALIDADE_PUBLICA_MS, (cb) => {
+    cb = cacheado("config_geral", cb);
+    return onSnapshot(REF_CONFIG_GERAL, (snap) => {
+      cb(snap.exists() ? { ...PADRAO_CONFIG_GERAL, ...snap.data() } : { ...PADRAO_CONFIG_GERAL });
+    });
   });
 }
 
@@ -199,8 +256,10 @@ const chavesOcultas = (dados) => Object.entries((dados && dados.ocultas) || {}).
 
 // Chama o callback com a lista de chaves das páginas ocultas, na hora em que mudar (tempo real).
 export function ouvirPaginasOcultas(callback) {
-  callback = cacheado("paginas_ocultas", callback);
-  return onSnapshot(REF_PAGINAS_SITE, (snap) => callback(chavesOcultas(snap.exists() ? snap.data() : null)), () => {});
+  return escutaComValidade("paginas_ocultas", callback, VALIDADE_PUBLICA_MS, (cb) => {
+    cb = cacheado("paginas_ocultas", cb);
+    return onSnapshot(REF_PAGINAS_SITE, (snap) => cb(chavesOcultas(snap.exists() ? snap.data() : null)), () => {});
+  });
 }
 
 export async function salvarPaginaOculta(chave, oculta) {
@@ -1102,11 +1161,13 @@ export async function excluirAviso(id) {
 // painel admin (botões "subir"/"descer") — usada tanto pelo carrossel público quanto
 // pela lista de gerenciamento em Configurações.
 export function ouvirBanners(callback) {
-  callback = cacheado("banners", callback);
-  return onSnapshot(collection(db, "banners"), (snap) => {
-    const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    lista.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
-    callback(lista);
+  return escutaComValidade("banners", callback, VALIDADE_PUBLICA_MS, (cb) => {
+    cb = cacheado("banners", cb);
+    return onSnapshot(collection(db, "banners"), (snap) => {
+      const lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      lista.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+      cb(lista);
+    });
   });
 }
 

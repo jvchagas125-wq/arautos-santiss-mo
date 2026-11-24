@@ -23,7 +23,7 @@ import {
   ouvirBanners, criarBanner, atualizarBanner, excluirBanner, trocarOrdemBanners
 } from "./dados.js";
 import {
-  limparCacheDoPainel, listarAdministradores, ouvirAdministradores, ouvirAdministrador, obterAdministrador,
+  limparCacheDoPainel, leiturasDaSessao, listarAdministradores, ouvirAdministradores, ouvirAdministrador, obterAdministrador,
   criarAdministrador, atualizarAdministrador, excluirAdministrador, removerSenhaAntigaDoPainel
 } from "./dados.js";
 import { criarCredenciais, conferirSenha, chaveConfere, TAMANHO_MINIMO_SENHA } from "./contas.js";
@@ -417,6 +417,25 @@ function iniciarPainel() {
     document.getElementById("avisoLeituraFalhou")?.classList.remove("oculto");
   });
   document.getElementById("btnAtualizarLeitura")?.addEventListener("click", () => window.location.reload());
+  // contador de leituras (Configurações): atualiza no máximo uma vez por segundo
+  let leiturasAgendado = false;
+  const mostrarLeituras = () => {
+    leiturasAgendado = false;
+    const { total, porColecao } = leiturasDaSessao();
+    const totalEl = document.getElementById("leiturasTotal");
+    const listaEl = document.getElementById("leiturasLista");
+    if (!totalEl || !listaEl) return;
+    totalEl.textContent = `Total: ${total.toLocaleString("pt-BR")} ${total === 1 ? "leitura" : "leituras"}`;
+    listaEl.innerHTML = "";
+    Object.entries(porColecao).sort((a, b) => b[1] - a[1]).forEach(([nome, qtd]) => {
+      const li = document.createElement("li");
+      li.textContent = `${nome}: ${qtd.toLocaleString("pt-BR")}`;
+      listaEl.appendChild(li);
+    });
+  };
+  window.addEventListener("arautos-leituras", () => {
+    if (!leiturasAgendado) { leiturasAgendado = true; setTimeout(mostrarLeituras, 1000); }
+  });
   window.addEventListener("arautos-sem-permissao", (e) => {
     mostrarToast(`O Firebase não liberou a leitura de "${e.detail}". Atualize as Regras do Firestore (veja as instruções que o Claude enviou).`);
   });
@@ -3146,6 +3165,11 @@ function configurarAcompanhamento() {
     renderizarCalendarioAgendados();
   });
 
+  // a lista de cancelados só é lida do banco quando a aba "Cancelados" é aberta pela primeira vez (poupa leituras)
+  let canceladosLigado = false;
+  const ligarCancelados = () => {
+    if (canceladosLigado) return;
+    canceladosLigado = true;
   ouvirTodosAgendamentos("cancelado", (lista) => {
     listaCancelados.innerHTML = lista.length
       ? lista.map(cardCancelado).join("")
@@ -3158,6 +3182,8 @@ function configurarAcompanhamento() {
       });
     });
   });
+  };
+  document.querySelector('.admin-aba[data-aba="cancelados"]')?.addEventListener("click", ligarCancelados);
   });
 
   function fecharCancelamentoAgend() {

@@ -943,6 +943,16 @@
         <h1 class="titulo-pagina">Configurações</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
 
+        <div class="painel" id="painelLeituras">
+          <div class="painel__titulo"><span class="emoji">📊</span> Uso do banco de dados (leituras)</div>
+          <p class="formulario-intro">
+            O plano gratuito do Firebase permite 50.000 leituras por dia. Aqui aparecem as leituras feitas por <strong>este navegador</strong>
+            desde que o painel foi aberto, por coleção — serve para ver o que está gastando mais.
+          </p>
+          <p id="leiturasTotal" style="margin:0 0 6px; font-weight:600;">Total: 0 leituras</p>
+          <ul id="leiturasLista" style="margin:0; padding-left:18px; line-height:1.7; color:var(--texto-suave);"></ul>
+        </div>
+
         <div class="painel" id="painelPaginasSite">
           <div class="painel__titulo painel__titulo--clicavel recolhido" id="cabecalhoPaginasSite" role="button" tabindex="0" aria-expanded="false">
             <span class="emoji">🧭</span> Páginas do site público
