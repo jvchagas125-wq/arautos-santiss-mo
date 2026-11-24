@@ -342,7 +342,7 @@ img{ max-width: 100%; display:block; }
 [data-t="n"]{ font-size:var(--fs, 1rem); }
 [data-t="g"]{ font-size:calc(var(--fs, 1rem) * 1.35); line-height:1.3; }
 [data-t="gg"]{ font-size:calc(var(--fs, 1rem) * 1.8); line-height:1.2; }
-.carrossel-banners__caixa-rodape{ display:flex; justify-content:flex-end; margin-top:6px; }
+.carrossel-banners__caixa-rodape{ display:flex; justify-content:flex-end; margin-top:12px; }
 .carrossel-banners__caixa .carrossel-banners__caixa-botao{ padding:8px 20px; font-size:.74rem; letter-spacing:.03em; text-decoration:none; width:auto; }
 @media (max-width: 480px){
   .carrossel-banners__caixa{ padding:11px 14px 13px; }
@@ -1841,7 +1841,7 @@ html.nav-interna .contato-quadro{ animation:none; }
   body.pagina-home.home-c2 .carrossel-banners__caixa{ padding:8px 12px 9px; gap:3px; }
   body.pagina-home.home-c2 .carrossel-banners__caixa-titulo{ font-size:.84rem; }
   body.pagina-home.home-c2 .carrossel-banners__caixa-texto{ --fs:.8rem; line-height:1.32; }
-  body.pagina-home.home-c2 .carrossel-banners__caixa-rodape{ margin-top:2px; }
+  body.pagina-home.home-c2 .carrossel-banners__caixa-rodape{ margin-top:8px; }
   body.pagina-home.home-c2 .carrossel-banners__caixa .carrossel-banners__caixa-botao{ padding:5px 14px; font-size:.62rem; }
   body.pagina-home.home-c2 .carrossel-banners{ margin-bottom:12px; }
   body.pagina-home.home-c2 .carrossel-banners__controles{ margin-top:4px; }
