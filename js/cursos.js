@@ -6,7 +6,7 @@ import {
   aplicarMascaraTelefone, formatarDataBR, obterUsuarioSessao, criarCampoData, hojeIso
 } from "./utils.js";
 import {
-  ouvirConfiguracoesGerais, ouvirCursos, inscricoesDaPessoa, salvarInscricao, excluirInscricao, ouvirAvisosDoCurso
+  ouvirConfiguracoesGerais, ouvirCursos, inscricoesDaPessoa, salvarInscricao, excluirInscricao, ouvirAvisosDoCurso, registrarInscricaoIniciada
 } from "./dados.js";
 import {
   estadoInscricoes, rotuloDataHora, CAMPOS_PADRAO, perguntaVisivel, opcoesDaPergunta, validarInscricao, montarInscricao, mascaraCpf,
@@ -148,6 +148,43 @@ function montarFormulario(curso, existente, aoConcluir) {
   });
   atualizarVisibilidade();
 
+  // "Iniciou e não concluiu": quando a pessoa começa a preencher (e ainda não tem inscrição neste curso), o painel
+  // passa a mostrar o nome dela numa lista à parte; ao enviar a inscrição ela sai da lista. Qualquer falha aqui
+  // (sem internet, regra do banco) é ignorada — nunca atrapalha a inscrição.
+  let iniciouRegistro = false, concluiu = false, temporizadorProgresso = null;
+  function progresso() {
+    let total = 0, preenchidos = 0;
+    CAMPOS_PADRAO.forEach(({ chave }) => {
+      const cfg = curso.campos[chave];
+      if (!cfg || !cfg.ativo || chave === "telefone") return; // o telefone já é conhecido (cadastro do site)
+      total++;
+      if (String(padrao[chave] ?? "").trim()) preenchidos++;
+    });
+    curso.perguntas.forEach((p) => {
+      if (!perguntaVisivel(p, curso.perguntas, respostas)) return;
+      total++;
+      const r = respostas[p.id];
+      if (Array.isArray(r) ? r.length : String(r ?? "").trim()) preenchidos++;
+    });
+    return { preenchidos, total };
+  }
+  function avisarProgresso(primeira) {
+    if (concluiu) return;
+    const { preenchidos, total } = progresso();
+    registrarInscricaoIniciada({
+      cursoId: curso.id, nome: nome || usuario.nome || "", telefone: usuario.telefone || "", telefoneDigits: usuario.telefoneDigits,
+      preenchidos, total, primeira
+    }).catch((err) => console.warn("Não foi possível registrar o início da inscrição:", err && err.code));
+  }
+  function aoInteragir() {
+    if (existente || concluiu || !usuario.telefoneDigits) return;
+    if (!iniciouRegistro) { iniciouRegistro = true; avisarProgresso(true); return; }
+    clearTimeout(temporizadorProgresso);
+    temporizadorProgresso = setTimeout(() => avisarProgresso(false), 6000); // atualiza "preencheu X de Y" sem gravar a cada letra
+  }
+  form.addEventListener("input", aoInteragir);
+  form.addEventListener("change", aoInteragir);
+
   // aceite para receber convites e informativos por e-mail (só aparece se o administrador ativou)
   if (curso.pedirAceiteContato) {
     const caixaAceite = criar("div", "curso-aceite");
@@ -193,6 +230,8 @@ function montarFormulario(curso, existente, aoConcluir) {
     }
     enviar.disabled = true;
     enviar.textContent = "Enviando...";
+    clearTimeout(temporizadorProgresso);
+    concluiu = true; // nenhuma gravação de progresso pode "ressuscitar" a pessoa na lista depois de enviar
     try {
       const dados = montarInscricao(curso, usuario, { nome, padrao, respostas, aceitaContato });
       await salvarInscricao(dados);
@@ -203,6 +242,7 @@ function montarFormulario(curso, existente, aoConcluir) {
     } catch (err) {
       console.error(err);
       mostrarToast("Não foi possível enviar agora. Verifique a internet e tente de novo.");
+      concluiu = false;
       enviar.disabled = false;
       enviar.textContent = existente ? "Salvar alterações" : "Enviar inscrição";
     }

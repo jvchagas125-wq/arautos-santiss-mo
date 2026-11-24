@@ -15,7 +15,7 @@
 <script>try{if(localStorage.getItem("arautos_admin_sessao"))document.documentElement.classList.add("com-sessao");}catch(e){}</script>
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="css/admin.css?v=85" />
+<link rel="stylesheet" href="css/admin.css?v=86" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -1089,8 +1089,18 @@
               <img id="previewBannerImagem" alt="" class="oculto" style="margin-top:8px; max-height:140px; border-radius:8px; display:block;" />
             </div>
             <div class="campo">
+              <label for="campoBannerTitulo">Título da caixa (opcional)</label>
+              <input type="text" id="campoBannerTitulo" maxlength="80" placeholder="Ex.: Adoração ao Santíssimo Sacramento" />
+            </div>
+            <div class="campo">
+              <label for="campoBannerCaixaTexto">Texto da caixa (opcional)</label>
+              <textarea id="campoBannerCaixaTexto" rows="3" maxlength="400" placeholder="Ex.: Venha adorar o Santíssimo todos os dias, a qualquer hora."></textarea>
+              <span class="campo-ajuda">📦 Se escrever o título e/ou o texto, aparece uma caixa logo <strong>abaixo da imagem</strong> do banner. Se deixar os dois em branco, a caixa não aparece.</span>
+            </div>
+            <div class="campo">
               <label for="campoBannerTexto">Texto do botão (opcional)</label>
-              <input type="text" id="campoBannerTexto" placeholder="Deixe em branco para não mostrar nenhum botão sobre o banner" />
+              <input type="text" id="campoBannerTexto" placeholder="Ex.: Agende seu horário" />
+              <span class="campo-ajuda">Com caixa, o botão fica no canto inferior direito dela. Sem caixa, ele aparece sobre a imagem, como antes. Deixe em branco para não ter botão.</span>
             </div>
             <div class="campo" style="margin-bottom:0;">
               <label>Para onde o banner leva ao ser tocado</label>

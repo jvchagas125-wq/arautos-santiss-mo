@@ -1112,18 +1112,21 @@ export function ouvirBanners(callback) {
 
 // Banners novos entram no fim da fila (maior "ordem" = último); use trocarOrdemBanners
 // para reordenar depois de criado.
-export async function criarBanner({ imagemUrl, textoBotao, paginaDestino }) {
+export async function criarBanner({ imagemUrl, textoBotao, paginaDestino, titulo = "", texto = "" }) {
   const ref = doc(collection(db, "banners"));
   await setDoc(ref, {
-    imagemUrl, textoBotao, paginaDestino,
+    imagemUrl, textoBotao, paginaDestino, titulo, texto,
     ordem: Date.now(),
     criadoEm: serverTimestamp()
   });
   return ref.id;
 }
 
-export async function atualizarBanner(id, { imagemUrl, textoBotao, paginaDestino }) {
+export async function atualizarBanner(id, { imagemUrl, textoBotao, paginaDestino, titulo, texto }) {
   const dados = { textoBotao, paginaDestino };
+  // título e texto da caixa sob o banner (opcionais; vazios = sem caixa)
+  if (titulo !== undefined) dados.titulo = titulo;
+  if (texto !== undefined) dados.texto = texto;
   // só mexe em imagemUrl quando o admin realmente trocou a imagem (envia um novo valor);
   // se não mexeu, o banner mantém a imagem que já tinha.
   if (imagemUrl !== undefined) dados.imagemUrl = imagemUrl;
@@ -1201,13 +1204,15 @@ export async function alterarAberturaDoCurso(id, ativo) {
 
 // Apaga o curso, as inscrições e os avisos dele.
 export async function excluirCurso(id) {
-  const [insc, avs] = await Promise.all([
+  const [insc, avs, inic] = await Promise.all([
     getDocs(query(collection(db, "inscricoes"), where("cursoId", "==", id))),
-    getDocs(query(collection(db, "avisosCursos"), where("cursoId", "==", id)))
+    getDocs(query(collection(db, "avisosCursos"), where("cursoId", "==", id))),
+    getDocs(query(collection(db, "inscricoesIniciadas"), where("cursoId", "==", id))).catch(() => ({ docs: [] }))
   ]);
   await Promise.all([
     ...insc.docs.map((d) => deleteDoc(d.ref)),
-    ...avs.docs.map((d) => deleteDoc(d.ref))
+    ...avs.docs.map((d) => deleteDoc(d.ref)),
+    ...inic.docs.map((d) => deleteDoc(d.ref).catch(() => {}))
   ]);
   await deleteDoc(doc(db, "cursos", id));
 }
@@ -1246,11 +1251,31 @@ export async function salvarInscricao(dados) {
     criadoEmMs: jaExiste ? (existente.data().criadoEmMs || Date.now()) : Date.now(),
     atualizadoEm: serverTimestamp()
   });
+  // concluiu: sai da lista de "iniciaram e não concluíram" (se não conseguir apagar, o painel já ignora quem tem inscrição)
+  deleteDoc(doc(db, "inscricoesIniciadas", id)).catch(() => {});
   return id;
 }
 
 export async function excluirInscricao(id) {
   await deleteDoc(doc(db, "inscricoes", id));
+}
+
+/* ---- Inscrições iniciadas e não concluídas ----
+   inscricoesIniciadas/{cursoId_telefone}: criado quando a pessoa começa a preencher o formulário do curso e apagado
+   quando ela envia a inscrição. Só o painel lê. Nunca pode atrapalhar a inscrição: quem chama ignora qualquer erro. */
+export async function registrarInscricaoIniciada({ cursoId, nome, telefone, telefoneDigits, preenchidos, total, primeira }) {
+  const dados = { cursoId, nome: nome || "", telefone: telefone || "", telefoneDigits, preenchidos, total, atualizadoEmMs: Date.now() };
+  if (primeira) dados.iniciouEmMs = Date.now();
+  await setDocFirestore(doc(db, "inscricoesIniciadas", idInscricao(cursoId, telefoneDigits)), dados, { merge: true });
+}
+export async function excluirInscricaoIniciada(id) {
+  await deleteDoc(doc(db, "inscricoesIniciadas", id));
+}
+export function ouvirInscricoesIniciadas(callback) {
+  callback = cacheado("adm_inscricoes_iniciadas", callback);
+  return onSnapshot(collection(db, "inscricoesIniciadas"), (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  }, aoFalharLeitura("inscricoesIniciadas"));
 }
 
 // Painel: todas as inscrições de todos os cursos (agrupadas na tela)

@@ -5,7 +5,7 @@ import {
 } from "./utils.js";
 import {
   ouvirCursos, salvarCurso, alterarAberturaDoCurso, excluirCurso,
-  ouvirTodasInscricoes, excluirInscricao, obterConfigEnvioIntencoes, salvarEmailsInscritos, ouvirTodosAvisosDosCursos, criarAvisoDoCurso, excluirAvisoDoCurso
+  ouvirTodasInscricoes, excluirInscricao, ouvirInscricoesIniciadas, excluirInscricaoIniciada, obterConfigEnvioIntencoes, salvarEmailsInscritos, ouvirTodosAvisosDosCursos, criarAvisoDoCurso, excluirAvisoDoCurso
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, TIPOS_PERGUNTA, TIPOS_COM_OPCOES, perguntaTemOpcoes, opcoesDaPergunta, normalizarCurso, novoIdCurto,
@@ -80,10 +80,12 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
   let cursos = [];
   let inscricoes = [];
   let avisos = [];
+  let iniciadas = []; // começaram a preencher a inscrição e não enviaram
   const abertosCursos = new Set();   // quadros da lista de cursos
   const abertosCrm = new Set();      // quadros do CRM
   const abertosPessoas = new Set();  // pessoas abertas no CRM
   const abertosAvisos = new Set();   // quadros de avisos
+  const abertosIniciadas = new Set(); // quadros "iniciaram e não concluíram"
   const buscaCrm = new Map();        // cursoId -> texto da busca
 
   /* ---------- confirmação genérica ---------- */
@@ -637,6 +639,59 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
   });
   campoEmailNovo.addEventListener("input", () => campoEmailNovo.classList.remove("invalido"));
 
+  // Pessoas que começaram a preencher o formulário do curso e não enviaram (quem já tem inscrição no curso não entra)
+  const quandoBrasilia = (ms) => new Date(ms).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(", ", " às ");
+  function criarQuadroIniciadas(curso, inscritosDoCurso) {
+    const jaInscritos = new Set(inscritosDoCurso.map((i) => i.telefoneDigits));
+    const pendentes = iniciadas
+      .filter((i) => i.cursoId === curso.id && !jaInscritos.has(i.telefoneDigits))
+      .sort((a, b) => (b.atualizadoEmMs || 0) - (a.atualizadoEmMs || 0));
+    const { quadro, corpo } = criarQuadro(`Iniciaram e não concluíram — ${pendentes.length}`, abertosIniciadas.has(curso.id),
+      (abriu) => { if (abriu) abertosIniciadas.add(curso.id); else abertosIniciadas.delete(curso.id); });
+    quadro.classList.add("quadro-iniciadas");
+    if (!pendentes.length) {
+      corpo.appendChild(criar("p", "mensagem-vazia", "Ninguém começou a se inscrever e deixou de concluir."));
+      return quadro;
+    }
+    corpo.appendChild(criar("p", "crm-iniciadas__ajuda", "Pessoas que começaram a preencher o formulário deste curso e ainda não enviaram. Quando enviam a inscrição, saem desta lista."));
+    pendentes.forEach((p) => {
+      const cartao = criar("div", "crm-contato crm-contato--iniciada");
+      const topo = criar("div", "crm-contato__topo crm-contato__topo--fixo");
+      const info = criar("div", "crm-contato__info");
+      info.appendChild(criar("strong", "crm-contato__nome", p.nome || "(sem nome)"));
+      info.appendChild(criar("span", "crm-contato__fone", formatarTelefone(p.telefoneDigits)));
+      const partes = [];
+      const quando = p.atualizadoEmMs || p.iniciouEmMs;
+      if (quando) partes.push(`Última atividade em ${quandoBrasilia(quando)}`);
+      if (p.total) partes.push(`preencheu ${p.preenchidos || 0} de ${p.total} ${p.total === 1 ? "campo" : "campos"}`);
+      if (partes.length) info.appendChild(criar("span", "crm-contato__meta", partes.join(" · ")));
+      topo.appendChild(info);
+
+      const num = numeroWhatsApp(p.telefoneDigits);
+      const zap = criar(num ? "a" : "span", "crm-zap" + (num ? "" : " desativado"));
+      zap.innerHTML = ICONE_ZAP;
+      if (num) {
+        zap.href = `https://wa.me/${num}?text=${encodeURIComponent(`Olá, ${(p.nome || "").split(/\s+/)[0]}! Aqui é da equipe dos Arautos. Vimos que você começou sua inscrição no curso "${curso.nome}" e não chegou a concluir. Podemos ajudar?`)}`;
+        zap.target = "_blank"; zap.rel = "noopener"; zap.title = "Abrir conversa no WhatsApp";
+      } else zap.title = "Sem número válido para WhatsApp";
+      topo.appendChild(zap);
+
+      const apagar = criar("button", "crm-zap crm-remover");
+      apagar.type = "button";
+      apagar.innerHTML = ICONE_LIXEIRA;
+      apagar.title = "Tirar esta pessoa da lista";
+      apagar.setAttribute("aria-label", "Tirar esta pessoa da lista");
+      apagar.addEventListener("click", async () => {
+        apagar.disabled = true;
+        try { await excluirInscricaoIniciada(p.id); } catch (err) { console.error(err); mostrarToast("Não foi possível remover agora. Tente novamente."); apagar.disabled = false; }
+      });
+      topo.appendChild(apagar);
+      cartao.appendChild(topo);
+      corpo.appendChild(cartao);
+    });
+    return quadro;
+  }
+
   function desenharCrm() {
     const raiz = document.getElementById("listaInscritosAdmin");
     // não refaz a tela enquanto a pessoa digita na busca (perderia o foco)
@@ -660,6 +715,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
         resumo.appendChild(s);
       });
       corpo.appendChild(resumo);
+      corpo.appendChild(criarQuadroIniciadas(curso, dele));
 
       const barra = criar("div", "crm-barra");
       const busca = document.createElement("input");
@@ -853,6 +909,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
   aoAbrirPaginaUmaVez("inscricoes", () => {
     ouvirCursos((lista) => { cursos = lista; redesenharTudo(); });
     ouvirTodasInscricoes((lista) => { inscricoes = lista; redesenharTudo(); });
+    ouvirInscricoesIniciadas((lista) => { iniciadas = lista; desenharCrm(); });
     ouvirTodosAvisosDosCursos((lista) => { avisos = lista; desenharAvisos(); desenharCursos(); });
   });
 

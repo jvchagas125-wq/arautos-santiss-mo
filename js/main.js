@@ -94,25 +94,36 @@ let indiceAtual = 0;
 let temporizadorAutoplay = null;
 let ultimaAssinaturaBanners = null;
 
-function criarSlideBanner(banner, indice) {
-  const slide = document.createElement("a");
-  slide.className = "carrossel-banners__slide";
-  slide.href = banner.paginaDestino || "#";
-  // link externo (ex.: WhatsApp, Instagram, outro site) abre em nova aba, pra não tirar a
-  // pessoa do site; página interna continua navegando normalmente na mesma aba.
-  if (/^https?:\/\//i.test(banner.paginaDestino || "")) {
-    slide.target = "_blank";
-    slide.rel = "noopener noreferrer";
+// destino do banner: página do próprio site (mesma aba) ou link externo (WhatsApp, Instagram, outro site: nova aba)
+function aplicarDestinoBanner(a, destino) {
+  a.href = destino || "#";
+  if (/^https?:\/\//i.test(destino || "")) {
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
   }
+}
 
+// o banner tem "caixa" (título e/ou texto escritos no painel) logo abaixo da imagem?
+const bannerTemCaixa = (banner) => !!(String(banner.titulo || "").trim() || String(banner.texto || "").trim());
+
+function criarImagemBanner(banner, indice) {
   const img = document.createElement("img");
   img.className = "carrossel-banners__img";
   definirSrcOtimizado(img, banner.imagemUrl, 1000);
-  img.alt = banner.textoBotao || "";
+  img.alt = banner.titulo || banner.textoBotao || "";
   img.loading = indice === 0 ? "eager" : "lazy";
   img.decoding = "async";
   if (indice === 0) img.fetchPriority = "high";
-  slide.appendChild(img);
+  return img;
+}
+
+function criarSlideBanner(banner, indice) {
+  if (bannerTemCaixa(banner)) return criarSlideBannerComCaixa(banner, indice);
+
+  const slide = document.createElement("a");
+  slide.className = "carrossel-banners__slide";
+  aplicarDestinoBanner(slide, banner.paginaDestino);
+  slide.appendChild(criarImagemBanner(banner, indice));
 
   if (banner.textoBotao) {
     const botao = document.createElement("span");
@@ -123,10 +134,65 @@ function criarSlideBanner(banner, indice) {
   return slide;
 }
 
+// Banner com caixa: a imagem fica inteira à mostra e, logo abaixo, vem uma caixa retangular com título, texto e
+// (se o painel tiver um texto de botão) o botão no canto inferior direito, que leva ao mesmo destino do banner.
+function criarSlideBannerComCaixa(banner, indice) {
+  const slide = document.createElement("div");
+  slide.className = "carrossel-banners__slide carrossel-banners__slide--com-caixa";
+
+  const linkImagem = document.createElement("a");
+  linkImagem.className = "carrossel-banners__imagem-link";
+  aplicarDestinoBanner(linkImagem, banner.paginaDestino);
+  linkImagem.appendChild(criarImagemBanner(banner, indice));
+  slide.appendChild(linkImagem);
+
+  const caixa = document.createElement("div");
+  caixa.className = "carrossel-banners__caixa";
+  const titulo = String(banner.titulo || "").trim();
+  const texto = String(banner.texto || "").trim();
+  if (titulo) {
+    const h = document.createElement("h3");
+    h.className = "carrossel-banners__caixa-titulo";
+    h.textContent = titulo;
+    caixa.appendChild(h);
+  }
+  if (texto) {
+    const p = document.createElement("p");
+    p.className = "carrossel-banners__caixa-texto";
+    p.textContent = texto;
+    caixa.appendChild(p);
+  }
+  if (banner.textoBotao) {
+    const rodape = document.createElement("div");
+    rodape.className = "carrossel-banners__caixa-rodape";
+    const botao = document.createElement("a");
+    botao.className = "btn btn-dourado carrossel-banners__caixa-botao";
+    botao.textContent = banner.textoBotao;
+    aplicarDestinoBanner(botao, banner.paginaDestino);
+    rodape.appendChild(botao);
+    caixa.appendChild(rodape);
+  }
+  slide.appendChild(caixa);
+  return slide;
+}
+
+// Com caixas, os slides têm alturas diferentes: a janela do carrossel acompanha a altura do banner que está aparecendo.
+const carrosselJanela = carrosselPista.parentElement;
+function ajustarAlturaCarrossel() {
+  const comCaixas = bannersAtuais.some(bannerTemCaixa);
+  carrosselBanners.classList.toggle("carrossel-banners--com-caixas", comCaixas);
+  if (!comCaixas) { carrosselJanela.style.height = ""; return; }
+  const slide = carrosselPista.children[indiceAtual];
+  if (slide) carrosselJanela.style.height = slide.offsetHeight + "px";
+}
+window.addEventListener("resize", ajustarAlturaCarrossel);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarAlturaCarrossel);
+
 function irParaSlide(indice) {
   if (!bannersAtuais.length) return;
   indiceAtual = ((indice % bannersAtuais.length) + bannersAtuais.length) % bannersAtuais.length;
   carrosselPista.style.transform = `translateX(-${indiceAtual * 100}%)`;
+  ajustarAlturaCarrossel();
   carrosselPontos.querySelectorAll(".carrossel-banners__ponto").forEach((ponto, i) => {
     ponto.classList.toggle("ativo", i === indiceAtual);
   });
@@ -188,7 +254,8 @@ function renderizarCarrossel(lista, opts = {}) {
   carrosselPista.style.transform = "translateX(0%)";
   // força o navegador a aplicar o "transition: none" antes de devolver a transição normal,
   // senão o primeiro slide entraria deslizando em vez de já aparecer no lugar
-  requestAnimationFrame(() => { carrosselPista.style.transition = ""; });
+  requestAnimationFrame(() => { carrosselPista.style.transition = ""; ajustarAlturaCarrossel(); });
+  ajustarAlturaCarrossel();
 
   reiniciarAutoplay();
 }

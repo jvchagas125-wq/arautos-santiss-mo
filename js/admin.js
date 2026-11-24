@@ -3674,6 +3674,8 @@ function configurarBanners() {
   const campoImagem = document.getElementById("campoBannerImagem");
   const previewImagemNovo = document.getElementById("previewBannerImagem");
   const campoTexto = document.getElementById("campoBannerTexto");
+  const campoTitulo = document.getElementById("campoBannerTitulo");
+  const campoCaixaTexto = document.getElementById("campoBannerCaixaTexto");
   const campoDestino = document.getElementById("campoBannerDestino");
   const campoLink = document.getElementById("campoBannerLink");
   const listaBannersAdmin = document.getElementById("listaBannersAdmin");
@@ -3755,7 +3757,9 @@ function configurarBanners() {
       await criarBanner({
         imagemUrl,
         textoBotao: campoTexto.value.trim(),
-        paginaDestino
+        paginaDestino,
+        titulo: campoTitulo.value.trim(),
+        texto: campoCaixaTexto.value.trim()
       });
       formNovo.reset();
       previewImagemNovo.classList.add("oculto");
@@ -3778,6 +3782,7 @@ function configurarBanners() {
       const nomeDestino = (PAGINAS_DESTINO_BANNER.find((p) => p.href === destinoAtual(banner.paginaDestino)) || {}).label || banner.paginaDestino;
 
       const temBotao = !!(banner.textoBotao && banner.textoBotao.trim());
+      const temCaixa = !!(String(banner.titulo || "").trim() || String(banner.texto || "").trim());
       const ehLink = ehLinkPersonalizado(banner.paginaDestino);
 
       const card = document.createElement("div");
@@ -3786,7 +3791,7 @@ function configurarBanners() {
         <img src="${banner.imagemUrl}" alt="" class="cartao-aviso-admin__img" />
         <div class="cartao-aviso-admin__corpo">
           <div class="cartao-aviso-admin__titulo">${temBotao ? escaparHtml(banner.textoBotao) : '<em style="color:var(--texto-suave); font-style:italic; font-weight:400;">(sem botão)</em>'}</div>
-          <p class="cartao-aviso-admin__texto">Leva para: ${escaparHtml(nomeDestino)}</p>
+          <p class="cartao-aviso-admin__texto">${temCaixa ? "📦 Caixa: " + escaparHtml(String(banner.titulo || "").trim() || String(banner.texto || "").trim().slice(0, 60)) + "<br />" : ""}Leva para: ${escaparHtml(nomeDestino)}</p>
           <div class="cartao-aviso-admin__acoes">
             <button type="button" class="btn btn-contorno btn-pequeno btn-subir-banner" title="Mover para cima" ${indice === 0 ? "disabled" : ""}>↑</button>
             <button type="button" class="btn btn-contorno btn-pequeno btn-descer-banner" title="Mover para baixo" ${indice === lista.length - 1 ? "disabled" : ""}>↓</button>
@@ -3803,8 +3808,18 @@ function configurarBanners() {
               <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 600 px</strong> (formato 2:1, retangular).</span>
             </div>
             <div class="campo">
+              <label>Título da caixa (opcional)</label>
+              <input type="text" class="campo-edit-titulo-banner" maxlength="80" value="${escaparHtml(banner.titulo || "")}" placeholder="Ex.: Adoração ao Santíssimo Sacramento" />
+            </div>
+            <div class="campo">
+              <label>Texto da caixa (opcional)</label>
+              <textarea class="campo-edit-caixa-texto-banner" rows="3" maxlength="400" placeholder="Ex.: Venha adorar o Santíssimo todos os dias, a qualquer hora.">${escaparHtml(banner.texto || "")}</textarea>
+              <span class="campo-ajuda">📦 Com título e/ou texto, aparece uma caixa abaixo da imagem. Em branco, a caixa não aparece.</span>
+            </div>
+            <div class="campo">
               <label>Texto do botão (opcional)</label>
-              <input type="text" class="campo-edit-texto-banner" value="${escaparHtml(banner.textoBotao || "")}" placeholder="Deixe em branco para não mostrar nenhum botão sobre o banner" />
+              <input type="text" class="campo-edit-texto-banner" value="${escaparHtml(banner.textoBotao || "")}" placeholder="Ex.: Agende seu horário" />
+              <span class="campo-ajuda">Com caixa, o botão fica no canto inferior direito dela; sem caixa, aparece sobre a imagem.</span>
             </div>
             <div class="campo" style="margin-bottom:0;">
               <label>Para onde o banner leva ao ser tocado</label>
@@ -3873,6 +3888,8 @@ function configurarBanners() {
           if (modoLinkEdit && !normalizarLink(linkEdit)) { mostrarToast("Informe o link para onde o banner deve levar."); btnSalvar.disabled = false; btnSalvar.textContent = "Salvar"; return; }
           const dadosSalvar = {
             textoBotao: formEdicao.querySelector(".campo-edit-texto-banner").value.trim(),
+            titulo: formEdicao.querySelector(".campo-edit-titulo-banner").value.trim(),
+            texto: formEdicao.querySelector(".campo-edit-caixa-texto-banner").value.trim(),
             paginaDestino: modoLinkEdit ? normalizarLink(linkEdit) : formEdicao.querySelector(".campo-edit-destino-banner").value
           };
           const fileEdicao = formEdicao.querySelector(".campo-edit-imagem-banner").files[0];
