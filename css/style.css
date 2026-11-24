@@ -308,6 +308,7 @@ img{ max-width: 100%; display:block; }
   text-decoration:none; background: var(--vermelho-escuro);
 }
 .carrossel-banners__img{ width:100%; height:100%; object-fit:cover; display:block; }
+.carrossel-banners__picture{ display:block; width:100%; height:100%; }
 /* especificidade extra (.carrossel-banners__slide + .carrossel-banners__botao) de propósito:
    essa regra precisa vencer a classe genérica ".btn" (padding/font-size padrão dos botões do
    site), que é definida mais abaixo no arquivo — sem isso, ".btn" venceria por vir depois. */

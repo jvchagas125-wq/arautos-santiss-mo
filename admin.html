@@ -1095,10 +1095,16 @@
           </p>
           <form id="formNovoBanner">
             <div class="campo">
-              <label for="campoBannerImagem">Imagem do banner</label>
+              <label for="campoBannerImagem">📱 Imagem do banner — celular</label>
               <input type="file" id="campoBannerImagem" accept="image/*" required />
-              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 600 px</strong> (formato 2:1, retangular).</span>
+              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 600 px</strong> (formato 2:1). Só em celulares de tela muito baixa a imagem pode perder um pedaço em cima e embaixo para a página caber inteira: mantenha textos e rostos na <strong>faixa central</strong> (entre 20% e 80% da altura).</span>
               <img id="previewBannerImagem" alt="" class="oculto" style="margin-top:8px; max-height:140px; border-radius:8px; display:block;" />
+            </div>
+            <div class="campo">
+              <label for="campoBannerImagemPc">🖥️ Imagem do banner — computador (opcional)</label>
+              <input type="file" id="campoBannerImagemPc" accept="image/*" />
+              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1600 × 800 px</strong> (formato 2:1). No computador a imagem aparece inteira, sem cortes. Se não enviar, o computador usa a imagem do celular.</span>
+              <img id="previewBannerImagemPc" alt="" class="oculto" style="margin-top:8px; max-height:140px; border-radius:8px; display:block;" />
             </div>
             <div class="campo">
               <label for="campoBannerTitulo">Título da caixa (opcional)</label>

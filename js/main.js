@@ -1,4 +1,4 @@
-import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia, comLimiteDeTempo, definirSrcOtimizado } from "./utils.js";
+import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia, comLimiteDeTempo, definirSrcOtimizado, otimizarImagemUrl } from "./utils.js";
 import { ouvirConfiguracoesGerais, obterFrases, ouvirBanners } from "./dados.js";
 import { mostrarTextoFormatado } from "./texto-formatado.js";
 
@@ -108,6 +108,9 @@ function aplicarDestinoBanner(a, destino) {
 // o banner tem "caixa" (título e/ou texto escritos no painel) logo abaixo da imagem?
 const bannerTemCaixa = (banner) => !!(String(banner.titulo || "").trim() || String(banner.texto || "").trim());
 
+// Imagem do banner. Se o painel tem uma imagem própria para computador, entra um <picture> que a usa só em tela de
+// computador (a mesma regra do fundo do site); no celular, e quando não há imagem do computador, vale a imagem normal.
+const MEDIA_COMPUTADOR = "(min-width: 1000px) and (hover: hover) and (pointer: fine)";
 function criarImagemBanner(banner, indice) {
   const img = document.createElement("img");
   img.className = "carrossel-banners__img";
@@ -116,7 +119,15 @@ function criarImagemBanner(banner, indice) {
   img.loading = indice === 0 ? "eager" : "lazy";
   img.decoding = "async";
   if (indice === 0) img.fetchPriority = "high";
-  return img;
+  const urlPc = String(banner.imagemPcUrl || "").trim();
+  if (!/^https:\/\//i.test(urlPc)) return img;
+  const figura = document.createElement("picture");
+  figura.className = "carrossel-banners__picture";
+  const fonte = document.createElement("source");
+  fonte.media = MEDIA_COMPUTADOR;
+  fonte.srcset = otimizarImagemUrl(urlPc, 1600);
+  figura.append(fonte, img);
+  return figura;
 }
 
 function criarSlideBanner(banner, indice) {
@@ -198,8 +209,8 @@ function ajustarAlturaCarrossel() {
 
 // ---- Tela inicial no celular: cabe inteira na tela (sem cortar o rodapé) ----
 // Com a caixa de texto abaixo do banner a página fica mais alta que a tela. Em vez de cortar o rodapé, a tela se
-// ajusta sozinha, só o necessário e nesta ordem: 1) a imagem do banner fica um pouco mais "baixa";
-// 2) modo compacto em etapas (home-c2: caixa, frase e atalhos menores; home-c3: atalhos em uma fileira); 4) por último,
+// ajusta sozinha, só o necessário e nesta ordem: 1) modo compacto (home-c2: caixa, frase e atalhos menores;
+// home-c3: atalhos em uma fileira); 2) a imagem do banner perde um pedaço em cima e embaixo; 3) por último,
 // a "Frase do dia" some (home-c4). Se a tela já cabe com folga, nada muda.
 const ehHome = document.body.classList.contains("pagina-home");
 const mqCelular = window.matchMedia("(max-width: 600px)");
@@ -239,17 +250,16 @@ function ajustarHomeNaTela() {
       carrosselBanners.style.setProperty("--altura-img-banner", Math.max(minimo, atual - s) + "px");
       aplicarAltura();
     };
-    encolherImagem(0.38);
-    // níveis cumulativos: c2 (caixa, frase e atalhos menores) → c3 (atalhos em uma fileira) → c4 (sem "Frase do dia")
-    const niveis = [["home-c2", 0.34], ["home-c3", 0.32], ["home-c4", 0.3]];
-    for (const [classe, proporcao] of niveis) {
+    // Ordem: primeiro os textos e atalhos ficam menores (c2, c3); só se ainda não couber a imagem perde um pedaço
+    // (nas bordas de cima e de baixo); por último some a "Frase do dia" (c4).
+    const etapas = [[null, 0], ["home-c2", 0], ["home-c3", 0], ["home-c3", 0.36], ["home-c4", 0.3]];
+    for (const [classe, proporcao] of etapas) {
       if (sobra() <= 0) break;
-      corpo.classList.add(classe);
-      // com o modo mais compacto a imagem volta ao tamanho normal e só encolhe se ainda precisar
+      if (classe) corpo.classList.add(classe);
       carrosselBanners.classList.remove("home-img-ajustada");
       carrosselBanners.style.removeProperty("--altura-img-banner");
       aplicarAltura();
-      encolherImagem(proporcao);
+      if (proporcao) encolherImagem(proporcao);
     }
   } finally {
     // devolve a animação de altura do carrossel (parte da altura anterior até a nova)

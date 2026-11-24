@@ -3700,6 +3700,8 @@ function configurarBanners() {
   const formNovo = document.getElementById("formNovoBanner");
   const campoImagem = document.getElementById("campoBannerImagem");
   const previewImagemNovo = document.getElementById("previewBannerImagem");
+  const campoImagemPc = document.getElementById("campoBannerImagemPc");
+  const previewImagemPcNovo = document.getElementById("previewBannerImagemPc");
   const campoTexto = document.getElementById("campoBannerTexto");
   const campoTitulo = document.getElementById("campoBannerTitulo");
   const placeholderCaixa = "Ex.: Venha adorar o Santíssimo todos os dias, a qualquer hora.";
@@ -3770,10 +3772,18 @@ function configurarBanners() {
     previewImagemNovo.classList.remove("oculto");
   });
 
+  campoImagemPc.addEventListener("change", () => {
+    const file = campoImagemPc.files[0];
+    if (!file) { previewImagemPcNovo.classList.add("oculto"); return; }
+    previewImagemPcNovo.src = URL.createObjectURL(file);
+    previewImagemPcNovo.classList.remove("oculto");
+  });
+
   formNovo.addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = formNovo.querySelector("button[type=submit]");
     const file = campoImagem.files[0];
+    const filePc = campoImagemPc.files[0];
     if (!file) { mostrarToast("Selecione uma imagem para o banner."); return; }
     const modoLink = [...formNovo.querySelectorAll('input[name=bannerDestinoTipo]')].some((r) => r.checked && r.value === "link");
     const paginaDestino = modoLink ? normalizarLink(campoLink.value) : campoDestino.value;
@@ -3784,9 +3794,11 @@ function configurarBanners() {
     try {
       btn.textContent = "Enviando imagem...";
       const imagemUrl = await enviarImagemParaCloudinary(file);
+      const imagemPcUrl = filePc ? await enviarImagemParaCloudinary(filePc) : "";
       btn.textContent = "Adicionando...";
       await criarBanner({
         imagemUrl,
+        imagemPcUrl,
         textoBotao: campoTexto.value.trim(),
         paginaDestino,
         titulo: campoTitulo.value.trim(),
@@ -3796,6 +3808,7 @@ function configurarBanners() {
       formNovo.reset();
       editorCaixaNovo.limpar();
       previewImagemNovo.classList.add("oculto");
+      previewImagemPcNovo.classList.add("oculto");
       atualizarDestinoNovo();
       mostrarToast("Banner adicionado!");
     } catch (err) {
@@ -3824,7 +3837,7 @@ function configurarBanners() {
         <img src="${banner.imagemUrl}" alt="" class="cartao-aviso-admin__img" />
         <div class="cartao-aviso-admin__corpo">
           <div class="cartao-aviso-admin__titulo">${temBotao ? escaparHtml(banner.textoBotao) : '<em style="color:var(--texto-suave); font-style:italic; font-weight:400;">(sem botão)</em>'}</div>
-          <p class="cartao-aviso-admin__texto">${temCaixa ? "📦 Caixa: " + escaparHtml(String(banner.titulo || "").trim() || String(banner.texto || "").trim().slice(0, 60)) + "<br />" : ""}Leva para: ${escaparHtml(nomeDestino)}</p>
+          <p class="cartao-aviso-admin__texto">${temCaixa ? "📦 Caixa: " + escaparHtml(String(banner.titulo || "").trim() || String(banner.texto || "").trim().slice(0, 60)) + "<br />" : ""}${banner.imagemPcUrl ? "🖥️ Tem imagem própria do computador<br />" : ""}Leva para: ${escaparHtml(nomeDestino)}</p>
           <div class="cartao-aviso-admin__acoes">
             <button type="button" class="btn btn-contorno btn-pequeno btn-subir-banner" title="Mover para cima" ${indice === 0 ? "disabled" : ""}>↑</button>
             <button type="button" class="btn btn-contorno btn-pequeno btn-descer-banner" title="Mover para baixo" ${indice === lista.length - 1 ? "disabled" : ""}>↓</button>
@@ -3836,9 +3849,16 @@ function configurarBanners() {
           </div>
           <form class="form-editar-banner oculto">
             <div class="campo">
-              <label>Trocar imagem (opcional)</label>
+              <label>📱 Trocar imagem do celular (opcional)</label>
               <input type="file" class="campo-edit-imagem-banner" accept="image/*" />
-              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 600 px</strong> (formato 2:1, retangular).</span>
+              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1200 × 600 px</strong> (formato 2:1). Mantenha textos e rostos na faixa central (entre 20% e 80% da altura): só em celulares de tela muito baixa as bordas de cima e de baixo podem ser cortadas.</span>
+            </div>
+            <div class="campo">
+              <label>🖥️ Imagem do computador (opcional)</label>
+              ${banner.imagemPcUrl ? `<img src="${banner.imagemPcUrl}" alt="" style="max-height:90px; border-radius:8px; display:block; margin-bottom:6px;" />` : ""}
+              <input type="file" class="campo-edit-imagem-pc-banner" accept="image/*" />
+              <span class="campo-ajuda">📐 Tamanho ideal: <strong>1600 × 800 px</strong> (formato 2:1). Aparece inteira no computador. ${banner.imagemPcUrl ? "Escolha outro arquivo para trocar, ou marque abaixo para voltar a usar a imagem do celular." : "Sem ela, o computador usa a imagem do celular."}</span>
+              ${banner.imagemPcUrl ? '<label style="display:flex; gap:6px; align-items:center; margin-top:6px; font-weight:400;"><input type="checkbox" class="campo-edit-remover-pc-banner" /> Remover a imagem do computador</label>' : ""}
             </div>
             <div class="campo">
               <label>Título da caixa (opcional)</label>
@@ -3935,6 +3955,13 @@ function configurarBanners() {
           if (fileEdicao) {
             btnSalvar.textContent = "Enviando imagem...";
             dadosSalvar.imagemUrl = await enviarImagemParaCloudinary(fileEdicao);
+          }
+          const filePcEdicao = formEdicao.querySelector(".campo-edit-imagem-pc-banner").files[0];
+          if (filePcEdicao) {
+            btnSalvar.textContent = "Enviando imagem do computador...";
+            dadosSalvar.imagemPcUrl = await enviarImagemParaCloudinary(filePcEdicao);
+          } else if (formEdicao.querySelector(".campo-edit-remover-pc-banner")?.checked) {
+            dadosSalvar.imagemPcUrl = "";
           }
           btnSalvar.textContent = "Salvando...";
           await atualizarBanner(banner.id, dadosSalvar);

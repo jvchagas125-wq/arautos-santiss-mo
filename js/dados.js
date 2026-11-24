@@ -1172,17 +1172,17 @@ export function ouvirBanners(callback) {
 
 // Banners novos entram no fim da fila (maior "ordem" = último); use trocarOrdemBanners
 // para reordenar depois de criado.
-export async function criarBanner({ imagemUrl, textoBotao, paginaDestino, titulo = "", texto = "", textoHtml = "" }) {
+export async function criarBanner({ imagemUrl, imagemPcUrl = "", textoBotao, paginaDestino, titulo = "", texto = "", textoHtml = "" }) {
   const ref = doc(collection(db, "banners"));
   await setDoc(ref, {
-    imagemUrl, textoBotao, paginaDestino, titulo, texto, textoHtml,
+    imagemUrl, imagemPcUrl, textoBotao, paginaDestino, titulo, texto, textoHtml,
     ordem: Date.now(),
     criadoEm: serverTimestamp()
   });
   return ref.id;
 }
 
-export async function atualizarBanner(id, { imagemUrl, textoBotao, paginaDestino, titulo, texto, textoHtml }) {
+export async function atualizarBanner(id, { imagemUrl, imagemPcUrl, textoBotao, paginaDestino, titulo, texto, textoHtml }) {
   const dados = { textoBotao, paginaDestino };
   // título e texto da caixa sob o banner (opcionais; vazios = sem caixa)
   if (titulo !== undefined) dados.titulo = titulo;
@@ -1192,6 +1192,8 @@ export async function atualizarBanner(id, { imagemUrl, textoBotao, paginaDestino
   // só mexe em imagemUrl quando o admin realmente trocou a imagem (envia um novo valor);
   // se não mexeu, o banner mantém a imagem que já tinha.
   if (imagemUrl !== undefined) dados.imagemUrl = imagemUrl;
+  // imagem própria para o computador (opcional; "" = volta a usar a do celular)
+  if (imagemPcUrl !== undefined) dados.imagemPcUrl = imagemPcUrl;
   await updateDoc(doc(db, "banners", id), dados);
 }
 
