@@ -1777,13 +1777,14 @@ html.fundo-outras-cel body.fundo-damasco::before, html.fundo-outras-cel body.fun
   .rodape-vermelho__bolinha, .rodape-vermelho__bolinha-texto{ transition:none; }
 }
 @media (min-width: 720px){
-  .rodape-vermelho{ justify-content:center; gap:64px; padding-top:12px; padding-bottom:12px; }
+  /* medalhão e texto ficam juntos; o espaço maior fica entre o texto e o botão de contato */
+  .rodape-vermelho{ justify-content:center; gap:12px; padding-top:12px; padding-bottom:12px; }
   .rodape-vermelho__texto{ flex:0 0 auto; font-size:.7rem; }
   /* no computador o botão cresce para a direita sem mexer no texto nem no centro do rodapé */
-  .rodape-vermelho__bolinha{ margin-left:0; width:36px; }
+  .rodape-vermelho__bolinha{ margin-left:52px; width:36px; }
   .rodape-vermelho__bolinha-texto{ max-width:none; font-size:.7rem; }
   .rodape-vermelho__bolinha-texto br{ display:none; }
-  .rodape-vermelho__bolinha.aberto, .rodape-vermelho__bolinha:hover{ width:218px; margin-right:-182px; }
+  .rodape-vermelho__bolinha.aberto, .rodape-vermelho__bolinha:hover{ width:var(--bolinha-aberta, 262px); margin-right:calc(36px - var(--bolinha-aberta, 262px)); }
   .rodape-vermelho__bolinha.aberto .rodape-vermelho__bolinha-texto, .rodape-vermelho__bolinha:hover .rodape-vermelho__bolinha-texto{ max-width:none; }
 }
 @media (max-width: 600px) and (max-height: 680px){

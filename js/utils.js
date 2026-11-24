@@ -1115,9 +1115,23 @@ function inserirNavegacaoEntrePaginas(paginaAtual) {
    Na primeira vez da visita ela abre o texto por alguns segundos e depois fecha, ficando só o coração.
    Depois disso só abre quando o mouse passa por cima. Fica na linha do rodapé, sem tapar o nome da igreja. */
 const CHAVE_BOLINHA_VISTA = "arautos_bolinha_contato_vista";
+// No computador o botão abre até caber o texto inteiro ("Entre em contato e colabore"): mede o texto de verdade
+// (a fonte muda o tamanho) e guarda em --bolinha-aberta, que o CSS usa como largura do botão aberto.
+function medirBolinhaContato() {
+  const bolinha = document.querySelector(".rodape-vermelho__bolinha");
+  const texto = bolinha && bolinha.querySelector(".rodape-vermelho__bolinha-texto");
+  if (!texto) return;
+  const prev = texto.style.cssText;
+  texto.style.cssText = "max-width:none; opacity:0; position:absolute; visibility:hidden; white-space:nowrap;";
+  const largura = Math.ceil(texto.getBoundingClientRect().width / (parseFloat(getComputedStyle(document.documentElement).zoom) || 1));
+  texto.style.cssText = prev;
+  if (largura > 0) bolinha.style.setProperty("--bolinha-aberta", (largura + 18 + 8 + 8 + 14 + 4) + "px"); // ícone + espaços + borda
+}
 function animarBolinhaContato() {
   const bolinha = document.querySelector(".rodape-vermelho__bolinha");
   if (!bolinha) return;
+  medirBolinhaContato();
+  if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", medirBolinhaContato);
   // (com "reduzir movimento" ligado no aparelho ela também abre e fecha, só que sem o deslizar — ver CSS)
   try { if (sessionStorage.getItem(CHAVE_BOLINHA_VISTA) === "1") return; } catch { /* mostra mesmo assim */ }
   setTimeout(() => {
