@@ -302,6 +302,9 @@ export function inscritosParaAvisos(curso, inscricoes) {
   return curso && curso.pedirAceiteContato ? inscricoes.filter((i) => i.aceitaContato === true) : inscricoes;
 }
 export const emailsParaAvisos = (curso, inscricoes) => emailsDosInscritos(inscritosParaAvisos(curso, inscricoes));
+// Aviso geral: todo mundo, de TODOS os cursos, que marcou o aceite de contato (e informou um e-mail válido).
+// Sem repetir: quem se inscreveu em vários cursos com o mesmo e-mail recebe uma vez só.
+export const emailsQueAceitaramContato = (inscricoes) => emailsDosInscritos(inscricoes.filter((i) => i && i.aceitaContato === true));
 
 /* ---------- Lista de presença (Word e PDF) ---------- */
 // Uma pessoa por linha: nome, telefone e os dados que o administrador escolheu pedir no curso (e-mail,

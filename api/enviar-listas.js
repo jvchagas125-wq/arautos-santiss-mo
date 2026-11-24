@@ -34,7 +34,7 @@ import {
   criarClienteFirestore, processarListasFechadas, montarEEnviarLista,
   normalizarConfigEnvio, idDocEnvio, atualizarComRetentativas
 } from "../servidor/envio-listas.js";
-import { enviarAvisoDoCurso } from "../servidor/avisos-curso.js";
+import { enviarAvisoDoCurso, enviarAvisoGeral } from "../servidor/avisos-curso.js";
 import { processarCursosEncerrados, enviarListaDoCurso, gerarAnexosDaLista } from "../servidor/lista-curso.js";
 
 // Arquivos da lista de inscritos de um curso (Excel, Word e PDF) — veja servidor/lista-curso.js
@@ -57,7 +57,9 @@ function criarEnviadorDeEmail() {
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: porta,
     secure: porta === 465,
-    auth: { user: usuario, pass: senha }
+    auth: { user: usuario, pass: senha },
+    // prazos: um servidor de e-mail que não responde não pode deixar a função pendurada até a Vercel derrubá-la
+    connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 30000
   });
   const remetente = process.env.EMAIL_REMETENTE || usuario;
   // Sem "copiaOculta": manda para a lista "para" (intenções). Com "copiaOculta": o "Para" é o próprio
@@ -161,6 +163,15 @@ export default async function handler(req, res) {
         return res.status(403).json({ ok: false, erro: "Você não tem permissão para usar esta função." });
       }
       const resultado = await enviarAvisoDoCurso({ avisoId: corpo.avisoId }, { firestore, criarEnviador: criarEnviadorDeEmail });
+      return res.status(resultado.ok ? 200 : 400).json(resultado);
+    }
+
+    /* ---------- aviso geral: todos que aceitaram contato, em qualquer curso ---------- */
+    if (corpo.acao === "avisoGeral") {
+      if (!temAcesso(conta, "inscricoes", "avisos")) {
+        return res.status(403).json({ ok: false, erro: "Você não tem permissão para usar esta função." });
+      }
+      const resultado = await enviarAvisoGeral({ avisoId: corpo.avisoId }, { firestore, criarEnviador: criarEnviadorDeEmail });
       return res.status(resultado.ok ? 200 : 400).json(resultado);
     }
 

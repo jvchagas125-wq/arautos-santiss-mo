@@ -5,11 +5,11 @@ import {
 } from "./utils.js";
 import {
   ouvirCursos, salvarCurso, alterarAberturaDoCurso, excluirCurso,
-  ouvirTodasInscricoes, excluirInscricao, ouvirInscricoesIniciadas, excluirInscricaoIniciada, obterConfigEnvioIntencoes, salvarEmailsInscritos, ouvirTodosAvisosDosCursos, criarAvisoDoCurso, excluirAvisoDoCurso
+  ouvirTodasInscricoes, excluirInscricao, ouvirInscricoesIniciadas, excluirInscricaoIniciada, obterConfigEnvioIntencoes, salvarEmailsInscritos, ouvirTodosAvisosDosCursos, criarAvisoDoCurso, criarAvisoGeral, excluirAvisoDoCurso
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, TIPOS_PERGUNTA, TIPOS_COM_OPCOES, perguntaTemOpcoes, opcoesDaPergunta, normalizarCurso, novoIdCurto,
-  estadoInscricoes, rotuloDataHora, tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailsParaAvisos, inscritosParaAvisos, emailValido, valorComoTexto, dataParaTexto
+  estadoInscricoes, rotuloDataHora, tabelaDeInscritos, formatarTelefone, numeroWhatsApp, emailsDosInscritos, emailsParaAvisos, emailsQueAceitaramContato, inscritosParaAvisos, emailValido, valorComoTexto, dataParaTexto
 } from "./cursos-comum.js";
 import { exportarInscritos } from "./exportar-inscritos.js";
 import { criarSeletorDataHora } from "./seletor-data-hora.js";
@@ -792,7 +792,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
   async function enviarPorEmail(aviso, botao) {
     if (botao) botao.disabled = true;
     try {
-      const r = await chamarApiEnvio({ acao: "avisoCurso", avisoId: aviso.id });
+      const r = await chamarApiEnvio({ acao: aviso.global ? "avisoGeral" : "avisoCurso", avisoId: aviso.id });
       mostrarToast(`Aviso enviado por e-mail para ${r.total} ${r.total === 1 ? "pessoa" : "pessoas"}.`);
     } catch (err) {
       console.error(err);
@@ -802,6 +802,88 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     }
   }
 
+  // Primeiro quadro: aviso por e-mail para todos que marcaram o aceite de contato, em qualquer curso.
+  function criarQuadroAvisoGeral() {
+    const emails = emailsQueAceitaramContato(inscricoes);
+    const gerais = avisos.filter((a) => a.global === true);
+    const { quadro, corpo } = criarQuadro(`Todos que aceitaram contato (todos os cursos) — ${emails.length} ${emails.length === 1 ? "e-mail" : "e-mails"}`,
+      abertosAvisos.has("__geral"), (abriu) => { if (abriu) abertosAvisos.add("__geral"); else abertosAvisos.delete("__geral"); });
+    quadro.classList.add("quadro-aviso-geral");
+
+    corpo.appendChild(criar("p", "crm-iniciadas__ajuda",
+      emails.length
+        ? `Este aviso vai só por e-mail, para ${emails.length} ${emails.length === 1 ? "pessoa" : "pessoas"} que marcaram o aceite de contato em algum curso (quem está em mais de um curso recebe uma vez só). Ele não aparece no quadro de nenhum curso.`
+        : "Ainda não há ninguém que tenha marcado o aceite de contato e informado um e-mail."));
+
+    const form = criar("form", "curso-aviso-form");
+    form.noValidate = true;
+    form.appendChild(criar("p", "campo-legenda", "Novo aviso por e-mail"));
+    const titulo = document.createElement("input");
+    titulo.type = "text"; titulo.maxLength = 120; titulo.placeholder = "Assunto do e-mail";
+    const texto = document.createElement("textarea");
+    texto.rows = 5; texto.maxLength = 4000; texto.placeholder = "Escreva a mensagem...";
+    const enviar = criar("button", "btn btn-dourado btn-pequeno", "Enviar por e-mail");
+    enviar.type = "submit";
+    enviar.disabled = emails.length === 0;
+    form.append(titulo, texto, enviar);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!titulo.value.trim() || !texto.value.trim()) { mostrarToast("Escreva o assunto e a mensagem."); return; }
+      if (!podeAvisar()) { mostrarToast("Você não tem permissão para enviar e-mails."); return; }
+      pedirConfirmacao({
+        titulo: "Enviar aviso por e-mail",
+        texto: `Enviar "${titulo.value.trim()}" por e-mail para ${emails.length} ${emails.length === 1 ? "pessoa" : "pessoas"} que aceitaram contato em qualquer curso?`,
+        botao: "Enviar",
+        acao: async () => {
+          const id = await criarAvisoGeral({ titulo: titulo.value.trim(), texto: texto.value.trim() });
+          titulo.value = ""; texto.value = "";
+          await enviarPorEmail({ id, global: true });
+        }
+      });
+    });
+    corpo.appendChild(form);
+
+    if (!gerais.length) corpo.appendChild(criar("p", "mensagem-vazia", "Nenhum aviso geral enviado ainda."));
+    gerais.forEach((a) => {
+      const item = criar("div", "curso-aviso-adm");
+      const cab = criar("div", "curso-aviso-adm__cab");
+      cab.appendChild(criar("strong", "", a.titulo));
+      cab.appendChild(criar("span", "curso-aviso-adm__data", dataDoMs(a.criadoEmMs)));
+      item.appendChild(cab);
+      const t = criar("p", "curso-aviso-adm__texto");
+      linkificarTexto(a.texto, t);
+      item.appendChild(t);
+      const rodape = criar("div", "curso-aviso-adm__rodape");
+      if (a.emailEnviadoEm) {
+        rodape.appendChild(criar("span", "quadro-intencao__selo", `✓ e-mail enviado para ${a.emailTotal ?? "?"} em ${formatarDataBR(String(a.emailEnviadoEm).slice(0, 10))}`));
+      } else {
+        rodape.appendChild(criar("span", "curso-aviso-adm__data", "Ainda não foi enviado por e-mail"));
+      }
+      const btnMail = criar("button", "btn btn-contorno btn-pequeno", a.emailEnviadoEm ? "Reenviar por e-mail" : "Enviar por e-mail");
+      btnMail.type = "button";
+      btnMail.disabled = emails.length === 0;
+      btnMail.addEventListener("click", () => {
+        if (!podeAvisar()) { mostrarToast("Você não tem permissão para enviar e-mails."); return; }
+        pedirConfirmacao({
+          titulo: a.emailEnviadoEm ? "Reenviar aviso por e-mail" : "Enviar aviso por e-mail",
+          texto: `${a.emailEnviadoEm ? "Reenviar" : "Enviar"} "${a.titulo}" por e-mail para ${emails.length} ${emails.length === 1 ? "pessoa" : "pessoas"} que aceitaram contato em qualquer curso?`,
+          botao: a.emailEnviadoEm ? "Reenviar" : "Enviar",
+          acao: async () => { await enviarPorEmail(a); }
+        });
+      });
+      const btnApagar = criar("button", "btn btn-contorno btn-pequeno btn-perigo", "Apagar");
+      btnApagar.type = "button";
+      btnApagar.addEventListener("click", () => pedirConfirmacao({
+        titulo: "Apagar aviso", texto: `Apagar o aviso "${a.titulo}" do histórico? Quem já recebeu o e-mail continua com ele.`,
+        acao: async () => { await excluirAvisoDoCurso(a.id); mostrarToast("Aviso apagado."); }
+      }));
+      rodape.append(btnMail, btnApagar);
+      item.appendChild(rodape);
+      corpo.appendChild(item);
+    });
+    return quadro;
+  }
+
   function desenharAvisos() {
     const raiz = document.getElementById("listaAvisosCursosAdmin");
     // não refaz enquanto a pessoa escreve um aviso
@@ -809,8 +891,9 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     if (foco && raiz.contains(foco) && foco.matches("input[type=text], textarea")) return;
     raiz.innerHTML = "";
     document.getElementById("avisoSemCursosAvisos").classList.toggle("oculto", cursos.length > 0);
+    raiz.appendChild(criarQuadroAvisoGeral());
     cursos.forEach((curso) => {
-      const dele = avisos.filter((a) => a.cursoId === curso.id);
+      const dele = avisos.filter((a) => a.cursoId === curso.id && !a.global);
       const doCurso = inscricoes.filter((i) => i.cursoId === curso.id);
       const emails = emailsParaAvisos(curso, doCurso);
       const total = doCurso.length;

@@ -97,28 +97,38 @@ export async function processarCursosEncerrados({ agora = new Date() } = {}, dep
     const idDoc = idDocEnvioCurso(curso.id);
     const caminho = `configuracoes/${idDoc}`;
     const item = { cursoId: curso.id, curso: curso.nome };
+    let reservou = false; // só depois de reservar é que um erro pode marcar o registro como "erro" (ver servidor/envio-listas.js)
     try {
       const existente = await firestore.lerDocumento(caminho);
       if (!existente) {
         const criou = await firestore.criarSeNaoExiste("configuracoes", idDoc, { status: "enviando", chave, tentativas: 1, iniciadoEm: agora.toISOString(), cursoId: curso.id });
         if (!criou) { relatorio.push({ ...item, resultado: "ignorada (outra execução já reservou)" }); continue; }
+        reservou = true;
       } else {
         const d = existente.dados;
         const mesmoEncerramento = d.chave === chave;
+        // "enviadoEm" nunca é apagado: mesmo que o status tenha sido sobrescrito por engano, esta lista já saiu.
+        if (mesmoEncerramento && d.status !== "enviado" && d.enviadoEm) {
+          try { await firestore.atualizar(caminho, { status: "enviado" }); } catch { /* só correção do registro */ }
+          relatorio.push({ ...item, resultado: "já enviada" }); continue;
+        }
         if (mesmoEncerramento && d.status === "enviado") { relatorio.push({ ...item, resultado: "já enviada" }); continue; }
         if (mesmoEncerramento && d.status === "enviando" && agora - new Date(d.iniciadoEm || 0) < ENVIANDO_EXPIRA_MINUTOS * 60000) { relatorio.push({ ...item, resultado: "em andamento" }); continue; }
         if (mesmoEncerramento && (d.tentativas || 0) >= MAX_TENTATIVAS) { relatorio.push({ ...item, resultado: "desistiu após várias tentativas" }); continue; }
-        const reservou = await firestore.atualizar(caminho, {
+        const conseguiu = await firestore.atualizar(caminho, {
           status: "enviando", chave, tentativas: mesmoEncerramento ? (d.tentativas || 0) + 1 : 1, iniciadoEm: agora.toISOString(), erro: ""
         }, existente.updateTime);
-        if (!reservou) { relatorio.push({ ...item, resultado: "ignorada (outra execução já reservou)" }); continue; }
+        if (!conseguiu) { relatorio.push({ ...item, resultado: "ignorada (outra execução já reservou)" }); continue; }
+        reservou = true;
       }
       const { total } = await enviarListaDoCurso({ cursoId: curso.id, destinatarios: configEnvio.emailsInscritos, encerramento: true }, dependencias, agora);
       await firestore.atualizar(caminho, { status: "enviado", total, enviadoEm: new Date().toISOString(), destinatarios: configEnvio.emailsInscritos, erro: "" });
       relatorio.push({ ...item, resultado: "enviada", total });
     } catch (erro) {
       const mensagem = String(erro?.message || erro).slice(0, 300);
-      try { await firestore.atualizar(caminho, { status: "erro", erro: mensagem }); } catch { /* não derruba a rodada */ }
+      if (reservou) {
+        try { await firestore.atualizar(caminho, { status: "erro", erro: mensagem }); } catch { /* não derruba a rodada */ }
+      }
       relatorio.push({ ...item, resultado: "erro", erro: mensagem });
     }
   }

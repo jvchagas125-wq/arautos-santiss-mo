@@ -21,6 +21,7 @@ const HORAS_ANTES_PADRAO = 3;
 // (ex.: o agendador atrasou). Passou disso, a lista é considerada perdida e não é mais enviada.
 const FOLGA_APOS_MISSA_HORAS = 2;
 const MAX_TENTATIVAS = 5;
+const PRAZO_FIRESTORE_MS = 8000;
 const ENVIANDO_EXPIRA_MINUTOS = 15;
 
 /* ---------------- Datas (sempre no horário de Brasília) ---------------- */
@@ -141,8 +142,10 @@ export function criarClienteFirestore({ projectId, apiKey, fetchFn = fetch }) {
     return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, codificar(v)]));
   }
 
-  async function chamar(url, opcoes) {
-    const resposta = await fetchFn(url, opcoes);
+  // Toda chamada tem prazo: sem isso, uma resposta que nunca chega deixa a função pendurada até a Vercel derrubá-la —
+  // possivelmente DEPOIS do e-mail já ter saído e ANTES de registrar "enviado" (a lista seria reenviada 15 min depois).
+  async function chamar(url, opcoes = {}) {
+    const resposta = await fetchFn(url, { ...opcoes, signal: AbortSignal.timeout(PRAZO_FIRESTORE_MS) });
     const texto = await resposta.text();
     let json = null;
     try { json = texto ? JSON.parse(texto) : null; } catch { /* resposta sem JSON */ }
@@ -329,6 +332,11 @@ export async function processarListasFechadas({ agora = new Date() } = {}, depen
     // "emailSaiu": o e-mail já foi aceito pelo servidor de e-mail. Daí em diante nada pode marcar a lista como
     // "erro" (isso faria a próxima rodada mandar tudo de novo) — só registrar que foi enviada.
     let emailSaiu = false, totalEnviado = 0;
+    // "reservou": ESTA rodada já reservou a lista (criou ou atualizou o registro). Só então um erro pode marcar a lista
+    // como "erro". Antes disso (por exemplo, se a leitura do registro falhar por cota estourada) o registro não é tocado:
+    // senão um "enviado" viraria "erro" e a rodada seguinte mandaria a mesma lista de novo.
+    let reservou = false;
+    let enviosAnteriores = [];
     const deps = { ...dependencias, enviarEmail: async (dados) => { await dependencias.enviarEmail(dados); emailSaiu = true; } };
     try {
       const existente = await firestore.lerDocumento(caminho);
@@ -339,18 +347,29 @@ export async function processarListasFechadas({ agora = new Date() } = {}, depen
           status: "enviando", tentativas: 1, iniciadoEm: agora.toISOString(), dataMissa, horaMissa
         });
         if (!criou) { relatorio.push({ ...item, resultado: "ignorada (outra execução já reservou)" }); continue; }
+        reservou = true;
       } else {
         const d = existente.dados;
+        enviosAnteriores = Array.isArray(d.envios) ? d.envios.filter((x) => typeof x === "string") : [];
         const ehEnviado = d.status === "enviado";
+        // "enviadoEm" só é gravado depois que o e-mail SAIU e nunca é apagado. Se o status foi sobrescrito por engano
+        // (ex.: "erro" gravado numa rodada em que o banco falhou), a lista continua contando como enviada: o envio
+        // automático nunca manda a mesma lista duas vezes. (Reenviar é sempre uma decisão do painel.)
+        if (!ehEnviado && d.enviadoEm) {
+          try { await firestore.atualizar(caminho, { status: "enviado" }); } catch { /* só correção do registro */ }
+          relatorio.push({ ...item, resultado: "já enviada" });
+          continue;
+        }
         const emAndamentoRecente = d.status === "enviando" &&
           agora - new Date(d.iniciadoEm || 0) < ENVIANDO_EXPIRA_MINUTOS * 60000;
         if (ehEnviado) { relatorio.push({ ...item, resultado: "já enviada" }); continue; }
         if (emAndamentoRecente) { relatorio.push({ ...item, resultado: "em andamento" }); continue; }
         if ((d.tentativas || 0) >= MAX_TENTATIVAS) { relatorio.push({ ...item, resultado: "desistiu após várias tentativas" }); continue; }
-        const reservou = await firestore.atualizar(caminho, {
+        const conseguiu = await firestore.atualizar(caminho, {
           status: "enviando", tentativas: (d.tentativas || 0) + 1, iniciadoEm: agora.toISOString()
         }, existente.updateTime);
-        if (!reservou) { relatorio.push({ ...item, resultado: "ignorada (outra execução já reservou)" }); continue; }
+        if (!conseguiu) { relatorio.push({ ...item, resultado: "ignorada (outra execução já reservou)" }); continue; }
+        reservou = true;
       }
 
       // 2) lista vazia só é enviada se o painel pedir
@@ -369,7 +388,8 @@ export async function processarListasFechadas({ agora = new Date() } = {}, depen
       totalEnviado = total;
       await atualizarComRetentativas(firestore, caminho, {
         status: "enviado", total, enviadoEm: new Date().toISOString(),
-        destinatarios: configEnvio.emails, erro: "", semEnvio: false, manual: false
+        destinatarios: configEnvio.emails, erro: "", semEnvio: false, manual: false,
+        envios: [...enviosAnteriores, new Date().toISOString()].slice(-10) // cada e-mail que saiu desta lista, em ordem
       }, esperas);
       relatorio.push({ ...item, resultado: "enviada", total });
     } catch (erro) {
@@ -379,12 +399,16 @@ export async function processarListasFechadas({ agora = new Date() } = {}, depen
         try {
           await atualizarComRetentativas(firestore, caminho, {
             status: "enviado", total: totalEnviado, enviadoEm: new Date().toISOString(),
-            destinatarios: configEnvio.emails, erro: `E-mail enviado; falha ao registrar: ${mensagem}`.slice(0, 300), semEnvio: false, manual: false
+            destinatarios: configEnvio.emails, erro: `E-mail enviado; falha ao registrar: ${mensagem}`.slice(0, 300), semEnvio: false, manual: false,
+            envios: [...enviosAnteriores, new Date().toISOString()].slice(-10)
           }, esperas);
         } catch { /* sem como gravar agora */ }
         relatorio.push({ ...item, resultado: "enviada (registro com falha)", total: totalEnviado, erro: mensagem });
       } else {
-        try { await firestore.atualizar(caminho, { status: "erro", erro: mensagem }); } catch { /* não derruba a rodada */ }
+        // só marca "erro" se a lista era desta rodada; falha anterior à reserva deixa o registro como está
+        if (reservou) {
+          try { await firestore.atualizar(caminho, { status: "erro", erro: mensagem }); } catch { /* não derruba a rodada */ }
+        }
         relatorio.push({ ...item, resultado: "erro", erro: mensagem });
       }
     }

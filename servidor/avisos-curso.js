@@ -1,6 +1,6 @@
 // Envio de um aviso do quadro de avisos de um curso para todos os inscritos que informaram e-mail.
 // Roda no servidor (chamado por api/enviar-listas.js, ação "avisoCurso").
-import { normalizarCurso, emailsParaAvisos, inscritosParaAvisos } from "../js/cursos-comum.js";
+import { normalizarCurso, emailsParaAvisos, inscritosParaAvisos, emailsQueAceitaramContato } from "../js/cursos-comum.js";
 
 const TAMANHO_LOTE = 40; // destinatários por e-mail (em cópia oculta)
 
@@ -64,4 +64,43 @@ export async function enviarAvisoDoCurso({ avisoId }, { firestore, criarEnviador
 
   await firestore.atualizar(`avisosCursos/${id}`, { emailEnviadoEm: new Date().toISOString(), emailTotal: emails.length });
   return { ok: true, total: emails.length, semEmail };
+}
+
+// Aviso geral (ação "avisoGeral"): vai por e-mail para todas as pessoas que marcaram o aceite de contato em
+// qualquer curso. O aviso fica registrado em avisosCursos com global:true (não aparece no quadro de nenhum curso).
+export async function enviarAvisoGeral({ avisoId }, { firestore, criarEnviador }) {
+  const id = String(avisoId || "");
+  if (!/^[A-Za-z0-9_-]{4,60}$/.test(id)) return { ok: false, erro: "Aviso inválido." };
+  const docAviso = await firestore.lerDocumento(`avisosCursos/${id}`);
+  if (!docAviso) return { ok: false, erro: "Aviso não encontrado. Ele pode ter sido apagado." };
+  const aviso = docAviso.dados;
+  if (aviso.global !== true) return { ok: false, erro: "Este aviso não é um aviso geral." };
+
+  const inscricoes = await firestore.listarColecao("inscricoes");
+  const emails = emailsQueAceitaramContato(inscricoes);
+  if (emails.length === 0) return { ok: false, erro: "Ninguém que aceitou receber e-mails informou um e-mail válido ainda." };
+
+  const titulo = limpar(aviso.titulo, 200) || "Aviso";
+  const texto = [
+    `Paz de Cristo!`,
+    ``,
+    titulo,
+    ``,
+    String(aviso.texto || "").trim(),
+    ``,
+    `— Arautos do Evangelho, Campos dos Goytacazes`,
+    `Você recebeu este e-mail porque se inscreveu em um dos nossos cursos ou eventos e aceitou ser contactado para receber convites e informativos.`
+  ].join("\n");
+
+  const enviar = criarEnviador();
+  for (let i = 0; i < emails.length; i += TAMANHO_LOTE) {
+    await enviar({
+      copiaOculta: emails.slice(i, i + TAMANHO_LOTE),
+      assunto: titulo.slice(0, 200),
+      texto,
+      nomeRemetente: "Arautos do Evangelho Campos"
+    });
+  }
+  await firestore.atualizar(`avisosCursos/${id}`, { emailEnviadoEm: new Date().toISOString(), emailTotal: emails.length });
+  return { ok: true, total: emails.length };
 }

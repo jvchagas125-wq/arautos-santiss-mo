@@ -1309,6 +1309,12 @@ export async function criarAvisoDoCurso({ cursoId, titulo, texto }) {
   await setDoc(ref, { cursoId, titulo, texto, criadoEmMs: agora, criadoEm: serverTimestamp() });
   return ref.id;
 }
+// Aviso geral: não pertence a nenhum curso (cursoId "__geral"); vai por e-mail a quem aceitou contato em qualquer curso.
+export async function criarAvisoGeral({ titulo, texto }) {
+  const ref = doc(collection(db, "avisosCursos"));
+  await setDoc(ref, { cursoId: "__geral", global: true, titulo, texto, criadoEmMs: Date.now(), criadoEm: serverTimestamp() });
+  return ref.id;
+}
 export async function excluirAvisoDoCurso(id) {
   await deleteDoc(doc(db, "avisosCursos", id));
 }
