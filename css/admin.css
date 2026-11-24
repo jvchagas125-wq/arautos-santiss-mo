@@ -1057,3 +1057,21 @@
 .crm-remover{ background: rgba(122,12,30,.1); color: var(--vermelho); border:0; cursor:pointer; }
 .crm-remover:hover{ background: var(--vermelho); color:#fff; box-shadow: 0 4px 12px rgba(122,12,30,.35); }
 .crm-remover svg{ width:19px; height:19px; }
+
+/* ---------- editor de texto com formatação (caixa dos banners) ---------- */
+.editor-formatado{ border:1px solid var(--borda, #d8cfa8); border-radius:12px; background:#fffefb; overflow:hidden; }
+.editor-formatado:focus-within{ border-color:var(--dourado); box-shadow:0 0 0 3px rgba(205,164,52,.2); }
+.editor-formatado__barra{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; padding:6px 8px; background:rgba(205,164,52,.12); border-bottom:1px solid rgba(205,164,52,.35); }
+.editor-formatado__botao{ min-width:34px; height:32px; padding:0 8px; border:1px solid rgba(156,122,31,.45); border-radius:8px; background:#fffefb; color:var(--vermelho-escuro, #6b0f1a); font:inherit; line-height:1; cursor:pointer; }
+.editor-formatado__botao:hover{ background:#fff3cf; }
+.editor-formatado__botao:active{ transform:scale(.95); }
+.editor-formatado__botao--tam-p{ font-size:.75rem; }
+.editor-formatado__botao--tam-n{ font-size:1rem; }
+.editor-formatado__botao--tam-g{ font-size:1.2rem; }
+.editor-formatado__botao--tam-gg{ font-size:1.5rem; }
+.editor-formatado__sep{ width:1px; height:22px; background:rgba(156,122,31,.35); margin:0 4px; }
+.editor-formatado__area{ --fs:1.05rem; min-height:92px; max-height:260px; overflow-y:auto; padding:10px 12px; font-family:'EB Garamond', serif; font-size:var(--fs); line-height:1.5; color:var(--texto, #2a1a1a); outline:none; }
+.editor-formatado__area:empty::before{ content:attr(data-placeholder); color:rgba(60,40,40,.45); pointer-events:none; }
+.editor-formatado__area div{ margin:0; }
+.editor-formatado__rodape{ display:flex; justify-content:flex-end; padding:3px 10px 6px; font-size:.75rem; color:var(--texto-suave, #7a6a5a); }
+.editor-formatado__contador--estourou{ color:#b3261e; font-weight:700; }

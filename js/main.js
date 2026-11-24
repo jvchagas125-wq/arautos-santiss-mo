@@ -1,5 +1,6 @@
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, escolherFraseDoDia, comLimiteDeTempo, definirSrcOtimizado } from "./utils.js";
 import { ouvirConfiguracoesGerais, obterFrases, ouvirBanners } from "./dados.js";
+import { mostrarTextoFormatado } from "./texto-formatado.js";
 
 inicializarNavegacao("index");
 
@@ -157,9 +158,14 @@ function criarSlideBannerComCaixa(banner, indice) {
     caixa.appendChild(h);
   }
   if (texto) {
-    const p = document.createElement("p");
+    const p = document.createElement("div");
     p.className = "carrossel-banners__caixa-texto";
-    p.textContent = texto;
+    if (String(banner.textoHtml || "").trim()) {
+      p.classList.add("carrossel-banners__caixa-texto--rico");
+      mostrarTextoFormatado(p, banner.textoHtml); // só b, i, br, div e tamanhos conhecidos (ver js/texto-formatado.js)
+    } else {
+      p.textContent = texto; // banners antigos: texto simples, com as quebras de linha
+    }
     caixa.appendChild(p);
   }
   if (banner.textoBotao) {

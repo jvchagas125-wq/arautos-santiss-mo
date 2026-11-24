@@ -1173,21 +1173,23 @@ export function ouvirBanners(callback) {
 
 // Banners novos entram no fim da fila (maior "ordem" = último); use trocarOrdemBanners
 // para reordenar depois de criado.
-export async function criarBanner({ imagemUrl, textoBotao, paginaDestino, titulo = "", texto = "" }) {
+export async function criarBanner({ imagemUrl, textoBotao, paginaDestino, titulo = "", texto = "", textoHtml = "" }) {
   const ref = doc(collection(db, "banners"));
   await setDoc(ref, {
-    imagemUrl, textoBotao, paginaDestino, titulo, texto,
+    imagemUrl, textoBotao, paginaDestino, titulo, texto, textoHtml,
     ordem: Date.now(),
     criadoEm: serverTimestamp()
   });
   return ref.id;
 }
 
-export async function atualizarBanner(id, { imagemUrl, textoBotao, paginaDestino, titulo, texto }) {
+export async function atualizarBanner(id, { imagemUrl, textoBotao, paginaDestino, titulo, texto, textoHtml }) {
   const dados = { textoBotao, paginaDestino };
   // título e texto da caixa sob o banner (opcionais; vazios = sem caixa)
   if (titulo !== undefined) dados.titulo = titulo;
   if (texto !== undefined) dados.texto = texto;
+  // texto com formatação (negrito, itálico, tamanhos): "texto" guarda a versão simples do mesmo conteúdo
+  if (textoHtml !== undefined) dados.textoHtml = textoHtml;
   // só mexe em imagemUrl quando o admin realmente trocou a imagem (envia um novo valor);
   // se não mexeu, o banner mantém a imagem que já tinha.
   if (imagemUrl !== undefined) dados.imagemUrl = imagemUrl;

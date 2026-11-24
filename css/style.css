@@ -330,13 +330,23 @@ img{ max-width: 100%; display:block; }
   display:flex; flex-direction:column; gap:6px;
 }
 .carrossel-banners__caixa-titulo{ margin:0; font-family:'Cinzel'; font-weight:700; font-size:1.02rem; line-height:1.3; color: var(--dourado-claro); overflow-wrap:anywhere; text-shadow:0 1px 6px rgba(0,0,0,.45); }
-.carrossel-banners__caixa-texto{ margin:0; font-family:'EB Garamond', serif; font-size:1rem; line-height:1.5; color: rgba(255,248,235,.94); white-space:pre-line; overflow-wrap:anywhere; text-shadow:0 1px 6px rgba(0,0,0,.45); }
+.carrossel-banners__caixa-texto{ --fs:1rem; margin:0; font-family:'EB Garamond', serif; font-size:var(--fs); line-height:1.5; color: rgba(255,248,235,.94); white-space:pre-line; overflow-wrap:anywhere; text-shadow:0 1px 6px rgba(0,0,0,.45); }
+/* texto da caixa com formatação (negrito/itálico/tamanhos escolhidos no painel) */
+.carrossel-banners__caixa-texto--rico{ white-space:normal; }
+.carrossel-banners__caixa-texto--rico div{ margin:0; }
+.carrossel-banners__caixa-texto b{ font-weight:700; color:#fff; }
+.carrossel-banners__caixa-texto i{ font-style:italic; }
+/* tamanhos: sempre em relação ao tamanho-base da caixa (--fs), então "normal" desfaz um tamanho maior ou menor */
+[data-t="p"]{ font-size:calc(var(--fs, 1rem) * .8); }
+[data-t="n"]{ font-size:var(--fs, 1rem); }
+[data-t="g"]{ font-size:calc(var(--fs, 1rem) * 1.35); line-height:1.3; }
+[data-t="gg"]{ font-size:calc(var(--fs, 1rem) * 1.8); line-height:1.2; }
 .carrossel-banners__caixa-rodape{ display:flex; justify-content:flex-end; margin-top:6px; }
 .carrossel-banners__caixa .carrossel-banners__caixa-botao{ padding:8px 20px; font-size:.74rem; letter-spacing:.03em; text-decoration:none; width:auto; }
 @media (max-width: 480px){
   .carrossel-banners__caixa{ padding:11px 14px 13px; }
   .carrossel-banners__caixa-titulo{ font-size:.92rem; }
-  .carrossel-banners__caixa-texto{ font-size:.9rem; line-height:1.45; }
+  .carrossel-banners__caixa-texto{ --fs:.9rem; line-height:1.45; }
   .carrossel-banners__caixa .carrossel-banners__caixa-botao{ padding:7px 16px; font-size:.68rem; }
 }
 /* setas + pontos: ficam juntos numa faixa embaixo do banner (setas nas pontas, pontos no meio) */

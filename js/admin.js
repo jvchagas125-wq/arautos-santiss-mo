@@ -27,6 +27,7 @@ import {
   criarAdministrador, atualizarAdministrador, excluirAdministrador, removerSenhaAntigaDoPainel
 } from "./dados.js";
 import { criarCredenciais, conferirSenha, chaveConfere, TAMANHO_MINIMO_SENHA } from "./contas.js";
+import { criarEditorTextoFormatado, textoSimplesParaHtml, LIMITE_HTML } from "./texto-formatado.js";
 import { CATALOGO_ACESSOS, PAGINA_ADMINISTRADORES, temAcesso, normalizarAcessos, resumoDeAcessos } from "./acessos.js";
 import { criarCrm } from "./crm-contatos.js";
 import { iniciarCursosAdmin } from "./cursos-admin.js";
@@ -3701,7 +3702,9 @@ function configurarBanners() {
   const previewImagemNovo = document.getElementById("previewBannerImagem");
   const campoTexto = document.getElementById("campoBannerTexto");
   const campoTitulo = document.getElementById("campoBannerTitulo");
-  const campoCaixaTexto = document.getElementById("campoBannerCaixaTexto");
+  const placeholderCaixa = "Ex.: Venha adorar o Santíssimo todos os dias, a qualquer hora.";
+  const editorCaixaNovo = criarEditorTextoFormatado({ placeholder: placeholderCaixa });
+  document.getElementById("campoBannerCaixaTexto").replaceWith(editorCaixaNovo.el);
   const campoDestino = document.getElementById("campoBannerDestino");
   const campoLink = document.getElementById("campoBannerLink");
   const listaBannersAdmin = document.getElementById("listaBannersAdmin");
@@ -3775,6 +3778,8 @@ function configurarBanners() {
     const modoLink = [...formNovo.querySelectorAll('input[name=bannerDestinoTipo]')].some((r) => r.checked && r.value === "link");
     const paginaDestino = modoLink ? normalizarLink(campoLink.value) : campoDestino.value;
     if (modoLink && !paginaDestino) { mostrarToast("Informe o link para onde o banner deve levar."); return; }
+    const caixa = editorCaixaNovo.obter();
+    if (editorCaixaNovo.estourou() || caixa.html.length > LIMITE_HTML) { mostrarToast(`O texto da caixa está grande demais (máximo de ${editorCaixaNovo.maxCaracteres} letras).`); return; }
     btn.disabled = true;
     try {
       btn.textContent = "Enviando imagem...";
@@ -3785,9 +3790,11 @@ function configurarBanners() {
         textoBotao: campoTexto.value.trim(),
         paginaDestino,
         titulo: campoTitulo.value.trim(),
-        texto: campoCaixaTexto.value.trim()
+        texto: caixa.texto,
+        textoHtml: caixa.html
       });
       formNovo.reset();
+      editorCaixaNovo.limpar();
       previewImagemNovo.classList.add("oculto");
       atualizarDestinoNovo();
       mostrarToast("Banner adicionado!");
@@ -3839,7 +3846,7 @@ function configurarBanners() {
             </div>
             <div class="campo">
               <label>Texto da caixa (opcional)</label>
-              <textarea class="campo-edit-caixa-texto-banner" rows="3" maxlength="400" placeholder="Ex.: Venha adorar o Santíssimo todos os dias, a qualquer hora.">${escaparHtml(banner.texto || "")}</textarea>
+              <div class="campo-edit-caixa-texto-banner"></div>
               <span class="campo-ajuda">📦 Com título e/ou texto, aparece uma caixa abaixo da imagem. Em branco, a caixa não aparece.</span>
             </div>
             <div class="campo">
@@ -3872,6 +3879,9 @@ function configurarBanners() {
       );
 
       const formEdicao = card.querySelector(".form-editar-banner");
+      // texto da caixa com formatação: abre com a versão formatada (ou, em banners antigos, com o texto simples)
+      const editorCaixa = criarEditorTextoFormatado({ valorHtml: banner.textoHtml || textoSimplesParaHtml(banner.texto || ""), placeholder: placeholderCaixa });
+      formEdicao.querySelector(".campo-edit-caixa-texto-banner").replaceWith(editorCaixa.el);
       const btnEditar = card.querySelector(".btn-editar-banner");
       const btnExcluir = card.querySelector(".btn-excluir-banner");
       const btnCancelarEdicao = card.querySelector(".btn-cancelar-edicao-banner");
@@ -3907,6 +3917,8 @@ function configurarBanners() {
       formEdicao.addEventListener("submit", async (e) => {
         e.preventDefault();
         const btnSalvar = formEdicao.querySelector("button[type=submit]");
+        const caixaEdit = editorCaixa.obter();
+        if (editorCaixa.estourou() || caixaEdit.html.length > LIMITE_HTML) { mostrarToast(`O texto da caixa está grande demais (máximo de ${editorCaixa.maxCaracteres} letras).`); return; }
         btnSalvar.disabled = true;
         try {
           const modoLinkEdit = [...formEdicao.querySelectorAll(".campo-edit-destino-tipo")].some((r) => r.checked && r.value === "link");
@@ -3915,7 +3927,8 @@ function configurarBanners() {
           const dadosSalvar = {
             textoBotao: formEdicao.querySelector(".campo-edit-texto-banner").value.trim(),
             titulo: formEdicao.querySelector(".campo-edit-titulo-banner").value.trim(),
-            texto: formEdicao.querySelector(".campo-edit-caixa-texto-banner").value.trim(),
+            texto: caixaEdit.texto,
+            textoHtml: caixaEdit.html,
             paginaDestino: modoLinkEdit ? normalizarLink(linkEdit) : formEdicao.querySelector(".campo-edit-destino-banner").value
           };
           const fileEdicao = formEdicao.querySelector(".campo-edit-imagem-banner").files[0];
