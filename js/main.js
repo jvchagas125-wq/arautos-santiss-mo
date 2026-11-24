@@ -216,13 +216,17 @@ function ajustarHomeNaTela() {
     corpo.classList.remove("home-c2", "home-c3", "home-c4");
     carrosselBanners.classList.remove("home-img-ajustada");
     carrosselBanners.style.removeProperty("--altura-img-banner");
+    // altura realmente visível: a página tem exatamente essa altura (em alguns celulares 100dvh passa da área visível e cortava o rodapé)
+    const alturaVisivel = Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
+    if (mqCelular.matches) document.documentElement.style.setProperty("--altura-tela", alturaVisivel + "px");
+    else document.documentElement.style.removeProperty("--altura-tela");
     if (!mqCelular.matches || carrosselBanners.classList.contains("oculto")) return;
 
     carrosselJanela.style.transition = "none"; // mede já com a altura final do banner, sem esperar a animação
     const aplicarAltura = () => { if (comCaixas && slide) carrosselJanela.style.height = slide.offsetHeight + "px"; };
     aplicarAltura();
     // medida pelo layout (offsetTop), que não é afetado pelas animações de entrada
-    const sobra = () => rodapeHome.offsetTop + rodapeHome.offsetHeight - window.innerHeight;
+    const sobra = () => rodapeHome.offsetTop + rodapeHome.offsetHeight - alturaVisivel;
     const link = comCaixas && slide ? slide.querySelector(".carrossel-banners__imagem-link") : null;
     const encolherImagem = (proporcaoMinima) => {
       if (!link) return;
@@ -262,6 +266,14 @@ function ajustarHomeNaTela() {
   }
 }
 window.addEventListener("load", ajustarHomeNaTela);
+// as fontes do site chegam depois do primeiro desenho e mudam o tamanho dos textos: confere de novo quando terminam
+if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", () => ajustarHomeNaTela());
+// qualquer mudança de tamanho do conteúdo (texto novo, frase, barra do navegador sumindo...) refaz a conta, com um pequeno atraso
+let temporizadorHome = null;
+if (ehHome && "ResizeObserver" in window) {
+  new ResizeObserver(() => { clearTimeout(temporizadorHome); temporizadorHome = setTimeout(() => ajustarHomeNaTela(), 120); })
+    .observe(document.querySelector("main.conteudo") || document.body);
+}
 
 window.addEventListener("resize", ajustarAlturaCarrossel);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarAlturaCarrossel);
