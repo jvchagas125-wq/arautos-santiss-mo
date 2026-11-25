@@ -5,7 +5,7 @@ import {
 } from "./utils.js";
 import {
   ouvirCursos, salvarCurso, alterarAberturaDoCurso, excluirCurso,
-  ouvirTodasInscricoes, excluirInscricao, ouvirInscricoesIniciadas, excluirInscricaoIniciada, obterConfigEnvioIntencoes, salvarEmailsInscritos, ouvirTodosAvisosDosCursos, criarAvisoDoCurso, criarAvisoGeral, excluirAvisoDoCurso
+  ouvirTodasInscricoes, excluirInscricao, salvarInscricao, ouvirInscricoesIniciadas, excluirInscricaoIniciada, obterConfigEnvioIntencoes, salvarEmailsInscritos, ouvirTodosAvisosDosCursos, criarAvisoDoCurso, criarAvisoGeral, excluirAvisoDoCurso
 } from "./dados.js";
 import {
   CAMPOS_PADRAO, TIPOS_PERGUNTA, TIPOS_COM_OPCOES, perguntaTemOpcoes, opcoesDaPergunta, normalizarCurso, novoIdCurto,
@@ -14,6 +14,7 @@ import {
 import { exportarInscritos } from "./exportar-inscritos.js";
 import { criarSeletorDataHora } from "./seletor-data-hora.js";
 import { criarEditorMensagem, mensagemParaPessoa } from "./campanhas-admin.js";
+import { montarFormularioDeInscricaoNoPainel } from "./inscrever-admin.js";
 
 const ICONE_SETA = '<svg class="quadro-intencao__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 const ICONE_LAPIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>';
@@ -530,6 +531,31 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
   /* =====================================================================================
      2) CRM dos inscritos
      ===================================================================================== */
+  // "＋ Inscrever pessoa": abre o formulário do curso (o mesmo do site) numa janela e grava a inscrição
+  const modalInscrever = document.getElementById("modalInscreverPessoa");
+  const fecharInscrever = () => { fecharModal(modalInscrever); document.getElementById("corpoInscreverPessoa").replaceChildren(); };
+  document.getElementById("fecharModalInscreverPessoa").addEventListener("click", fecharInscrever);
+  modalInscrever.addEventListener("click", (e) => { if (e.target === modalInscrever) fecharInscrever(); });
+  function abrirInscreverPessoa(curso) {
+    document.getElementById("subtituloInscreverPessoa").textContent = curso.nome;
+    const corpoModal = document.getElementById("corpoInscreverPessoa");
+    corpoModal.replaceChildren();
+    if (estadoInscricoes(curso).estado !== "abertas") {
+      corpoModal.appendChild(criar("p", "inscrever-pessoa__aviso", "As inscrições deste curso não estão abertas para o público no momento, mas o painel pode inscrever mesmo assim."));
+    }
+    corpoModal.appendChild(montarFormularioDeInscricaoNoPainel(curso, {
+      jaInscrito: (telefoneDigits) => inscricoes.some((i) => i.cursoId === curso.id && i.telefoneDigits === telefoneDigits),
+      salvar: (dados) => salvarInscricao(dados),
+      aoConcluir: (dados) => { fecharInscrever(); mostrarToast(`${dados.nome} foi inscrito(a) em "${curso.nome}".`); },
+      aoCancelar: fecharInscrever,
+      toast: mostrarToast
+    }));
+    abrirModal(modalInscrever);
+    corpoModal.scrollTop = 0;
+    const primeiro = corpoModal.querySelector("input");
+    if (primeiro) setTimeout(() => primeiro.focus({ preventScroll: true }), 150);
+  }
+
   function criarCartaoPessoa(curso, insc) {
     const aberto = abertosPessoas.has(insc.id);
     const cartao = criar("div", "crm-contato" + (aberto ? " aberto" : ""));
@@ -771,6 +797,11 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
         resumo.appendChild(s);
       });
       corpo.appendChild(resumo);
+      const btnInscrever = criar("button", "btn btn-dourado btn-pequeno crm-inscrever", "＋ Inscrever pessoa");
+      btnInscrever.type = "button";
+      btnInscrever.title = "Inscrever alguém neste curso pelo painel";
+      btnInscrever.addEventListener("click", () => abrirInscreverPessoa(curso));
+      corpo.appendChild(btnInscrever);
       corpo.appendChild(criarQuadroIniciadas(curso, dele));
 
       const barra = criar("div", "crm-barra");

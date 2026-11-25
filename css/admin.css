@@ -1083,3 +1083,9 @@
 .estado-agendador{ margin:0 0 16px; padding:11px 14px; border-radius:10px; font-size:.9rem; line-height:1.45; border:1px solid transparent; }
 .estado-agendador--ok{ background:#eef6ea; border-color:#b9d6ad; color:#2f5a23; }
 .estado-agendador--alerta{ background:#fdeceb; border-color:#e3a39f; color:#8a1f17; font-weight:600; }
+
+/* ---------- Inscrever pessoa pelo painel ---------- */
+.crm-inscrever{ margin: 4px 0 14px; }
+.inscrever-pessoa__curso{ text-align:center; margin:-4px 0 12px; font-family:'Cinzel'; font-size:.9rem; color: var(--vermelho-escuro); flex-shrink:0; }
+.inscrever-pessoa__aviso{ margin:0 0 14px; padding:10px 12px; border:1px dashed rgba(157,122,31,.55); border-radius:10px; background: rgba(255,255,255,.6); font-size:.85rem; color: var(--texto-suave); line-height:1.5; }
+.curso-form--painel .curso-form__botoes{ display:flex; flex-direction:column; gap:10px; margin-top:18px; }

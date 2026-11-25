@@ -16,7 +16,7 @@
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
 <script src="js/visual-cache.js"></script>
-<link rel="stylesheet" href="css/admin.css?v=87" />
+<link rel="stylesheet" href="css/admin.css?v=88" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -324,6 +324,8 @@
       <section class="admin-secao oculto" id="secao-intencoes">
         <h1 class="titulo-pagina">Intenções da Missa</h1>
         <div class="linha-ornamento"><img src="assets/cruz-ornamento.png" alt="" /></div>
+
+        <div class="estado-agendador oculto" id="estadoAgendador" role="status"></div>
 
         <div class="intencoes-colunas">
           <div class="painel">
@@ -1545,6 +1547,16 @@
         <button type="button" class="btn btn-dourado btn-full" id="btnSalvarCurso">Salvar curso</button>
         <button type="button" class="btn btn-contorno btn-full" id="btnCancelarCurso">Cancelar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: inscrever uma pessoa num curso pelo painel (mesmo formulário do site) -->
+  <div class="modal-overlay" id="modalInscreverPessoa">
+    <div class="modal modal--largo modal--curso" role="dialog" aria-modal="true" aria-labelledby="tituloInscreverPessoa">
+      <button class="modal--fechar" id="fecharModalInscreverPessoa" aria-label="Fechar">&times;</button>
+      <h3 id="tituloInscreverPessoa">Inscrever pessoa</h3>
+      <p class="inscrever-pessoa__curso" id="subtituloInscreverPessoa">—</p>
+      <div class="especial-corpo curso-editor" id="corpoInscreverPessoa"></div>
     </div>
   </div>
 
