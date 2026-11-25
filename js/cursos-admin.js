@@ -13,6 +13,7 @@ import {
 } from "./cursos-comum.js";
 import { exportarInscritos } from "./exportar-inscritos.js";
 import { criarSeletorDataHora } from "./seletor-data-hora.js";
+import { criarEditorMensagem, mensagemParaPessoa } from "./campanhas-admin.js";
 
 const ICONE_SETA = '<svg class="quadro-intencao__seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 const ICONE_LAPIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>';
@@ -641,6 +642,35 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
 
   // Pessoas que começaram a preencher o formulário do curso e não enviaram (quem já tem inscrição no curso não entra)
   const quandoBrasilia = (ms) => new Date(ms).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(", ", " às ");
+  // Mensagem de WhatsApp enviada a quem não concluiu a inscrição: uma por curso. Fica guardada neste aparelho
+  // (sem gastar leituras/gravações do banco) e o mesmo editor é reaproveitado a cada redesenho da tela,
+  // para não perder o que a pessoa está digitando quando chega uma atualização.
+  const editoresIniciadas = new Map(); // cursoId → { editor, aoMudar }
+  const chaveMensagemIniciadas = (cursoId) => `arautos_msg_iniciadas_${cursoId}`;
+  const mensagemPadraoIniciadas = (curso) =>
+    `Olá, {nome}! Aqui é da equipe dos Arautos do Evangelho. Vimos que você começou sua inscrição no curso "${curso.nome}", mas ainda não concluiu. Podemos ajudar com alguma dúvida? 🙏`;
+  function lerMensagemIniciadas(curso) {
+    try { const guardada = localStorage.getItem(chaveMensagemIniciadas(curso.id)); if (guardada !== null) return guardada; } catch (_) { /* sem armazenamento: usa a padrão */ }
+    return mensagemPadraoIniciadas(curso);
+  }
+  function editorIniciadas(curso) {
+    let item = editoresIniciadas.get(curso.id);
+    if (!item) {
+      item = { aoMudar: () => {} };
+      item.editor = criarEditorMensagem({
+        rotulo: "Mensagem para enviar pelo WhatsApp",
+        mensagem: lerMensagemIniciadas(curso),
+        toast: mostrarToast,
+        aoMudar: (texto) => {
+          try { localStorage.setItem(chaveMensagemIniciadas(curso.id), texto); } catch (_) { /* sem armazenamento */ }
+          item.aoMudar(texto);
+        }
+      });
+      editoresIniciadas.set(curso.id, item);
+    }
+    return item;
+  }
+
   function criarQuadroIniciadas(curso, inscritosDoCurso) {
     const jaInscritos = new Set(inscritosDoCurso.map((i) => i.telefoneDigits));
     const pendentes = iniciadas
@@ -654,6 +684,24 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       return quadro;
     }
     corpo.appendChild(criar("p", "crm-iniciadas__ajuda", "Pessoas que começaram a preencher o formulário deste curso e ainda não enviaram. Quando enviam a inscrição, saem desta lista."));
+
+    // caixa de mensagem (a mesma de Contatos > Campanhas): o botão do WhatsApp de cada pessoa abre a conversa com ela
+    const item = editorIniciadas(curso);
+    const caixaMsg = criar("div", "crm-iniciadas__mensagem");
+    caixaMsg.appendChild(item.editor.el);
+    const restaurar = criar("button", "btn btn-contorno btn-pequeno crm-iniciadas__restaurar", "Restaurar mensagem padrão");
+    restaurar.type = "button";
+    restaurar.addEventListener("click", () => { item.editor.definirMensagem(mensagemPadraoIniciadas(curso)); mostrarToast("Mensagem padrão restaurada."); });
+    caixaMsg.appendChild(restaurar);
+    corpo.appendChild(caixaMsg);
+    const linksZap = []; // [{ a, nome, num }] — os links acompanham a mensagem enquanto ela é editada
+    const atualizarLinksZap = (texto) => linksZap.forEach(({ a, nome, num }) => {
+      const msg = mensagemParaPessoa(texto, nome);
+      a.href = `https://wa.me/${num}` + (msg.trim() ? `?text=${encodeURIComponent(msg)}` : "");
+    });
+    item.aoMudar = atualizarLinksZap;
+    corpo.appendChild(criar("h4", "crm-iniciadas__titulo-lista", `Pessoas (${pendentes.length})`));
+
     pendentes.forEach((p) => {
       const cartao = criar("div", "crm-contato crm-contato--iniciada");
       const topo = criar("div", "crm-contato__topo crm-contato__topo--fixo");
@@ -671,8 +719,8 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       const zap = criar(num ? "a" : "span", "crm-zap" + (num ? "" : " desativado"));
       zap.innerHTML = ICONE_ZAP;
       if (num) {
-        zap.href = `https://wa.me/${num}?text=${encodeURIComponent(`Olá, ${(p.nome || "").split(/\s+/)[0]}! Aqui é da equipe dos Arautos. Vimos que você começou sua inscrição no curso "${curso.nome}" e não chegou a concluir. Podemos ajudar?`)}`;
-        zap.target = "_blank"; zap.rel = "noopener"; zap.title = "Abrir conversa no WhatsApp";
+        linksZap.push({ a: zap, nome: p.nome || "", num });
+        zap.target = "_blank"; zap.rel = "noopener"; zap.title = "Abrir conversa no WhatsApp com a mensagem acima";
       } else zap.title = "Sem número válido para WhatsApp";
       topo.appendChild(zap);
 
@@ -689,6 +737,7 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
       cartao.appendChild(topo);
       corpo.appendChild(cartao);
     });
+    atualizarLinksZap(item.editor.obterMensagem());
     return quadro;
   }
 
@@ -697,6 +746,13 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     // não refaz a tela enquanto a pessoa digita na busca (perderia o foco)
     const foco = document.activeElement;
     const focoBusca = foco && raiz.contains(foco) && foco.classList.contains("crm-busca") ? foco.dataset.curso : null;
+    // a pessoa está escrevendo a mensagem das "iniciaram e não concluíram"? guarda onde o cursor estava
+    let focoMensagem = null;
+    if (foco && foco.tagName === "TEXTAREA") {
+      for (const [cursoId, { editor }] of editoresIniciadas) {
+        if (editor.textarea === foco) { focoMensagem = { cursoId, ini: foco.selectionStart, fim: foco.selectionEnd }; break; }
+      }
+    }
     raiz.innerHTML = "";
     document.getElementById("avisoSemInscritos").classList.toggle("oculto", cursos.length > 0);
     cursos.forEach((curso) => {
@@ -783,6 +839,10 @@ export function iniciarCursosAdmin({ enviarImagem, chamarApiEnvio, podeAvisar = 
     if (focoBusca) {
       const novo = raiz.querySelector(`.crm-busca[data-curso="${focoBusca}"]`);
       if (novo) { novo.focus(); const f = novo.value.length; novo.setSelectionRange?.(f, f); }
+    }
+    if (focoMensagem) {
+      const ed = editoresIniciadas.get(focoMensagem.cursoId);
+      if (ed && ed.editor.textarea.isConnected) { ed.editor.textarea.focus({ preventScroll: true }); ed.editor.textarea.setSelectionRange(focoMensagem.ini, focoMensagem.fim); }
     }
   }
 

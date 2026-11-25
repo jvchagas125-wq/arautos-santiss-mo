@@ -359,3 +359,94 @@ export function criarCampanhas(opcoes) {
     definirContatos(lista) { contatos = Array.isArray(lista) ? lista : []; if (ativo && idAtual !== null) desenharPessoas(); }
   };
 }
+
+/* =========================================================
+   Caixa de mensagem reutilizável (a mesma da aba "Campanhas": negrito, itálico, tachado, emoji, link, {nome}
+   e "Como a pessoa vai ver"). Usada, por exemplo, em "Iniciaram e não concluíram", nos cursos.
+   opcoes: { mensagem, rotulo, placeholder, exemplo, aoMudar(texto), toast }
+   Devolve { el, obterMensagem(), definirMensagem(texto), textarea }.
+   ========================================================= */
+let contadorEditores = 0;
+export function criarEditorMensagem(opcoes = {}) {
+  const n = ++contadorEditores;
+  const idMsg = `editorMsg${n}`;
+  const raiz = document.createElement("div");
+  raiz.className = "editor-msg";
+  raiz.innerHTML = `
+    <div class="campo" style="margin-bottom:0;">
+      <label for="${idMsg}">${esc(opcoes.rotulo || "Mensagem")}</label>
+      <div class="camp-barra" role="toolbar" aria-label="Formatação da mensagem">
+        <button type="button" data-fmt="*" title="Negrito"><b>N</b></button>
+        <button type="button" data-fmt="_" title="Itálico"><i>I</i></button>
+        <button type="button" data-fmt="~" title="Tachado"><s>T</s></button>
+        <button type="button" data-acao="emoji" title="Emoji">😊</button>
+        <button type="button" data-acao="link" title="Link">🔗</button>
+        <button type="button" data-acao="nome" title="Inserir o primeiro nome da pessoa">{nome}</button>
+      </div>
+      <div class="camp-emojis oculto" data-painel="emojis">${EMOJIS.map((e) => `<button type="button" data-emoji="${e}">${e}</button>`).join("")}</div>
+      <div class="camp-linkbox oculto" data-painel="link">
+        <input type="text" data-campo="linkTexto" placeholder="Texto antes do link (opcional)" autocomplete="off" />
+        <input type="url" data-campo="linkUrl" placeholder="https://..." autocomplete="off" />
+        <button type="button" class="btn btn-dourado btn-pequeno" data-acao="linkOk">Inserir link</button>
+      </div>
+      <textarea id="${idMsg}" rows="6" placeholder="${esc(opcoes.placeholder || "Escreva aqui a mensagem. Use {nome} para colocar o primeiro nome de cada pessoa.")}"></textarea>
+      <p class="campo-ajuda">O WhatsApp aceita <strong>negrito</strong>, <em>itálico</em>, <s>tachado</s>, emojis e links. Sublinhado e cores não existem nas mensagens do WhatsApp.</p>
+    </div>
+    <div class="camp-previa-titulo">Como a pessoa vai ver</div>
+    <div class="camp-previa" data-previa></div>`;
+
+  const $ = (s) => raiz.querySelector(s);
+  const campoMsg = $("textarea");
+  campoMsg.value = opcoes.mensagem || "";
+
+  function atualizarPrevia() {
+    const exemplo = mensagemParaPessoa(campoMsg.value, opcoes.exemplo || "Maria Silva");
+    $("[data-previa]").innerHTML = exemplo.trim() ? previaWhatsapp(exemplo) : '<span class="camp-previa-vazia">A mensagem aparece aqui enquanto você escreve.</span>';
+  }
+  function mudou() { atualizarPrevia(); if (opcoes.aoMudar) opcoes.aoMudar(campoMsg.value); }
+  campoMsg.addEventListener("input", mudou);
+
+  function inserir(texto) {
+    const ini = campoMsg.selectionStart ?? campoMsg.value.length;
+    const fim = campoMsg.selectionEnd ?? ini;
+    campoMsg.setRangeText(texto, ini, fim, "end");
+    campoMsg.focus();
+    campoMsg.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  function envolver(marca) {
+    const ini = campoMsg.selectionStart ?? 0, fim = campoMsg.selectionEnd ?? 0;
+    const selecionado = campoMsg.value.slice(ini, fim);
+    if (selecionado) {
+      campoMsg.setRangeText(`${marca}${selecionado}${marca}`, ini, fim, "end");
+    } else {
+      campoMsg.setRangeText(`${marca}${marca}`, ini, fim, "end");
+      campoMsg.setSelectionRange(ini + 1, ini + 1);
+    }
+    campoMsg.focus();
+    campoMsg.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  raiz.querySelectorAll("[data-fmt]").forEach((b) => b.addEventListener("click", () => envolver(b.dataset.fmt)));
+  $('[data-acao="emoji"]').addEventListener("click", () => $('[data-painel="emojis"]').classList.toggle("oculto"));
+  raiz.querySelectorAll("[data-emoji]").forEach((b) => b.addEventListener("click", () => inserir(b.dataset.emoji)));
+  $('[data-acao="nome"]').addEventListener("click", () => inserir("{nome}"));
+  $('[data-acao="link"]').addEventListener("click", () => $('[data-painel="link"]').classList.toggle("oculto"));
+  $('[data-acao="linkOk"]').addEventListener("click", () => {
+    const campoUrl = $('[data-campo="linkUrl"]'), campoRotulo = $('[data-campo="linkTexto"]');
+    let url = campoUrl.value.trim();
+    if (!url) { opcoes.toast?.("Digite o endereço do link."); return; }
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    const rotulo = campoRotulo.value.trim();
+    const antes = campoMsg.value.slice(0, campoMsg.selectionStart ?? 0);
+    inserir((antes && !/\s$/.test(antes) ? " " : "") + (rotulo ? rotulo + " " : "") + url);
+    campoRotulo.value = ""; campoUrl.value = "";
+    $('[data-painel="link"]').classList.add("oculto");
+  });
+
+  atualizarPrevia();
+  return {
+    el: raiz,
+    textarea: campoMsg,
+    obterMensagem: () => campoMsg.value,
+    definirMensagem(texto) { campoMsg.value = texto || ""; mudou(); }
+  };
+}
