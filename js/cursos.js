@@ -46,7 +46,8 @@ function montarFormulario(curso, existente, aoConcluir) {
     Object.assign(padrao, existente.padrao || {});
     (existente.itens || []).forEach((it) => { respostas[it.id] = it.valor; });
   }
-  let nome = existente ? existente.nome : usuario.nome || "";
+  // o nome completo NÃO vem preenchido: a pessoa digita (só o telefone já vem do cadastro do site)
+  let nome = existente ? existente.nome : "";
   let aceitaContato = !!(existente && existente.aceitaContato === true);
 
   const erroDe = new Map(); // chave -> elemento de erro
@@ -76,7 +77,7 @@ function montarFormulario(curso, existente, aoConcluir) {
 
   // nome completo (sempre)
   form.appendChild(campo("nome", "Nome completo", true, () =>
-    entradaTexto("text", nome, (i) => { nome = i.value; }, { autocomplete: "name", maxlength: "120" })));
+    entradaTexto("text", nome, (i) => { nome = i.value; }, { autocomplete: "off", maxlength: "120" })));
 
   // dados pedidos pelo administrador
   CAMPOS_PADRAO.forEach(({ chave, rotulo, tipo }) => {
