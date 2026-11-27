@@ -281,15 +281,24 @@ semanaProxima.addEventListener("click", () => {
 // quanto no celular (classe .tela-cheia, ver css/style.css). No celular, tenta também girar a
 // tela pra paisagem — melhor pra ver várias colunas da semana de uma vez (ver girarTelaSePossivel
 // logo abaixo; em navegadores sem suporte, como Safari/iOS, simplesmente não faz nada). ----
+let temporizadorFechaPlanilha = null;
 document.getElementById("btnVerCalendarioAgendamentos").addEventListener("click", () => {
+  clearTimeout(temporizadorFechaPlanilha); // abriu de novo enquanto ainda estava fechando
   modalCalendarioAgendamentos.classList.add("tela-cheia");
   abrirModal(modalCalendarioAgendamentos);
   girarTelaSePossivel();
 });
 document.getElementById("fecharModalCalendarioAgendamentos").addEventListener("click", () => {
   fecharModal(modalCalendarioAgendamentos);
-  modalCalendarioAgendamentos.classList.remove("tela-cheia");
-  desfazerGirarTela();
+  // A planilha só some (fade) e continua do mesmo tamanho até terminar: tirar a classe "tela-cheia" na hora
+  // fazia a janela encolher para o tamanho normal e voltar ao tamanho da tela (sair da tela cheia) ANTES de
+  // sumir — o "bug" de encolher e depois fechar. Só depois do fade é que tudo volta ao normal.
+  clearTimeout(temporizadorFechaPlanilha);
+  temporizadorFechaPlanilha = setTimeout(() => {
+    if (modalCalendarioAgendamentos.classList.contains("aberto")) return; // reaberta nesse meio-tempo
+    modalCalendarioAgendamentos.classList.remove("tela-cheia");
+    desfazerGirarTela();
+  }, 420);
 });
 
 async function girarTelaSePossivel() {

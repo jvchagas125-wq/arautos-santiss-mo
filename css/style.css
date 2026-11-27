@@ -707,9 +707,10 @@ img{ max-width: 100%; display:block; }
      essa altura que decide quanto sobra pra tabela rolar dentro do modal no celular */
   max-height:min(97dvh, 1100px); height:97dvh;
   padding:16px 14px;
-  transform: scale(.94) translateY(8px); transition: transform var(--transicao);
+  /* abre e fecha só com o esmaecer do fundo (sem encolher a planilha ao fechar) */
+  transform:none; transition:none;
 }
-#modalCalendarioAgendamentos.tela-cheia.aberto .modal{ transform: scale(1) translateY(0); }
+#modalCalendarioAgendamentos.tela-cheia.aberto .modal{ transform:none; }
 #modalCalendarioAgendamentos.tela-cheia .modal--fechar{ display:block; }
 
 /* ---------- Grade semanal de agendamentos: mesmo layout/cores da planilha (Excel) exportada
