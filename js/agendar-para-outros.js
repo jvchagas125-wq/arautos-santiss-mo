@@ -36,16 +36,17 @@ export function criarAgendarParaOutros() {
   let horaAtual = null;
 
   const temPeriodo = () => !!(periodo && periodo.dataInicio && periodo.dataFim);
-  // mesmas regras do site público: dentro do período, não passado e não marcado como "sem adoração"
+  // todos os dias do período em que há adoração (não marcado como "sem adoração"), INCLUSIVE os que já passaram:
+  // o painel pode registrar depois quem ficou num horário ou marcar uma Santa Missa, e a planilha mostra tudo
   const diaDoPeriodo = (iso) => temPeriodo()
     && periodo.alteracoes?.[iso]?.fechado !== true
-    && iso >= periodo.dataInicio && iso <= periodo.dataFim && iso >= hojeIso()
+    && iso >= periodo.dataInicio && iso <= periodo.dataFim
     && horariosDoDiaComMissa(periodo, iso).length > 0;
   const doDia = (iso) => agendamentos.filter((a) => a.data === iso);
 
   function garantirEscuta() {
     if (!aberto || !temPeriodo()) return;
-    const inicio = periodo.dataInicio > hojeIso() ? periodo.dataInicio : hojeIso();
+    const inicio = periodo.dataInicio; // do começo do período: os dias que já passaram também aparecem
     const faixa = `${inicio}_${periodo.dataFim}`;
     if (faixa === faixaEscutada) return;
     if (pararEscuta) pararEscuta();
@@ -63,7 +64,7 @@ export function criarAgendarParaOutros() {
     const nomeMes = MESES[mes.getMonth()];
     elMesAno.textContent = `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${mes.getFullYear()}`;
     const primeiroMes = (() => {
-      const base = temPeriodo() && periodo.dataInicio > hojeIso() ? isoParaData(periodo.dataInicio) : new Date();
+      const base = temPeriodo() ? isoParaData(periodo.dataInicio) : new Date();
       return new Date(base.getFullYear(), base.getMonth(), 1);
     })();
     const ultimoMes = temPeriodo()
@@ -302,7 +303,9 @@ export function criarAgendarParaOutros() {
       periodo = dh || null;
       if (primeiraVez && temPeriodo()) {
         primeiraVez = false;
-        const base = periodo.dataInicio > hojeIso() ? isoParaData(periodo.dataInicio) : new Date();
+        // abre no mês de hoje; se hoje está fora do período, no mês mais próximo dele
+        const hoje = hojeIso();
+        const base = isoParaData(hoje < periodo.dataInicio ? periodo.dataInicio : hoje > periodo.dataFim ? periodo.dataFim : hoje);
         mes = new Date(base.getFullYear(), base.getMonth(), 1);
       }
       garantirEscuta();
