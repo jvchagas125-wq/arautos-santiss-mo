@@ -180,7 +180,9 @@ export function limitesDoDia(diasHorarios, iso) {
 }
 const minutosDe = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); return h * 60 + (m || 0); };
 
-export function horariosDisponiveisNoDia(diasHorarios, iso) {
+// Horários do dia dentro do período e dos limites, INCLUINDO os marcados como Santa Missa (servem para desenhar a
+// lista de horários: o da Missa aparece em amarelo, sem poder agendar).
+export function horariosDoDiaComMissa(diasHorarios, iso) {
   let horas = [...(diasHorarios?.horariosAtivos || [])].sort((a, b) => a - b);
   if (!diasHorarios) return horas;
 
@@ -197,30 +199,25 @@ export function horariosDisponiveisNoDia(diasHorarios, iso) {
   return horas;
 }
 
-/* ---------- Horário automático da Missa de abertura/encerramento: quando um dia tem hora de
-   início configurada (o 1º dia do período ou um dia alterado em "Fechamento e alterações de
-   agenda"), a Missa é a hora imediatamente anterior a ela (ex.: adoração começa às 09:00 ->
-   Missa às 08:00); quando tem hora de término, a Missa é a hora imediatamente seguinte ao
-   término (ex.: termina às 18:30 -> Missa às 19:00). É automático — não precisa marcar
-   manualmente. ---------- */
+// Horários em que dá para agendar adoração: os do dia, menos os que o administrador marcou como Santa Missa.
+export function horariosDisponiveisNoDia(diasHorarios, iso) {
+  const horas = horariosDoDiaComMissa(diasHorarios, iso);
+  if (!diasHorarios) return horas;
+  const missas = horasDeMissaNoDia(diasHorarios, iso);
+  return missas.size ? horas.filter((h) => !missas.has(h)) : horas;
+}
+
+/* ---------- Santa Missa marcada pelo administrador (painel > Dias e horários > "Agendar Adoração para outras
+   pessoas"): diasHorarios.missas = { "aaaa-mm-dd": [hora, hora...] }. O horário marcado aparece como "Santa Missa"
+   (amarelo) na planilha do site, em Acompanhamento e na lista de horários do site, e ninguém consegue agendar nele.
+   Só vale para horários que fazem parte da adoração naquele dia. Não existe mais "Missa" automática antes/depois da
+   adoração. ---------- */
 export function horasDeMissaNoDia(diasHorarios, iso) {
   const horas = new Set();
-  if (!diasHorarios) return horas;
-
-  const limites = limitesDoDia(diasHorarios, iso);
-  if (limites.fechado || (!limites.inicio && !limites.fim)) return horas;
-
-  const disponiveis = horariosDisponiveisNoDia(diasHorarios, iso);
-  if (disponiveis.length === 0) return horas;
-
-  if (limites.inicio) {
-    const primeiraHora = Math.min(...disponiveis);
-    horas.add((primeiraHora - 1 + 24) % 24);
-  }
-  if (limites.fim) {
-    const ultimaHora = Math.max(...disponiveis);
-    horas.add((ultimaHora + 1) % 24);
-  }
+  const marcadas = diasHorarios?.missas?.[iso];
+  if (!Array.isArray(marcadas) || marcadas.length === 0) return horas;
+  const doDia = new Set(horariosDoDiaComMissa(diasHorarios, iso));
+  marcadas.forEach((h) => { const n = Number(h); if (Number.isInteger(n) && doDia.has(n)) horas.add(n); });
   return horas;
 }
 

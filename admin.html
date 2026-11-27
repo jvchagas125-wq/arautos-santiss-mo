@@ -16,7 +16,7 @@
 <style>.com-sessao #telaLoginAdmin{display:none}</style>
 <link rel="stylesheet" href="css/style.css" />
 <script src="js/visual-cache.js"></script>
-<link rel="stylesheet" href="css/admin.css?v=88" />
+<link rel="stylesheet" href="css/admin.css?v=89" />
 </head>
 <body class="pagina-clara admin-body">
 
@@ -1334,19 +1334,37 @@
   <div class="modal-overlay" id="modalAgendarNome">
     <div class="modal">
       <button class="modal--fechar" id="fecharModalAgendarNome" aria-label="Fechar">&times;</button>
-      <h3>Nome da pessoa</h3>
+      <h3 id="tituloAgendarNome">Nome da pessoa</h3>
       <p class="modal__data" id="agendarNomeResumo">—</p>
       <form id="formAgendarNome" autocomplete="off">
-        <div class="campo">
+        <div class="campo" id="agendarNomeCaixa">
           <label for="agendarNomeCampo">Nome completo</label>
           <input type="text" id="agendarNomeCampo" maxlength="80" placeholder="Ex.: Maria da Silva" required />
           <small class="campo-ajuda">Esse nome vai aparecer no site público, em Acompanhamento.</small>
+        </div>
+        <div class="campo campo-checkbox-simples agendar-missa">
+          <label><input type="checkbox" id="agendarMissaCheck" /> <span>Neste horário haverá a Santa Missa
+            <small>Aparece como "Santa Missa" (amarelo) na planilha, em Acompanhamento e na lista de horários do site, e ninguém consegue agendar nele.</small></span></label>
         </div>
         <div class="modal__acoes">
           <button type="button" class="btn btn-contorno" id="btnCancelarAgendarNome">Voltar</button>
           <button type="submit" class="btn btn-dourado" id="btnConfirmarAgendarNome">Agendar</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: horário marcado como Santa Missa — remover a marcação -->
+  <div class="modal-overlay" id="modalDesmarcarMissa">
+    <div class="modal">
+      <button class="modal--fechar" id="fecharModalDesmarcarMissa" aria-label="Fechar">&times;</button>
+      <h3>Santa Missa neste horário</h3>
+      <p class="modal__data" id="desmarcarMissaResumo">—</p>
+      <p>Se remover a marcação, o horário volta a ficar disponível para agendar adoração.</p>
+      <div class="modal__acoes">
+        <button type="button" class="btn btn-contorno" id="btnVoltarDesmarcarMissa">Manter</button>
+        <button type="button" class="btn btn-vermelho" id="btnConfirmarDesmarcarMissa">Remover marcação</button>
+      </div>
     </div>
   </div>
 

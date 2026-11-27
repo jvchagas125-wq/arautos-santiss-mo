@@ -2,8 +2,8 @@
 // Calendário com os dias da adoração -> janela com os horários do dia (mostrando quem já agendou) ->
 // janela pedindo o nome da pessoa. O agendamento aparece no site público em "Acompanhamento".
 import { abrirModal, fecharModal, mostrarToast, MESES, dataParaIso, isoParaData, hojeIso,
-  formatarDataComDiaSemana, formatarHora, horariosDisponiveisNoDia, capitalizarNome } from "./utils.js";
-import { ouvirAgendamentosAtivosNoPeriodo, criarAgendamentoParaOutraPessoa } from "./dados.js";
+  formatarDataComDiaSemana, formatarHora, horariosDoDiaComMissa, horasDeMissaNoDia, capitalizarNome } from "./utils.js";
+import { ouvirAgendamentosAtivosNoPeriodo, criarAgendamentoParaOutraPessoa, salvarMissasAdoracao } from "./dados.js";
 
 const textoHora = (hora) => `${String(hora).padStart(2, "0")}:00 - ${String((hora + 1) % 24).padStart(2, "0")}:00`;
 
@@ -18,6 +18,11 @@ export function criarAgendarParaOutros() {
   const formNome = document.getElementById("formAgendarNome");
   const campoNome = document.getElementById("agendarNomeCampo");
   const btnConfirmarNome = document.getElementById("btnConfirmarAgendarNome");
+  const caixaNome = document.getElementById("agendarNomeCaixa");
+  const checkMissa = document.getElementById("agendarMissaCheck");
+  const tituloNome = document.getElementById("tituloAgendarNome");
+  const modalDesmarcar = document.getElementById("modalDesmarcarMissa");
+  const btnConfirmarDesmarcar = document.getElementById("btnConfirmarDesmarcarMissa");
   if (!cabecalho || !calendarioEl) return { definirPeriodo() {} };
 
   let periodo = null; // doc configuracoes/diasHorarios completo (dataInicio, dataFim, horariosAtivos, alteracoes...)
@@ -35,7 +40,7 @@ export function criarAgendarParaOutros() {
   const diaDoPeriodo = (iso) => temPeriodo()
     && periodo.alteracoes?.[iso]?.fechado !== true
     && iso >= periodo.dataInicio && iso <= periodo.dataFim && iso >= hojeIso()
-    && horariosDisponiveisNoDia(periodo, iso).length > 0;
+    && horariosDoDiaComMissa(periodo, iso).length > 0;
   const doDia = (iso) => agendamentos.filter((a) => a.data === iso);
 
   function garantirEscuta() {
@@ -101,7 +106,8 @@ export function criarAgendarParaOutros() {
   function renderizarHorarios() {
     if (!diaAtual) return;
     document.getElementById("agendarHorariosData").textContent = formatarDataComDiaSemana(diaAtual);
-    const horas = temPeriodo() ? horariosDisponiveisNoDia(periodo, diaAtual) : [];
+    const horas = temPeriodo() ? horariosDoDiaComMissa(periodo, diaAtual) : [];
+    const missas = temPeriodo() ? horasDeMissaNoDia(periodo, diaAtual) : new Set();
     gradeHorarios.innerHTML = "";
     semHorarios.classList.toggle("oculto", horas.length > 0);
     const naHora = new Map();
@@ -111,6 +117,17 @@ export function criarAgendarParaOutros() {
     });
     horas.forEach((hora) => {
       const pessoas = naHora.get(hora) || [];
+      if (missas.has(hora)) {
+        // horário marcado como Santa Missa: amarelo; tocar abre a janela para remover a marcação
+        const m = document.createElement("button");
+        m.type = "button";
+        m.className = "horario-btn horario-btn--missa";
+        m.dataset.hora = String(hora);
+        m.innerHTML = `<span class="horario-btn__hora">${textoHora(hora)}</span><span class="horario-btn__reservado horario-btn__missa-rotulo">Santa Missa · toque para remover</span>`;
+        m.addEventListener("click", () => abrirDesmarcar(hora));
+        gradeHorarios.appendChild(m);
+        return;
+      }
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "horario-btn";
@@ -149,10 +166,62 @@ export function criarAgendarParaOutros() {
     horaAtual = hora;
     document.getElementById("agendarNomeResumo").textContent = `${formatarDataComDiaSemana(diaAtual)} · ${formatarHora(hora)}`;
     campoNome.value = "";
+    checkMissa.checked = false;
+    aplicarModoMissa();
     abrirModal(modalNome);
     setTimeout(() => campoNome.focus(), 80);
   }
   function fecharNome() { fecharModal(modalNome); horaAtual = null; }
+
+  // com "Santa Missa" marcada, a janela não pede nome: só marca o horário
+  function aplicarModoMissa() {
+    const missa = checkMissa.checked;
+    caixaNome.classList.toggle("oculto", missa);
+    campoNome.required = !missa;
+    tituloNome.textContent = missa ? "Santa Missa neste horário" : "Nome da pessoa";
+    btnConfirmarNome.textContent = missa ? "Marcar Santa Missa" : "Agendar";
+    if (!missa) setTimeout(() => campoNome.focus(), 0);
+  }
+  checkMissa.addEventListener("change", aplicarModoMissa);
+
+  // mapa atual { iso: [horas] } do banco, para somar/tirar um horário e salvar o conjunto
+  const missasAtuais = () => {
+    const copia = {};
+    Object.entries((periodo && periodo.missas) || {}).forEach(([iso, horas]) => { if (Array.isArray(horas)) copia[iso] = [...horas]; });
+    return copia;
+  };
+
+  let horaDesmarcar = null;
+  function abrirDesmarcar(hora) {
+    horaDesmarcar = hora;
+    document.getElementById("desmarcarMissaResumo").textContent = `${formatarDataComDiaSemana(diaAtual)} · ${formatarHora(hora)}`;
+    abrirModal(modalDesmarcar);
+    // as janelas de baixo continuam abertas: o fundo segue sem rolar
+    document.body.style.overflow = "hidden";
+  }
+  function fecharDesmarcar() {
+    fecharModal(modalDesmarcar);
+    horaDesmarcar = null;
+    if (modalHorarios.classList.contains("aberto")) document.body.style.overflow = "hidden";
+  }
+  document.getElementById("fecharModalDesmarcarMissa").addEventListener("click", fecharDesmarcar);
+  document.getElementById("btnVoltarDesmarcarMissa").addEventListener("click", fecharDesmarcar);
+  btnConfirmarDesmarcar.addEventListener("click", async () => {
+    if (!diaAtual || horaDesmarcar === null) return;
+    btnConfirmarDesmarcar.disabled = true;
+    try {
+      const mapa = missasAtuais();
+      mapa[diaAtual] = (mapa[diaAtual] || []).filter((h) => Number(h) !== horaDesmarcar);
+      await salvarMissasAdoracao(mapa);
+      mostrarToast("Marcação de Santa Missa removida. O horário voltou a ficar disponível.");
+      fecharDesmarcar();
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível remover agora. Verifique a conexão e tente novamente.");
+    } finally {
+      btnConfirmarDesmarcar.disabled = false;
+    }
+  });
 
   document.getElementById("fecharModalAgendarHorarios").addEventListener("click", fecharHorarios);
   document.getElementById("fecharModalAgendarNome").addEventListener("click", fecharNome);
@@ -161,6 +230,7 @@ export function criarAgendarParaOutros() {
   formNome.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!diaAtual || horaAtual === null) return;
+    if (checkMissa.checked) { await marcarMissa(); return; }
     const digitado = campoNome.value.replace(/\s+/g, " ").trim();
     if (digitado.length < 2 || !/\p{L}/u.test(digitado)) { mostrarToast("Digite o nome da pessoa."); campoNome.focus(); return; }
     const nome = capitalizarNome(digitado);
@@ -182,6 +252,30 @@ export function criarAgendarParaOutros() {
       btnConfirmarNome.textContent = "Agendar";
     }
   });
+
+  // marca o horário escolhido como Santa Missa (não pode ter gente agendada nele)
+  async function marcarMissa() {
+    const hora = horaAtual;
+    if (doDia(diaAtual).some((a) => a.hora === hora)) {
+      mostrarToast("Esse horário já tem pessoas agendadas. Cancele os agendamentos em Acompanhamento antes de marcar a Santa Missa.");
+      return;
+    }
+    btnConfirmarNome.disabled = true;
+    btnConfirmarNome.textContent = "Marcando...";
+    try {
+      const mapa = missasAtuais();
+      mapa[diaAtual] = [...new Set([...(mapa[diaAtual] || []), hora])];
+      await salvarMissasAdoracao(mapa);
+      fecharNome();
+      mostrarToast("Santa Missa marcada. Ninguém poderá agendar nesse horário.");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Não foi possível marcar agora. Verifique a conexão e tente novamente.");
+    } finally {
+      btnConfirmarNome.disabled = false;
+      aplicarModoMissa();
+    }
+  }
 
   calendarioEl.querySelector("[data-nav-anterior]").addEventListener("click", () => {
     mes = new Date(mes.getFullYear(), mes.getMonth() - 1, 1);

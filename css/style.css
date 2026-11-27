@@ -499,6 +499,11 @@ img{ max-width: 100%; display:block; }
 }
 .painel__dica + .painel__seta{ margin-left:0; }
 .painel__titulo--clicavel:not(.recolhido) .painel__dica{ display:none; }
+@media (min-width: 601px){
+  /* título longo (ex.: "Agendar Adoração para outras pessoas"): o texto quebra dentro dele e a setinha não cai pra linha de baixo */
+  .painel__titulo--clicavel{ flex-wrap:nowrap; }
+  .painel__dica{ white-space:nowrap; flex-shrink:0; }
+}
 @media (max-width: 600px){
   /* em telas estreitas a dica desce pra uma linha só dela, abaixo do título */
   .painel__dica{ order:5; width:100%; margin-left:0; text-align:left; padding-left:30px; }
@@ -1887,3 +1892,11 @@ html.nav-interna .contato-quadro{ animation:none; }
 .modal--horarios .modal__conteudo-scroll{ text-align:left; }
 .modal--horarios .grade-horarios{ margin-top:0; }
 .modal--horarios .legenda-grupos{ margin-top:16px; }
+
+/* horário da Santa Missa na lista de horários (marcado pelo administrador): amarelo, sem agendar */
+.horario-btn.horario-btn--missa, .horario-btn.horario-btn--missa:disabled{
+  display:flex; flex-direction:column; gap:3px; background:#FFD700; border-color:#c9a300; color:#6B5900;
+  opacity:1; text-decoration:none; cursor:default; transform:none; box-shadow:none;
+}
+.horario-btn--missa .horario-btn__hora{ color:#6B5900; }
+.horario-btn--missa .horario-btn__missa-rotulo{ font-family:'Cinzel', serif; font-weight:700; font-size:.74rem; color:#6B5900; text-decoration:none; cursor:default; letter-spacing:.03em; }

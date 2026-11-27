@@ -1,7 +1,7 @@
 import { exigirCadastro } from "./auth.js";
 import { inicializarNavegacao, aplicarLogo, aplicarFundo, mostrarToast, abrirModal, fecharModal,
   isoParaData, dataParaIso, formatarDataBR, formatarHora, hojeIso,
-  horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana, reduzirNomeParaExibicao,
+  horariosDisponiveisNoDia, horariosDoDiaComMissa, horasDeMissaNoDia, gerarBlocosDeSemana, reduzirNomeParaExibicao,
   MESES, DIAS_SEMANA_ABREV, comLimiteDeTempo } from "./utils.js";
 import { ouvirConfiguracoesGerais, ouvirDiasHorarios, ouvirAgendamentosDaData, ouvirAgendamentosAtivosNoPeriodo, criarAgendamento } from "./dados.js";
 
@@ -235,7 +235,7 @@ function renderizarGradeSemanal() {
       const pessoas = mapAgendamentosPorDiaHora.get(`${iso}_${hora}`) || [];
 
       if (horasMissa.has(hora)) {
-        td.textContent = "Missa";
+        td.textContent = "Santa Missa";
         td.className = "grade-semanal__cel--missa";
       } else if (!horasAtivas.has(hora)) {
         // horas seguidas sem adoração viram um único bloco cinza com o aviso escrito uma vez só
@@ -457,16 +457,28 @@ function textoReservado(qtd) {
 }
 
 function renderizarHorarios() {
-  const horariosAtivos = horariosDisponiveisNoDia(diasHorarios, dataSelecionada);
+  const horariosAtivos = horariosDoDiaComMissa(diasHorarios, dataSelecionada); // inclui o(s) horário(s) da Santa Missa
+  const horasMissa = horasDeMissaNoDia(diasHorarios, dataSelecionada);
   gradeHorarios.innerHTML = "";
 
-  if (horariosAtivos.length === 0) {
+  if (horariosAtivos.every((h) => horasMissa.has(h))) {
     semHorarios.classList.remove("oculto");
     return;
   }
   semHorarios.classList.add("oculto");
 
   horariosAtivos.forEach((hora) => {
+    // horário da Santa Missa (marcado pelo administrador): aparece em amarelo e ninguém agenda nele
+    if (horasMissa.has(hora)) {
+      const missa = document.createElement("button");
+      missa.type = "button";
+      missa.className = "horario-btn horario-btn--missa";
+      missa.disabled = true;
+      missa.setAttribute("aria-label", `${textoHora(hora)} — Santa Missa, sem adoração neste horário`);
+      missa.innerHTML = `<span class="horario-btn__hora">${textoHora(hora)}</span><span class="horario-btn__reservado horario-btn__missa-rotulo">Santa Missa</span>`;
+      gradeHorarios.appendChild(missa);
+      return;
+    }
     // pode haver mais de uma pessoa agendada para o mesmo dia e horário
     const ocupacoes = horariosOcupados.filter((o) => o.hora === hora);
     const btn = document.createElement("button");

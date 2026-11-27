@@ -1089,3 +1089,11 @@
 .inscrever-pessoa__curso{ text-align:center; margin:-4px 0 12px; font-family:'Cinzel'; font-size:.9rem; color: var(--vermelho-escuro); flex-shrink:0; }
 .inscrever-pessoa__aviso{ margin:0 0 14px; padding:10px 12px; border:1px dashed rgba(157,122,31,.55); border-radius:10px; background: rgba(255,255,255,.6); font-size:.85rem; color: var(--texto-suave); line-height:1.5; }
 .curso-form--painel .curso-form__botoes{ display:flex; flex-direction:column; gap:10px; margin-top:18px; }
+
+/* ---------- Santa Missa marcada em horário da adoração ---------- */
+.agendar-missa{ margin-top:4px; padding:10px 12px; border:1px dashed rgba(157,122,31,.55); border-radius:10px; background: rgba(255,215,0,.12); text-align:left; }
+.agendar-missa label{ display:flex; gap:10px; align-items:flex-start; cursor:pointer; text-transform:none; letter-spacing:0; font-family:inherit; font-size:.95rem; }
+.agendar-missa input{ accent-color: var(--vermelho); width:18px; height:18px; margin-top:3px; flex-shrink:0; }
+.agendar-missa small{ display:block; margin-top:4px; color: var(--texto-suave); font-size:.78rem; line-height:1.45; }
+.grupo-horario-dia--missa .grupo-horario-dia__titulo{ background:#FFD700; color:#6B5900; padding:4px 10px; border-radius:8px; display:inline-flex; }
+.horario-missa-msg{ color:#6B5900; font-weight:600; }

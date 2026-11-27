@@ -1,7 +1,7 @@
 import { iniciarInicioAdmin } from "./inicio-admin.js";
 import { listaArquivada, inicializarNavegacao, aplicarLogo, mostrarToast, abrirModal, fecharModal,
   formatarDataComDiaSemana, formatarDataBR, formatarHora, vincularOlhoSenha, criarCalendario, criarSeletorHora,
-  isoParaData, dataParaIso, horariosDisponiveisNoDia, horasDeMissaNoDia, gerarBlocosDeSemana,
+  isoParaData, dataParaIso, horariosDisponiveisNoDia, horariosDoDiaComMissa, horasDeMissaNoDia, gerarBlocosDeSemana,
   MESES, CATEGORIAS_PADRAO, DIAS_SEMANA_COMPLETO, horariosDoDia, statusMissaEspecifica, hojeIso, linkificarTexto, ORDEM_PAGINAS, destinoAtual, categoriasPermitidasDaMissa,
   normalizarRegraFechamento, regraDeFechamentoDaMissa, descreverRegraDeFechamento, textoHoraMinuto,
   capitalizarNome, reduzirNomeParaExibicao, vincularMascaraTelefone, telefoneValido, telefoneParaDigits, aoAbrirPaginaUmaVez } from "./utils.js";
@@ -16,7 +16,7 @@ import {
   obterConfigIntencoes, salvarConfigIntencoes, ouvirConfigIntencoes, salvarHorariosEspeciais,
   obterFormularioIntencoes, ouvirFormularioIntencoes, salvarFormularioIntencoes, limparRascunhosVencidos,
   ouvirTodasIntencoes, excluirListaIntencoes,
-  obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes, ouvirIntencoesRecentes, ouvirEnviosRecentes,
+  obterConfigEnvioIntencoes, salvarConfigEnvioIntencoes, ouvirEnviosIntencoes, ouvirIntencoesRecentes, ouvirEnviosRecentes, ouvirAgendadorEnvio,
   criarIntencao, atualizarIntencao, excluirIntencao, ouvirContatosCrm, salvarContatoCrm,
   obterVisitasDosDias, ouvirVisitasDoDia, ouvirCampanhas, salvarCampanha, marcarEnvioCampanha, excluirCampanha, novoIdCampanha,
   ouvirAvisos, criarAviso, atualizarAviso, excluirAviso, trocarOrdemAvisos,
@@ -2226,7 +2226,37 @@ function configurarIntencoes() {
     const desde = new Date(Date.now() - DIAS_DA_LISTA_PRINCIPAL * 24 * 3600000 - 3 * 3600000).toISOString().slice(0, 10);
     pararIntencoesRecentes = ouvirIntencoesRecentes(desde, receberIntencoes);
     pararEnviosRecentes = ouvirEnviosRecentes(desde, receberEnvios);
+    ligarEstadoDoAgendador();
   });
+
+  // Aviso do agendador (cron-job.org): o servidor grava um "batimento" a cada rodada; se passar de 20 minutos sem batimento,
+  // o envio automático está parado e o painel avisa (e lembra do botão de envelope, que envia na hora).
+  function ligarEstadoDoAgendador() {
+    const caixa = document.getElementById("estadoAgendador");
+    if (!caixa) return;
+    let batimento; // undefined = ainda não chegou; null = nunca registrado
+    const hora = (iso) => new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    function desenhar() {
+      if (batimento === undefined) return;
+      caixa.classList.remove("oculto", "estado-agendador--ok", "estado-agendador--alerta");
+      const ultima = batimento && batimento.ultimaRodada ? new Date(batimento.ultimaRodada).getTime() : 0;
+      if (!ultima) {
+        caixa.classList.add("estado-agendador--alerta");
+        caixa.textContent = "Agendador do envio automático: ainda sem registro. Se isso não mudar em alguns minutos, confira o job no cron-job.org. O botão de envelope de cada lista envia na hora.";
+        return;
+      }
+      const min = Math.max(0, Math.round((Date.now() - ultima) / 60000));
+      if (min > 20) {
+        caixa.classList.add("estado-agendador--alerta");
+        caixa.textContent = `⚠️ O agendador não chama o site desde ${hora(batimento.ultimaRodada)} (há ${min >= 120 ? Math.round(min / 60) + " h" : min + " min"}): os e-mails automáticos estão PARADOS. Confira o job "Enviar listas de intenção" no cron-job.org (ele pode ter sido desativado). Enquanto isso, use o botão de envelope de cada lista para enviar na hora.`;
+      } else {
+        caixa.classList.add("estado-agendador--ok");
+        caixa.textContent = `✓ Agendador ativo: última verificação ${min < 1 ? "agora há pouco" : "há " + min + " min"}.${batimento.erro ? " Aviso da última rodada: " + batimento.erro : ""}`;
+      }
+    }
+    ouvirAgendadorEnvio((dados) => { batimento = dados; desenhar(); });
+    setInterval(desenhar, 60000);
+  }
   function ligarLeituraCompleta() {
     if (leituraCompletaLigada) return;
     leituraCompletaLigada = true;
@@ -2768,7 +2798,7 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, diasHorariosAtual, indiceS
       const pessoas = porDataHora.get(chave) || [];
 
       if (horasDeMissa.has(hora)) {
-        cell.value = "MISSA";
+        cell.value = "SANTA MISSA";
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: CORES_EXPORT.missa } };
         cell.font = { bold: true, color: { argb: "FF6B5900" } };
       } else if (!horasAtivasDoDia.has(hora)) {
@@ -2793,7 +2823,7 @@ function adicionarAbasDeSemana(wb, dias, porDataHora, diasHorariosAtual, indiceS
     [CORES_EXPORT.nicodemos, "Grupo São Nicodemos — Homens (00h às 06h e 21h às 23h) *", "FF3A2A1A"],
     [CORES_EXPORT.madalena, "Grupo Santa Maria Madalena — para todos (12h às 20h)", "FF3A2A1A"],
     [CORES_EXPORT.extra, "Extra — qualquer grupo", "FF3A2A1A"],
-    [CORES_EXPORT.missa, "Missa (sem adoração no horário)", "FF6B5900"],
+    [CORES_EXPORT.missa, "Santa Missa (sem adoração no horário)", "FF6B5900"],
     [CORES_EXPORT.aberto, "Horário em aberto!!!", "FFFFFFFF"],
     [CORES_EXPORT.bloqueado, "Fora do período de adoração", "FFFFFFFF"]
   ];
@@ -2983,7 +3013,8 @@ function configurarAcompanhamento() {
     });
 
     // mostra todos os horários ativos do dia (não só os que já têm gente agendada)
-    const horasDoDia = horariosDisponiveisNoDia(diasHorariosAtual, iso);
+    const horasDoDia = horariosDoDiaComMissa(diasHorariosAtual, iso);
+    const horasDeMissaDoDia = horasDeMissaNoDia(diasHorariosAtual, iso);
 
     horasDoDia.forEach((hora) => {
       const pessoas = porHora.get(hora) || [];
@@ -2995,6 +3026,17 @@ function configurarAcompanhamento() {
       titulo.className = "grupo-horario-dia__titulo";
       titulo.innerHTML = `${formatarHora(hora)} ${pessoas.length ? `<span class="contagem-contatos">${pessoas.length}</span>` : ""}`;
       grupo.appendChild(titulo);
+
+      if (horasDeMissaDoDia.has(hora)) {
+        // horário marcado como Santa Missa no painel (Dias e horários): sem adoração
+        grupo.classList.add("grupo-horario-dia--missa");
+        const missa = document.createElement("p");
+        missa.className = "horario-vazio-msg horario-missa-msg";
+        missa.textContent = "Santa Missa — sem adoração neste horário.";
+        grupo.appendChild(missa);
+        diaAgendadosConteudo.appendChild(grupo);
+        return;
+      }
 
       if (pessoas.length === 0) {
         const aviso = document.createElement("p");

@@ -333,6 +333,25 @@ export async function salvarAlteracoesAgenda(mapa) {
   return limpo;
 }
 
+// Santa Missa marcada em horários da adoração: { "aaaa-mm-dd": [hora, ...] } (campo "missas" do mesmo documento
+// de Dias e horários, então o site público já recebe junto com o resto, sem leitura a mais). Salva o mapa inteiro
+// (updateDoc troca o campo todo, então um horário desmarcado some de verdade).
+export async function salvarMissasAdoracao(mapa) {
+  const limpo = {};
+  Object.entries(mapa || {}).forEach(([iso, horas]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || !Array.isArray(horas)) return;
+    const lista = [...new Set(horas.map(Number).filter((h) => Number.isInteger(h) && h >= 0 && h <= 23))].sort((a, b) => a - b);
+    if (lista.length) limpo[iso] = lista;
+  });
+  try {
+    await updateDoc(REF_DIAS_HORARIOS, { missas: limpo });
+  } catch (erro) {
+    // documento ainda não existe: cria com o campo
+    await setDoc(REF_DIAS_HORARIOS, { missas: limpo }, { merge: true });
+  }
+  return limpo;
+}
+
 /* ---------------- Contas do painel administrativo ----------------
    Coleção "administradores": uma conta por pessoa, com
    { nome, usuario, sal, verificador, status, principal, acessos, criadoEm }.
@@ -795,6 +814,11 @@ export async function salvarConfigEnvioIntencoes({ ativo, emails, enviarVazias }
 // Lista própria de e-mails para a lista de inscritos dos cursos (fica no mesmo documento, em "emailsInscritos").
 export async function salvarEmailsInscritos(emails) {
   await setDoc(REF_ENVIO_INTENCOES, { emailsInscritos: emails }, { merge: true });
+}
+
+// "Batimento" do agendador do envio automático: o servidor grava a hora de cada rodada em configuracoes/agendadorEnvio.
+export function ouvirAgendadorEnvio(callback) {
+  return onSnapshot(doc(db, "configuracoes", "agendadorEnvio"), (snap) => callback(snap.exists() ? snap.data() : null));
 }
 
 // Escuta o histórico de envios registrados pelo servidor. Devolve um objeto { "aaaa-mm-dd|hora": {...} }.
